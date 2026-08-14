@@ -75,7 +75,9 @@ export function Sidebar() {
           <RotateCcw size={14} /> Reset data demo
         </button>
         <button
-          onClick={logout}
+          onClick={() => {
+            void logout();
+          }}
           className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs text-white/70 hover:bg-white/8"
         >
           <LogOut size={14} /> Keluar

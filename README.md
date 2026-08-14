@@ -56,7 +56,20 @@ Ada **2 file SQL**, jangan tertukar:
 3. Paste isi **`schema.sql`** → Run.
 4. Kalau sukses, di Table Editor harus muncul `sensei`, `schedules`, `session_reports`, dll.
 
-Jangan jalankan `schema-v3.sql` di project kosong — itu penyebab error `relation "sensei" does not exist`.
+### Setelah schema.sql sukses
+1. Copy `.env.example` → `.env.local`
+2. Isi dari Supabase → Project Settings → API:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. (Opsional) jalankan `seed-demo.sql` untuk isi Sensei/siswa contoh
+4. Buat user di **Authentication → Users** (email + password)
+5. Di Table Editor `profiles`, set:
+   - Super Admin: `role = Super Admin`, `status = Approved`
+   - Kyouiku: `role = Kyouiku`, `status = Approved`
+   - Sensei: `role = Sensei`, `status = Approved`, email sama dengan baris `sensei.email`
+6. `npm install && npm run dev` → login pakai email/password itu
+
+Tanpa `.env.local`, app tetap bisa dibuka dalam **mode demo lokal**.
 
 ## V2 continuity
 

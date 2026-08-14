@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { LoginView } from './components/LoginView';
 import { Sidebar } from './components/layout/Sidebar';
@@ -18,6 +19,20 @@ import { useDashboardStore } from './store/useDashboardStore';
 export default function App() {
   const currentUser = useDashboardStore((state) => state.currentUser);
   const activeTab = useDashboardStore((state) => state.activeTab);
+  const isBootstrapping = useDashboardStore((state) => state.isBootstrapping);
+  const bootstrapAuth = useDashboardStore((state) => state.bootstrapAuth);
+
+  useEffect(() => {
+    void bootstrapAuth();
+  }, [bootstrapAuth]);
+
+  if (isBootstrapping) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center text-sm font-semibold text-ink-soft">
+        Menyambungkan ke Supabase staging…
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return (
