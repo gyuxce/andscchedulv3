@@ -23,7 +23,7 @@ Student login is reserved for V4. Student records in V3 exist only for learning 
 
 ## Local run
 
-Login **wajib Supabase Auth** — mode demo lokal sudah dihapus.
+Login memakai akun resmi yang sudah diaktifkan (email + password).
 
 ```bash
 cp .env.example .env.local
@@ -37,63 +37,43 @@ npm test
 npm run build
 ```
 
-Tanpa `.env.local` yang valid, layar login meminta konfigurasi (tidak ada role-picker demo).
-
-## Supabase setup (penting)
-
-Ada **2 file SQL**, jangan tertukar:
+## Database setup
 
 | File | Dipakai di mana |
 | --- | --- |
-| `schema.sql` | **Project Supabase BARU / kosong** (staging V3) |
-| `schema-v3.sql` | Project yang **sudah punya** tabel V2 (`sensei`, `schedules`, …) |
-| `schema-timezone-settings.sql` | Staging yang **sudah jalan** — tambah timezone Sensei + `app_settings` (grace late-join) |
-| `schema-level-completions.sql` | Staging yang **sudah jalan** — tabel `level_completions` |
-| `schema-class-master.sql` | Staging yang **sudah jalan** — Class Master + `schedules.class_id` |
-| `schema-enrollments.sql` | Staging yang **sudah jalan** — Enrollment / Learning Journey + `session_reports.material_url` |
+| `schema.sql` | Project database **baru / kosong** |
+| `schema-v3.sql` | Project yang **sudah punya** tabel lama (`sensei`, `schedules`, …) |
+| `schema-timezone-settings.sql` | Additive — timezone Sensei + `app_settings` |
+| `schema-level-completions.sql` | Additive — `level_completions` |
+| `schema-class-master.sql` | Additive — Class Master + `schedules.class_id` |
+| `schema-enrollments.sql` | Additive — Enrollment / Learning Journey + `material_url` |
+| `schema-rls.sql` | RBAC policies (jalankan ulang setelah schema additive) |
+| `cleanup-demo-data.sql` | Hapus data seed/demo dari project live |
 
-### Yang kamu lakukan sekarang
-1. Buat / buka **project Supabase baru** (bukan produksi V2).
-2. Buka **SQL Editor**.
-3. Paste isi **`schema.sql`** → Run.
-4. Kalau sukses, di Table Editor harus muncul `sensei`, `schedules`, `session_reports`, dll.
+### Project baru
+1. Buka SQL Editor.
+2. Jalankan **`schema.sql`**, lalu **`schema-rls.sql`**.
+3. Set env `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (lokal atau Vercel).
+4. Buat user di Authentication, lalu di `profiles` set `role` + `status = Approved`.
+5. Sensei: samakan email Auth dengan `sensei.email`.
 
-### Staging yang sudah pernah di-setup
+### Project yang sudah jalan
 Jalankan berurutan (jangan loncat):
 1. `schema-timezone-settings.sql`
 2. `schema-level-completions.sql`
-3. **`schema-class-master.sql`** ← wajib sebelum enrollments
-4. **`schema-enrollments.sql`**
+3. `schema-class-master.sql`
+4. `schema-enrollments.sql`
 5. `schema-rls.sql` ulang
 
-Kalau error `relation "class_masters" does not exist`, berarti langkah 3 belum dijalankan.
+Kalau masih ada data seed lama, jalankan **`cleanup-demo-data.sql`**, lalu hapus user demo di Authentication → Users.
 
-### Setelah schema.sql sukses
-1. **Wajib:** jalankan `schema-rls.sql` (kunci RBAC Super Admin / Kyouiku / Sensei)
-2. Copy `.env.example` → `.env.local`
-3. Isi dari Supabase → Project Settings → API:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-4. (Opsional) jalankan `seed-demo.sql` untuk isi Sensei/siswa contoh
-5. Buat user di **Authentication → Users** (email + password)
-6. Di Table Editor `profiles`, set:
-   - Super Admin: `role = Super Admin`, `status = Approved`
-   - Kyouiku: `role = Kyouiku`, `status = Approved`
-   - Sensei: `role = Sensei`, `status = Approved`, email sama dengan baris `sensei.email`
-7. Di tab **Sensei**, set timezone (WIB/WITA/WIT). Di **Pengaturan**, set grace late-join (menit).
-8. Makeup: batalkan kelas → **Jadwalkan makeup**. Level completion: tab Akademik Siswa → **Complete level**.
-9. `npm install && npm run dev` → login pakai email/password itu
+## Deploy (Vercel)
 
-### Cek RLS cepat
-Login 3 role, pastikan:
-- Sensei **tidak** bisa create/edit jadwal resmi orang lain
-- Sensei hanya lihat kelas / ketersediaan sendiri
-- Kyouiku bisa lihat semua + input QA + tandai level selesai, **tidak** bisa assign/swap kelas
-- Super Admin bisa manage users + jadwal resmi + settings + makeup
+Environment variables:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-## V2 continuity
-
-V2 production stays live. Additive changes go to staging first. Do not rename or drop V2 columns that the live app still writes.
+Build: `npm run build` · Output: `dist`
 
 ## Open Kyouiku decisions still TBC
 

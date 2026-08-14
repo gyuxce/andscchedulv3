@@ -27,7 +27,7 @@ export function QaView() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-soft">
-        Teaching Performance diinput manual oleh Kyouiku (0–100). Rekaman hanya disimpan sebagai referensi URL, bukan platform video. Skor komposit disiplin belum dihitung di V3.
+        Teaching Performance diinput manual oleh Kyouiku (0–100). Rekaman disimpan sebagai referensi URL. Skor komposit disiplin belum digabung di V3.
       </p>
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="ui-card p-4">
@@ -64,7 +64,7 @@ export function QaView() {
               </Button>
             </div>
           ) : (
-            <p className="mt-3 text-xs text-ink-soft">Visibilitas skor sendiri masih TBC; V3 menampilkan metrik milik Sensei yang login sebagai bahan coaching.</p>
+            <p className="mt-3 text-xs text-ink-soft">Menampilkan skor Teaching Performance milik akun Sensei yang login.</p>
           )}
         </div>
         <div className="ui-card p-4">
