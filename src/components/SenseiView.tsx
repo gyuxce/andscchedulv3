@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { getOperationalLabels } from '../lib/labels';
+import { timezoneAbbreviation, timezoneLabel, SENSEI_TIMEZONE_OPTIONS } from '../lib/timezone';
 import { formatHours, formatPercent, getWorkloadMetrics } from '../lib/workload';
 import { useDashboardStore, usePermissions } from '../store/useDashboardStore';
+import type { SenseiTimezone } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
@@ -22,17 +24,20 @@ export function SenseiView() {
   const weekAnchor = useDashboardStore((state) => state.weekAnchor);
   const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const overrideSenseiStatus = useDashboardStore((state) => state.overrideSenseiStatus);
+  const updateSenseiTimezone = useDashboardStore((state) => state.updateSenseiTimezone);
   const currentUser = useDashboardStore((state) => state.currentUser);
   const visible = permissions.canViewAllSensei ? sensei : sensei.filter((item) => item.id === currentUser?.senseiId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  const [timezoneDraft, setTimezoneDraft] = useState<SenseiTimezone>('Asia/Jakarta');
   const selected = visible.find((item) => item.id === selectedId);
+  const canEditOps = permissions.canManageUsers || permissions.role === 'Super Admin';
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-ink-soft">
-          Status utama ACTIVE/INACTIVE terpisah dari label operasional NEW, UNASSIGNED, dan CUTI. Satu Sensei bisa ACTIVE + NEW, atau ACTIVE + UNASSIGNED.
+          Status utama ACTIVE/INACTIVE terpisah dari label operasional NEW, UNASSIGNED, dan CUTI. Timezone Sensei (WIB/WITA/WIT) dipakai untuk hitung late-join.
         </p>
         <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
       </div>
@@ -41,11 +46,21 @@ export function SenseiView() {
           const labels = getOperationalLabels(item, schedules, leavePeriods);
           const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
           return (
-            <button key={item.id} className="ui-card p-4 text-left" onClick={() => { setSelectedId(item.id); setReason(''); }}>
+            <button
+              key={item.id}
+              className="ui-card p-4 text-left"
+              onClick={() => {
+                setSelectedId(item.id);
+                setReason('');
+                setTimezoneDraft(item.timezone);
+              }}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-extrabold text-ink">{item.name}</h3>
-                  <p className="text-xs text-ink-soft">{item.email} · join {item.joinDate}</p>
+                  <p className="text-xs text-ink-soft">
+                    {item.email} · {timezoneAbbreviation(item.timezone)} · join {item.joinDate}
+                  </p>
                 </div>
                 <Badge tone={item.primaryStatus === 'ACTIVE' ? 'success' : 'muted'}>{item.primaryStatus}</Badge>
               </div>
@@ -80,14 +95,37 @@ export function SenseiView() {
           footer={<Button onClick={() => setSelectedId(null)}>Tutup</Button>}
         >
           <p className="text-sm text-ink-soft">Level: {selected.levels.join(', ')}</p>
+          <p className="text-sm text-ink-soft">Timezone: {timezoneLabel(selected.timezone)}</p>
           {selected.notes ? <p className="text-sm">{selected.notes}</p> : null}
-          {permissions.canManageUsers || permissions.role === 'Super Admin' ? (
-            <div className="space-y-2 rounded-2xl border border-[#efe4d2] p-3">
-              <p className="ui-label">Override status utama</p>
-              <input className="ui-input" placeholder="Alasan" value={reason} onChange={(event) => setReason(event.target.value)} />
-              <div className="flex gap-2">
-                <Button disabled={!reason} onClick={() => overrideSenseiStatus(selected.id, 'ACTIVE', reason)}>Set ACTIVE</Button>
-                <Button tone="danger" disabled={!reason} onClick={() => overrideSenseiStatus(selected.id, 'INACTIVE', reason)}>Set INACTIVE</Button>
+          {canEditOps ? (
+            <div className="space-y-3">
+              <div className="space-y-2 rounded-2xl border border-[#efe4d2] p-3">
+                <p className="ui-label">Timezone Sensei</p>
+                <select
+                  className="ui-input"
+                  value={timezoneDraft}
+                  onChange={(event) => setTimezoneDraft(event.target.value as SenseiTimezone)}
+                >
+                  {SENSEI_TIMEZONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.abbreviation} · {option.label}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  disabled={timezoneDraft === selected.timezone}
+                  onClick={() => updateSenseiTimezone(selected.id, timezoneDraft)}
+                >
+                  Simpan timezone
+                </Button>
+              </div>
+              <div className="space-y-2 rounded-2xl border border-[#efe4d2] p-3">
+                <p className="ui-label">Override status utama</p>
+                <input className="ui-input" placeholder="Alasan" value={reason} onChange={(event) => setReason(event.target.value)} />
+                <div className="flex gap-2">
+                  <Button disabled={!reason} onClick={() => overrideSenseiStatus(selected.id, 'ACTIVE', reason)}>Set ACTIVE</Button>
+                  <Button tone="danger" disabled={!reason} onClick={() => overrideSenseiStatus(selected.id, 'INACTIVE', reason)}>Set INACTIVE</Button>
+                </div>
               </div>
             </div>
           ) : null}

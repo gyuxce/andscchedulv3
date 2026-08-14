@@ -1,4 +1,4 @@
-import type { DashboardSnapshot, UserAccount } from '../types';
+import type { AppSettings, DashboardSnapshot, SenseiTimezone, UserAccount } from '../types';
 import { WEEKLY_HOUR_TARGET } from '../constants';
 import {
   availabilityToRow,
@@ -18,6 +18,22 @@ import {
 import { getSupabase } from '../lib/supabase';
 import type { AvailabilitySlot, ClassSession, SessionLog, SessionReport, TeachingQaScore } from '../types';
 
+const DEFAULT_SETTINGS: AppSettings = {
+  lateGraceMinutes: 0,
+  minAttendancePercent: null,
+  weeklyHourTarget: WEEKLY_HOUR_TARGET
+};
+
+function parseSettings(rows: Record<string, unknown>[]): AppSettings {
+  const byKey = new Map(rows.map((row) => [String(row.key), row.value]));
+  const graceRaw = byKey.get('late_grace_minutes');
+  const grace = typeof graceRaw === 'number' ? graceRaw : Number(graceRaw);
+  return {
+    ...DEFAULT_SETTINGS,
+    lateGraceMinutes: Number.isFinite(grace) && grace >= 0 ? grace : DEFAULT_SETTINGS.lateGraceMinutes
+  };
+}
+
 export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -34,7 +50,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     studentRecordsRes,
     qaRes,
     auditRes,
-    profilesRes
+    profilesRes,
+    settingsRes
   ] = await Promise.all([
     supabase.from('sensei').select('*'),
     supabase.from('sensei_status').select('*'),
@@ -47,7 +64,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     supabase.from('session_student_records').select('*'),
     supabase.from('teaching_qa_scores').select('*'),
     supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
-    supabase.from('profiles').select('*')
+    supabase.from('profiles').select('*'),
+    supabase.from('app_settings').select('key, value')
   ]);
 
   const firstError = [
@@ -103,6 +121,10 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     };
   });
 
+  const settings = settingsRes.error
+    ? DEFAULT_SETTINGS
+    : parseSettings((settingsRes.data || []) as Record<string, unknown>[]);
+
   return {
     users,
     sensei,
@@ -120,11 +142,7 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     qaScores: ((qaRes.data || []) as Record<string, unknown>[]).map(mapQaScore),
     leavePeriods,
     auditLogs: ((auditRes.data || []) as Record<string, unknown>[]).map(mapAudit),
-    settings: {
-      lateGraceMinutes: 0,
-      minAttendancePercent: null,
-      weeklyHourTarget: WEEKLY_HOUR_TARGET
-    }
+    settings
   };
 }
 
@@ -267,6 +285,25 @@ export async function upsertSenseiStatusRemote(input: {
     join_date: input.joinDate || null,
     updated_at: new Date().toISOString(),
     updated_by: input.updatedBy || null
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function upsertSenseiTimezoneRemote(senseiId: string, timezone: SenseiTimezone) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('sensei').update({ timezone }).eq('id', senseiId);
+  if (error) throw new Error(error.message);
+}
+
+export async function upsertAppSettingsRemote(settings: AppSettings, updatedBy?: string) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('app_settings').upsert({
+    key: 'late_grace_minutes',
+    value: settings.lateGraceMinutes,
+    updated_at: new Date().toISOString(),
+    updated_by: updatedBy || null
   });
   if (error) throw new Error(error.message);
 }

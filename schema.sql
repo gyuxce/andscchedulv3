@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS sensei (
   email TEXT,
   level_mengajar TEXT,
   kelas_tersedia TEXT,
-  sensei_leave_quota INTEGER DEFAULT 4
+  sensei_leave_quota INTEGER DEFAULT 4,
+  -- Zona waktu Sensei untuk jam kelas & late-join (bukan paksa WIB)
+  timezone TEXT NOT NULL DEFAULT 'Asia/Jakarta'
+    CHECK (timezone IN ('Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'))
 );
 
 CREATE TABLE IF NOT EXISTS students (
@@ -240,6 +243,17 @@ CREATE TABLE IF NOT EXISTS teaching_qa_scores (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT
+);
+
+INSERT INTO app_settings (key, value)
+VALUES ('late_grace_minutes', '0'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
 -- =========================================================
 -- INDEXES
 -- =========================================================
@@ -276,6 +290,7 @@ ALTER TABLE session_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_student_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_qa_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.current_profile_role()
 RETURNS TEXT

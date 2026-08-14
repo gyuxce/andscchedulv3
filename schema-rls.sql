@@ -118,6 +118,7 @@ ALTER TABLE session_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_student_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_qa_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- =========================================================
 -- PROFILES
@@ -495,6 +496,19 @@ CREATE POLICY v3_audit_insert
 CREATE POLICY v3_audit_delete_ops
   ON audit_logs FOR DELETE TO authenticated
   USING (public.is_ops());
+
+-- =========================================================
+-- APP SETTINGS (late-join grace, dll)
+-- =========================================================
+
+CREATE POLICY v3_app_settings_select
+  ON app_settings FOR SELECT TO authenticated
+  USING (public.is_approved_user());
+
+CREATE POLICY v3_app_settings_write_ops
+  ON app_settings FOR ALL TO authenticated
+  USING (public.is_ops())
+  WITH CHECK (public.is_ops());
 
 -- =========================================================
 -- QUICK VERIFY (optional)

@@ -4,6 +4,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  Settings,
   Shield,
   Users,
   Video,
@@ -25,7 +26,8 @@ const ICONS: Record<TabId, typeof LayoutDashboard> = {
   qa: Video,
   disciplinary: Scale,
   audit: Shield,
-  users: Activity
+  users: Activity,
+  settings: Settings
 };
 
 export function Sidebar() {

@@ -34,7 +34,8 @@ export type TabId =
   | 'qa'
   | 'disciplinary'
   | 'audit'
-  | 'users';
+  | 'users'
+  | 'settings';
 
 export interface UserAccount {
   id: string;
@@ -45,6 +46,8 @@ export interface UserAccount {
   senseiId?: string;
 }
 
+export type SenseiTimezone = 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura';
+
 export interface Sensei {
   id: string;
   name: string;
@@ -53,7 +56,7 @@ export interface Sensei {
   levels: string[];
   primaryStatus: SenseiPrimaryStatus;
   joinDate: string;
-  timezone: 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura';
+  timezone: SenseiTimezone;
   notes?: string;
 }
 

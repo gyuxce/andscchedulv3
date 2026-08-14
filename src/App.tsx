@@ -13,6 +13,7 @@ import { QaView } from './components/QaView';
 import { DisciplinaryView } from './components/DisciplinaryView';
 import { AuditView } from './components/AuditView';
 import { UsersView } from './components/UsersView';
+import { SettingsView } from './components/SettingsView';
 import { NAV_BY_ROLE } from './constants';
 import { useDashboardStore } from './store/useDashboardStore';
 
@@ -62,6 +63,7 @@ export default function App() {
           {tab === 'disciplinary' && <DisciplinaryView />}
           {tab === 'audit' && <AuditView />}
           {tab === 'users' && <UsersView />}
+          {tab === 'settings' && <SettingsView />}
         </main>
       </div>
       <Toaster richColors position="top-right" />

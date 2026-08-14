@@ -110,10 +110,23 @@ describe('session workflow and late join', () => {
     expect(getSessionWorkflow(session, { id: 'l', scheduleId: 'c1', senseiId: 's1', clockInAt: 'x', lateJoin: false, overridden: false })).toBe('in_progress');
   });
 
-  it('marks late join after scheduled start when grace is 0', () => {
+  it('marks late join after scheduled start when grace is 0 (Sensei WIB)', () => {
     const session = classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '10:00' });
-    expect(isLateJoin(session, '2026-08-14T09:00:01', 0)).toBe(true);
-    expect(isLateJoin(session, '2026-08-14T09:00:00', 0)).toBe(false);
+    // 09:00 Asia/Jakarta = 02:00 UTC
+    expect(isLateJoin(session, '2026-08-14T02:00:01.000Z', 0, 'Asia/Jakarta')).toBe(true);
+    expect(isLateJoin(session, '2026-08-14T02:00:00.000Z', 0, 'Asia/Jakarta')).toBe(false);
+  });
+
+  it('uses Sensei timezone, not a forced WIB clock', () => {
+    const session = classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '10:00' });
+    // 09:00 Asia/Jayapura (WIT, UTC+9) = 00:00 UTC
+    expect(isLateJoin(session, '2026-08-14T00:00:00.000Z', 0, 'Asia/Jayapura')).toBe(false);
+    expect(isLateJoin(session, '2026-08-14T00:01:00.000Z', 0, 'Asia/Jayapura')).toBe(true);
+    // Same absolute time would be late for WIB (class starts 02:00 UTC)
+    expect(isLateJoin(session, '2026-08-14T00:00:00.000Z', 0, 'Asia/Jakarta')).toBe(false);
+    expect(isLateJoin(session, '2026-08-14T01:59:00.000Z', 0, 'Asia/Jakarta')).toBe(false);
+    expect(isLateJoin(session, '2026-08-14T02:06:00.000Z', 5, 'Asia/Jakarta')).toBe(true);
+    expect(isLateJoin(session, '2026-08-14T02:05:00.000Z', 5, 'Asia/Jakarta')).toBe(false);
   });
 });
 

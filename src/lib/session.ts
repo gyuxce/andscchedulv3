@@ -1,5 +1,5 @@
 import type { ClassSession, SessionLog, SessionReport, SessionWorkflowState } from '../types';
-import { combineDateTime } from './dates';
+import { classStartUtc } from './timezone';
 
 export function getSessionWorkflow(
   session: ClassSession,
@@ -23,8 +23,17 @@ export function workflowLabel(state: SessionWorkflowState) {
   }[state];
 }
 
-export function isLateJoin(session: ClassSession, clockInAt: string, graceMinutes: number) {
-  const scheduled = combineDateTime(session.date, session.startTime);
+/**
+ * Late-join compares clock-in (absolute) against class start interpreted
+ * in the teaching Sensei's timezone, then applies grace minutes.
+ */
+export function isLateJoin(
+  session: ClassSession,
+  clockInAt: string,
+  graceMinutes: number,
+  senseiTimezone?: string | null
+) {
+  const scheduled = classStartUtc(session.date, session.startTime, senseiTimezone);
   const actual = new Date(clockInAt);
   const diff = (actual.getTime() - scheduled.getTime()) / 60000;
   return diff > graceMinutes;

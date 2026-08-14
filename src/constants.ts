@@ -76,7 +76,8 @@ export const NAV_BY_ROLE: Record<AppRole, TabId[]> = {
     'qa',
     'disciplinary',
     'audit',
-    'users'
+    'users',
+    'settings'
   ],
   Kyouiku: [
     'overview',
@@ -102,5 +103,6 @@ export const TAB_LABELS: Record<TabId, string> = {
   qa: 'QA & Rekaman',
   disciplinary: 'Disiplin',
   audit: 'Audit Log',
-  users: 'Pengguna'
+  users: 'Pengguna',
+  settings: 'Pengaturan'
 };

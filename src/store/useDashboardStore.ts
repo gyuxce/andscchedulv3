@@ -11,16 +11,19 @@ import { mapProfile } from '../lib/mappers';
 import {
   ensureProfile,
   loadDashboardSnapshot,
+  upsertAppSettingsRemote,
   upsertAvailabilityRemote,
   upsertQaRemote,
   upsertScheduleRemote,
   upsertSenseiStatusRemote,
+  upsertSenseiTimezoneRemote,
   upsertSessionLogRemote,
   upsertSessionReportRemote,
   writeAudit
 } from '../services/supabaseData';
 import type {
   AppRole,
+  AppSettings,
   AttendanceStatus,
   AvailabilitySlot,
   CancellationInitiator,
@@ -28,6 +31,7 @@ import type {
   DashboardSnapshot,
   Permissions,
   RecordingStatus,
+  SenseiTimezone,
   SessionReport,
   StudentSessionRecord,
   SwapInitiator,
@@ -117,6 +121,8 @@ interface DashboardStore extends DashboardSnapshot {
   reviewRecording: (reportId: string, notes: string) => void;
   upsertQaScore: (senseiId: string, month: string, score: number, notes: string) => void;
   overrideSenseiStatus: (senseiId: string, status: 'ACTIVE' | 'INACTIVE', reason: string) => void;
+  updateSenseiTimezone: (senseiId: string, timezone: SenseiTimezone) => void;
+  updateSettings: (patch: Partial<AppSettings>) => void;
   upsertUser: (user: Omit<UserAccount, 'id'> & { id?: string }) => void;
 }
 
@@ -484,8 +490,14 @@ export const useDashboardStore = create<DashboardStore>()(
         const state = get();
         const session = state.schedules.find((item) => item.id === scheduleId);
         if (!session) return;
+        const teachingSensei = state.sensei.find((item) => item.id === session.senseiId);
         const clockInAt = at ?? new Date().toISOString();
-        const lateJoin = isLateJoin(session, clockInAt, state.settings.lateGraceMinutes);
+        const lateJoin = isLateJoin(
+          session,
+          clockInAt,
+          state.settings.lateGraceMinutes,
+          teachingSensei?.timezone
+        );
         let savedLog = null as ReturnType<typeof get>['sessionLogs'][number] | null;
         set((current) => {
           const existing = current.sessionLogs.find((item) => item.scheduleId === scheduleId);
@@ -526,6 +538,7 @@ export const useDashboardStore = create<DashboardStore>()(
         const state = get();
         const session = state.schedules.find((item) => item.id === scheduleId);
         if (!session) return;
+        const teachingSensei = state.sensei.find((item) => item.id === session.senseiId);
         let savedLog = null as ReturnType<typeof get>['sessionLogs'][number] | null;
         set((current) => {
           const existing = current.sessionLogs.find((item) => item.scheduleId === scheduleId);
@@ -535,7 +548,12 @@ export const useDashboardStore = create<DashboardStore>()(
             senseiId: session.senseiId,
             clockInAt,
             clockOutAt,
-            lateJoin: isLateJoin(session, clockInAt, current.settings.lateGraceMinutes),
+            lateJoin: isLateJoin(
+              session,
+              clockInAt,
+              current.settings.lateGraceMinutes,
+              teachingSensei?.timezone
+            ),
             overridden: true
           };
           savedLog = log;
@@ -740,6 +758,44 @@ export const useDashboardStore = create<DashboardStore>()(
           'Update status Sensei'
         );
         toast.success('Status Sensei diubah');
+      },
+      updateSenseiTimezone: (senseiId, timezone) => {
+        const existing = get().sensei.find((item) => item.id === senseiId);
+        if (!existing) return;
+        set((state) => {
+          pushAudit(state, {
+            action: 'update_sensei_timezone',
+            entity: 'sensei',
+            recordId: senseiId,
+            oldValue: existing.timezone,
+            newValue: timezone
+          });
+          return {
+            sensei: state.sensei.map((item) => (item.id === senseiId ? { ...item, timezone } : item)),
+            auditLogs: state.auditLogs
+          };
+        });
+        void safeRemote(() => upsertSenseiTimezoneRemote(senseiId, timezone), 'Update timezone Sensei');
+        toast.success('Timezone Sensei disimpan');
+      },
+      updateSettings: (patch) => {
+        const previous = get().settings;
+        const next = { ...previous, ...patch };
+        set((state) => {
+          pushAudit(state, {
+            action: 'update_app_settings',
+            entity: 'app_settings',
+            recordId: 'late_grace_minutes',
+            oldValue: previous,
+            newValue: next
+          });
+          return { settings: next, auditLogs: state.auditLogs };
+        });
+        void safeRemote(
+          () => upsertAppSettingsRemote(next, get().currentUser?.email),
+          'Simpan pengaturan'
+        );
+        toast.success('Pengaturan disimpan');
       },
       upsertUser: (user) => {
         set((state) => {

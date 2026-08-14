@@ -16,6 +16,7 @@ import type {
   UserAccount,
   UserStatus
 } from '../types';
+import { normalizeTimezone } from './timezone';
 
 export function mapRole(role?: string | null): AppRole {
   const value = String(role || '').toLowerCase();
@@ -37,7 +38,7 @@ export function mapSensei(row: Record<string, unknown>): Sensei {
     levels,
     primaryStatus: 'ACTIVE',
     joinDate: new Date().toISOString().slice(0, 10),
-    timezone: 'Asia/Jakarta',
+    timezone: normalizeTimezone(row.timezone ? String(row.timezone) : null),
     notes: row.note ? String(row.note) : undefined
   };
 }

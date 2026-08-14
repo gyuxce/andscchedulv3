@@ -71,7 +71,7 @@ export function createSeedData(now = new Date()): DashboardSnapshot {
         levels: ['Guntai 3', 'N4', 'Custom Kaiwa'],
         primaryStatus: 'ACTIVE',
         joinDate: '2023-04-12',
-        timezone: 'Asia/Jakarta'
+        timezone: 'Asia/Makassar'
       },
       {
         id: 'sensei-aiko',
@@ -81,7 +81,7 @@ export function createSeedData(now = new Date()): DashboardSnapshot {
         levels: ['N5', 'Pra Guntai'],
         primaryStatus: 'ACTIVE',
         joinDate: '2022-11-01',
-        timezone: 'Asia/Jakarta'
+        timezone: 'Asia/Jayapura'
       },
       {
         id: 'sensei-rina',

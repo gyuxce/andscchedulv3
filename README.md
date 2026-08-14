@@ -49,12 +49,16 @@ Ada **2 file SQL**, jangan tertukar:
 | --- | --- |
 | `schema.sql` | **Project Supabase BARU / kosong** (staging V3) |
 | `schema-v3.sql` | Project yang **sudah punya** tabel V2 (`sensei`, `schedules`, …) |
+| `schema-timezone-settings.sql` | Staging yang **sudah jalan** — tambah timezone Sensei + `app_settings` (grace late-join) |
 
 ### Yang kamu lakukan sekarang
 1. Buat / buka **project Supabase baru** (bukan produksi V2).
 2. Buka **SQL Editor**.
 3. Paste isi **`schema.sql`** → Run.
 4. Kalau sukses, di Table Editor harus muncul `sensei`, `schedules`, `session_reports`, dll.
+
+### Staging yang sudah pernah di-setup
+Jalankan **`schema-timezone-settings.sql`**, lalu **`schema-rls.sql`** lagi (agar policy `app_settings` ikut terpasang).
 
 ### Setelah schema.sql sukses
 1. **Wajib:** jalankan `schema-rls.sql` (kunci RBAC Super Admin / Kyouiku / Sensei)
@@ -68,14 +72,15 @@ Ada **2 file SQL**, jangan tertukar:
    - Super Admin: `role = Super Admin`, `status = Approved`
    - Kyouiku: `role = Kyouiku`, `status = Approved`
    - Sensei: `role = Sensei`, `status = Approved`, email sama dengan baris `sensei.email`
-7. `npm install && npm run dev` → login pakai email/password itu
+7. Di tab **Sensei**, set timezone (WIB/WITA/WIT). Di **Pengaturan**, set grace late-join (menit).
+8. `npm install && npm run dev` → login pakai email/password itu
 
 ### Cek RLS cepat
 Login 3 role, pastikan:
 - Sensei **tidak** bisa create/edit jadwal resmi orang lain
 - Sensei hanya lihat kelas / ketersediaan sendiri
 - Kyouiku bisa lihat semua + input QA, **tidak** bisa assign/swap kelas
-- Super Admin bisa manage users + jadwal resmi
+- Super Admin bisa manage users + jadwal resmi + settings
 
 Tanpa `.env.local`, app tetap bisa dibuka dalam **mode demo lokal**.
 
@@ -88,5 +93,4 @@ V2 production stays live. Additive changes go to staging first. Do not rename or
 - Exact attendance % treatment of Late / Excused / Partial / cancelled
 - Minimum attendance for level completion
 - Makeup counting policy
-- Late-join grace period
 - Sensei visibility of own QA/disciplinary/recording details
