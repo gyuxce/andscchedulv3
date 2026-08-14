@@ -57,17 +57,25 @@ Ada **2 file SQL**, jangan tertukar:
 4. Kalau sukses, di Table Editor harus muncul `sensei`, `schedules`, `session_reports`, dll.
 
 ### Setelah schema.sql sukses
-1. Copy `.env.example` → `.env.local`
-2. Isi dari Supabase → Project Settings → API:
+1. **Wajib:** jalankan `schema-rls.sql` (kunci RBAC Super Admin / Kyouiku / Sensei)
+2. Copy `.env.example` → `.env.local`
+3. Isi dari Supabase → Project Settings → API:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-3. (Opsional) jalankan `seed-demo.sql` untuk isi Sensei/siswa contoh
-4. Buat user di **Authentication → Users** (email + password)
-5. Di Table Editor `profiles`, set:
+4. (Opsional) jalankan `seed-demo.sql` untuk isi Sensei/siswa contoh
+5. Buat user di **Authentication → Users** (email + password)
+6. Di Table Editor `profiles`, set:
    - Super Admin: `role = Super Admin`, `status = Approved`
    - Kyouiku: `role = Kyouiku`, `status = Approved`
    - Sensei: `role = Sensei`, `status = Approved`, email sama dengan baris `sensei.email`
-6. `npm install && npm run dev` → login pakai email/password itu
+7. `npm install && npm run dev` → login pakai email/password itu
+
+### Cek RLS cepat
+Login 3 role, pastikan:
+- Sensei **tidak** bisa create/edit jadwal resmi orang lain
+- Sensei hanya lihat kelas / ketersediaan sendiri
+- Kyouiku bisa lihat semua + input QA, **tidak** bisa assign/swap kelas
+- Super Admin bisa manage users + jadwal resmi
 
 Tanpa `.env.local`, app tetap bisa dibuka dalam **mode demo lokal**.
 

@@ -292,27 +292,10 @@ LANGUAGE SQL
 IMMUTABLE
 SET search_path = public
 AS $$
-  -- Ganti dengan email Super Admin kamu
+  -- Ganti dengan email Super Admin kamu (opsional, untuk bootstrap)
   SELECT lower(coalesce(profile_email, '')) IN ('replace-with-your-admin-email@example.com')
 $$;
 
--- Policy longgar untuk staging (authenticated bisa baca/tulis).
--- Kunci ulang lebih ketat sebelum cutover produksi.
-DO $$
-DECLARE
-  t TEXT;
-BEGIN
-  FOREACH t IN ARRAY ARRAY[
-    'profiles','sensei','students','groups','offdays','schedules',
-    'sensei_time_blocks','lesson_trackers','audit_logs','sensei_status',
-    'sensei_availability','session_logs','session_reports',
-    'session_student_records','teaching_qa_scores'
-  ]
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS staging_all_authenticated ON %I', t);
-    EXECUTE format(
-      'CREATE POLICY staging_all_authenticated ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)',
-      t
-    );
-  END LOOP;
-END $$;
+-- RLS diaktifkan di atas, tapi policy ketat ada di schema-rls.sql
+-- Setelah file ini sukses, LANGSUNG jalankan schema-rls.sql
+-- (jangan biarkan staging tanpa policy / dengan policy longgar).
