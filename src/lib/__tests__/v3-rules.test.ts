@@ -6,8 +6,10 @@ import { findConflicts } from '../schedule';
 import { getDisciplinaryMetrics } from '../disciplinary';
 import { getSessionWorkflow, isLateJoin } from '../session';
 import { filterAcademicReportRows, hasActiveOrCompletedMakeup } from '../makeup';
+import { generateRecurringDates } from '../recurring';
+import { getClassHealth, getClassProgress, getSessionOrdinal } from '../classProgress';
 import { buildActionItems } from '../actionCenter';
-import type { ClassSession, Sensei } from '../../types';
+import type { ClassMaster, ClassSession, Sensei } from '../../types';
 
 const yuki: Sensei = {
   id: 's1',
@@ -262,5 +264,38 @@ describe('makeup class', () => {
     const filtered = filterAcademicReportRows(rows, schedules);
     expect(filtered).toHaveLength(1);
     expect(filtered[0].session.id).toBe('mk');
+  });
+});
+
+describe('recurring + session X of X + class health', () => {
+  it('generates recurring dates on selected weekdays', () => {
+    const dates = generateRecurringDates('2026-08-17', [1, 5], 4);
+    expect(dates).toEqual(['2026-08-17', '2026-08-21', '2026-08-24', '2026-08-28']);
+  });
+
+  it('computes session ordinal and overdue/ending soon health', () => {
+    const teachingClass: ClassMaster = {
+      id: 'c1',
+      displayName: 'Private Aiko N5',
+      type: 'Private',
+      level: 'N5',
+      senseiId: 's1',
+      studentIds: ['st1'],
+      requiredMeetings: 4,
+      sessionDurationMinutes: 90,
+      startDate: '2026-08-01',
+      plannedEndDate: '2026-08-10',
+      status: 'active'
+    };
+    const schedules = [
+      classOf({ id: '1', classId: 'c1', date: '2026-08-03', startTime: '09:00', endTime: '10:30', status: 'completed' }),
+      classOf({ id: '2', classId: 'c1', date: '2026-08-05', startTime: '09:00', endTime: '10:30' }),
+      classOf({ id: '3', classId: 'c1', date: '2026-08-07', startTime: '09:00', endTime: '10:30', status: 'cancelled' }),
+      classOf({ id: '4', classId: 'c1', date: '2026-08-10', startTime: '09:00', endTime: '10:30' })
+    ];
+    expect(getSessionOrdinal(schedules[1], schedules, teachingClass)?.label).toBe('Sesi 2 dari 4');
+    expect(getClassProgress(teachingClass, schedules, []).completed).toBe(1);
+    expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-14')).status).toBe('overdue');
+    expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-09')).status).toBe('ending_soon');
   });
 });

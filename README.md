@@ -49,6 +49,7 @@ Ada **2 file SQL**, jangan tertukar:
 | `schema-v3.sql` | Project yang **sudah punya** tabel V2 (`sensei`, `schedules`, …) |
 | `schema-timezone-settings.sql` | Staging yang **sudah jalan** — tambah timezone Sensei + `app_settings` (grace late-join) |
 | `schema-level-completions.sql` | Staging yang **sudah jalan** — tabel `level_completions` |
+| `schema-class-master.sql` | Staging yang **sudah jalan** — Class Master + `schedules.class_id` |
 
 ### Yang kamu lakukan sekarang
 1. Buat / buka **project Supabase baru** (bukan produksi V2).
@@ -57,7 +58,7 @@ Ada **2 file SQL**, jangan tertukar:
 4. Kalau sukses, di Table Editor harus muncul `sensei`, `schedules`, `session_reports`, dll.
 
 ### Staging yang sudah pernah di-setup
-Jalankan **`schema-timezone-settings.sql`**, lalu **`schema-level-completions.sql`**, lalu **`schema-rls.sql`** lagi (agar policy baru ikut terpasang).
+Jalankan **`schema-timezone-settings.sql`**, lalu **`schema-level-completions.sql`**, lalu **`schema-class-master.sql`**, lalu **`schema-rls.sql`** lagi (agar policy baru ikut terpasang).
 
 ### Setelah schema.sql sukses
 1. **Wajib:** jalankan `schema-rls.sql` (kunci RBAC Super Admin / Kyouiku / Sensei)

@@ -1,6 +1,7 @@
 import type {
   ActionItem,
   AvailabilitySlot,
+  ClassMaster,
   ClassSession,
   LeavePeriod,
   Sensei,
@@ -8,6 +9,7 @@ import type {
   SessionReport
 } from '../types';
 import { WEEKLY_HOUR_TARGET } from '../constants';
+import { getClassHealth } from './classProgress';
 import { toDateKey } from './dates';
 import { getOperationalLabels } from './labels';
 import { findConflicts } from './schedule';
@@ -21,6 +23,7 @@ export function buildActionItems(input: {
   logs: SessionLog[];
   reports: SessionReport[];
   leavePeriods: LeavePeriod[];
+  classMasters?: ClassMaster[];
   weekAnchor: Date | string;
   now?: Date;
 }): ActionItem[] {
@@ -43,7 +46,8 @@ export function buildActionItems(input: {
         title: 'Laporan sesi belum masuk',
         detail: `${session.level} · ${session.date} ${session.startTime}`,
         senseiId: session.senseiId,
-        scheduleId: session.id
+        scheduleId: session.id,
+        classId: session.classId ?? undefined
       });
     }
 
@@ -55,7 +59,8 @@ export function buildActionItems(input: {
         title: 'Referensi rekaman belum ada',
         detail: `${session.level} · perlu ditindaklanjuti sebelum QA`,
         senseiId: session.senseiId,
-        scheduleId: session.id
+        scheduleId: session.id,
+        classId: session.classId ?? undefined
       });
     }
 
@@ -67,7 +72,8 @@ export function buildActionItems(input: {
         title: 'Clock-in terlambat',
         detail: `${session.date} ${session.startTime} · bandingkan dengan jam mulai kelas`,
         senseiId: session.senseiId,
-        scheduleId: session.id
+        scheduleId: session.id,
+        classId: session.classId ?? undefined
       });
     }
   }
@@ -82,6 +88,31 @@ export function buildActionItems(input: {
       senseiId: pair.a.senseiId,
       scheduleId: pair.a.id
     });
+  }
+
+  for (const teachingClass of input.classMasters ?? []) {
+    const health = getClassHealth(teachingClass, input.schedules, input.reports, now);
+    if (health.status === 'overdue') {
+      items.push({
+        id: `overdue:${teachingClass.id}`,
+        kind: 'overdue_class',
+        severity: 'high',
+        title: `${teachingClass.displayName} overdue`,
+        detail: health.detail,
+        senseiId: teachingClass.senseiId,
+        classId: teachingClass.id
+      });
+    } else if (health.status === 'ending_soon') {
+      items.push({
+        id: `ending_soon:${teachingClass.id}`,
+        kind: 'ending_soon',
+        severity: 'medium',
+        title: `${teachingClass.displayName} ending soon`,
+        detail: health.detail,
+        senseiId: teachingClass.senseiId,
+        classId: teachingClass.id
+      });
+    }
   }
 
   for (const sensei of input.sensei) {

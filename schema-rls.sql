@@ -119,6 +119,7 @@ ALTER TABLE session_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_student_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_qa_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE level_completions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE class_masters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- =========================================================
@@ -539,6 +540,22 @@ CREATE POLICY v3_level_completions_write
   ON level_completions FOR ALL TO authenticated
   USING (public.is_kyouiku_or_ops())
   WITH CHECK (public.is_kyouiku_or_ops());
+
+-- =========================================================
+-- CLASS MASTERS
+-- =========================================================
+
+CREATE POLICY v3_class_masters_select
+  ON class_masters FOR SELECT TO authenticated
+  USING (
+    public.is_kyouiku_or_ops()
+    OR sensei_id = public.current_sensei_id()
+  );
+
+CREATE POLICY v3_class_masters_write_ops
+  ON class_masters FOR ALL TO authenticated
+  USING (public.is_ops())
+  WITH CHECK (public.is_ops());
 
 -- =========================================================
 -- QUICK VERIFY (optional)

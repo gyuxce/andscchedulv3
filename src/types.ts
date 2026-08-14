@@ -10,6 +10,8 @@ export type ClassType = 'Private' | 'Semi-Private' | 'Group' | 'Kids Private' | 
 
 export type ClassStatus = 'active' | 'completed' | 'cancelled';
 
+export type ClassMasterStatus = 'draft' | 'ready' | 'active' | 'completed' | 'cancelled';
+
 export type AttendanceStatus = 'Present' | 'Late' | 'Excused' | 'Absent' | 'Partial';
 
 export type RecordingStatus = 'Available' | 'Missing' | 'Not Required';
@@ -26,6 +28,7 @@ export type AvailabilityPattern = 'specific_date' | 'weekly';
 
 export type TabId =
   | 'overview'
+  | 'classes'
   | 'schedule'
   | 'availability'
   | 'teaching'
@@ -99,6 +102,28 @@ export interface Group {
   level: string;
 }
 
+export interface ClassMaster {
+  id: string;
+  displayName: string;
+  code?: string | null;
+  type: ClassType;
+  level: string;
+  senseiId: string;
+  studentIds: string[];
+  requiredMeetings: number;
+  sessionDurationMinutes: number;
+  startDate?: string | null;
+  plannedEndDate?: string | null;
+  meetLink?: string | null;
+  classroomLink?: string | null;
+  chatLink?: string | null;
+  materialLink?: string | null;
+  teachingNotes?: string | null;
+  status: ClassMasterStatus;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface AvailabilitySlot {
   id: string;
   senseiId: string;
@@ -113,6 +138,7 @@ export interface AvailabilitySlot {
 
 export interface ClassSession {
   id: string;
+  classId?: string | null;
   senseiId: string;
   studentIds: string[];
   groupId?: string | null;
@@ -202,6 +228,7 @@ export interface DashboardSnapshot {
   sensei: Sensei[];
   students: Student[];
   groups: Group[];
+  classMasters: ClassMaster[];
   availability: AvailabilitySlot[];
   schedules: ClassSession[];
   sessionLogs: SessionLog[];
@@ -252,12 +279,15 @@ export interface ActionItem {
     | 'schedule_conflict'
     | 'unassigned_sensei'
     | 'hours_below_target'
-    | 'low_availability';
+    | 'low_availability'
+    | 'ending_soon'
+    | 'overdue_class';
   severity: 'high' | 'medium' | 'low';
   title: string;
   detail: string;
   senseiId?: string;
   scheduleId?: string;
+  classId?: string;
 }
 
 export interface DisciplinaryMetrics {

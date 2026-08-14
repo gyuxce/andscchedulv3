@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookOpen,
   CalendarDays,
   ClipboardList,
   LayoutDashboard,
@@ -18,6 +19,7 @@ import type { TabId } from '../../types';
 
 const ICONS: Record<TabId, typeof LayoutDashboard> = {
   overview: LayoutDashboard,
+  classes: BookOpen,
   schedule: CalendarDays,
   availability: Clock3,
   teaching: ClipboardList,

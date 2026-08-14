@@ -5,6 +5,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { OverviewView } from './components/OverviewView';
 import { ScheduleView } from './components/ScheduleView';
+import { ClassesView } from './components/ClassesView';
 import { AvailabilityView } from './components/AvailabilityView';
 import { TeachingView } from './components/TeachingView';
 import { SenseiView } from './components/SenseiView';
@@ -54,6 +55,7 @@ export default function App() {
         <TopBar />
         <main className="flex-1 overflow-y-auto p-6">
           {tab === 'overview' && <OverviewView />}
+          {tab === 'classes' && <ClassesView />}
           {tab === 'schedule' && <ScheduleView />}
           {tab === 'availability' && <AvailabilityView />}
           {tab === 'teaching' && <TeachingView />}

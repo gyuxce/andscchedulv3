@@ -9,11 +9,13 @@ import { isUuid, resolveSenseiId } from '../lib/senseiLink';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { mapProfile } from '../lib/mappers';
 import { hasActiveOrCompletedMakeup } from '../lib/makeup';
+import { addMinutesToTime, generateRecurringDates, suggestPlannedEndDate } from '../lib/recurring';
 import {
   ensureProfile,
   loadDashboardSnapshot,
   upsertAppSettingsRemote,
   upsertAvailabilityRemote,
+  upsertClassMasterRemote,
   upsertLevelCompletionRemote,
   upsertQaRemote,
   upsertScheduleRemote,
@@ -30,6 +32,7 @@ import type {
   AttendanceStatus,
   AvailabilitySlot,
   CancellationInitiator,
+  ClassMaster,
   ClassSession,
   DashboardSnapshot,
   LevelCompletion,
@@ -54,6 +57,7 @@ function emptySnapshot(): DashboardSnapshot {
     sensei: [],
     students: [],
     groups: [],
+    classMasters: [],
     availability: [],
     schedules: [],
     sessionLogs: [],
@@ -84,6 +88,7 @@ interface ClassInput {
   senseiId: string;
   studentIds: string[];
   groupId?: string | null;
+  classId?: string | null;
   type: ClassSession['type'];
   level: string;
   date: string;
@@ -150,6 +155,14 @@ interface DashboardStore extends DashboardSnapshot {
     nextLevel: string | null;
     notes?: string;
   }) => boolean;
+  upsertClassMaster: (input: Omit<ClassMaster, 'id'> & { id?: string }) => string | null;
+  generateClassSchedule: (input: {
+    classId: string;
+    startDate: string;
+    weekdays: number[];
+    startTime: string;
+    meetings?: number;
+  }) => number;
   upsertUser: (user: Omit<UserAccount, 'id'> & { id?: string }) => void;
 }
 
@@ -383,6 +396,7 @@ export const useDashboardStore = create<DashboardStore>()(
         const session: ClassSession = {
           id: createId(),
           ...input,
+          classId: input.classId ?? null,
           makeupOfSessionId: input.makeupOfSessionId ?? null,
           status: 'active',
           updatedAt: new Date().toISOString(),
@@ -882,6 +896,117 @@ export const useDashboardStore = create<DashboardStore>()(
         toast.success(nextLevel ? `Level ${level} completed → ${nextLevel}` : `Level ${level} completed`);
         return true;
       },
+      upsertClassMaster: (input) => {
+        const state = get();
+        if (!input.displayName.trim()) {
+          toast.error('Nama kelas wajib diisi');
+          return null;
+        }
+        if (!input.senseiId || input.studentIds.length === 0) {
+          toast.error('Sensei dan minimal 1 siswa wajib');
+          return null;
+        }
+        if (input.type === 'Semi-Private' && (input.studentIds.length < 2 || input.studentIds.length > 4)) {
+          toast.error('Semi-Private sebaiknya 2–4 siswa');
+          return null;
+        }
+        const id = input.id ?? createId();
+        const next: ClassMaster = {
+          ...input,
+          id,
+          requiredMeetings: Math.max(1, input.requiredMeetings || 10),
+          sessionDurationMinutes: Math.max(30, input.sessionDurationMinutes || 90),
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.currentUser?.name
+        };
+        set((current) => {
+          const exists = current.classMasters.some((item) => item.id === id);
+          pushAudit(current, {
+            action: exists ? 'update_class_master' : 'create_class_master',
+            entity: 'class_masters',
+            recordId: id,
+            newValue: next
+          });
+          return {
+            classMasters: exists
+              ? current.classMasters.map((item) => (item.id === id ? next : item))
+              : [next, ...current.classMasters],
+            auditLogs: current.auditLogs
+          };
+        });
+        void safeRemote(() => upsertClassMasterRemote(next), 'Simpan Class Master');
+        toast.success('Class Master disimpan');
+        return id;
+      },
+      generateClassSchedule: ({ classId, startDate, weekdays, startTime, meetings }) => {
+        const state = get();
+        const teachingClass = state.classMasters.find((item) => item.id === classId);
+        if (!teachingClass) {
+          toast.error('Class Master tidak ditemukan');
+          return 0;
+        }
+        if (weekdays.length === 0) {
+          toast.error('Pilih minimal 1 hari berulang');
+          return 0;
+        }
+        const count = meetings ?? teachingClass.requiredMeetings;
+        const dates = generateRecurringDates(startDate, weekdays, count);
+        if (!dates.length) {
+          toast.error('Tidak ada tanggal yang bisa digenerate');
+          return 0;
+        }
+        const endTime = addMinutesToTime(startTime, teachingClass.sessionDurationMinutes);
+        const created: ClassSession[] = [];
+        for (const date of dates) {
+          const session: ClassSession = {
+            id: createId(),
+            classId,
+            senseiId: teachingClass.senseiId,
+            studentIds: teachingClass.studentIds,
+            type: teachingClass.type,
+            level: teachingClass.level,
+            date,
+            startTime,
+            endTime,
+            status: 'active',
+            updatedAt: new Date().toISOString(),
+            updatedBy: state.currentUser?.name
+          };
+          if (wouldConflict([...state.schedules, ...created], session)) {
+            toast.error(`Bentrok di ${date} ${startTime}. Generate dibatalkan.`);
+            return 0;
+          }
+          created.push(session);
+        }
+        const plannedEnd = suggestPlannedEndDate(startDate, weekdays, count);
+        const updatedClass: ClassMaster = {
+          ...teachingClass,
+          startDate,
+          plannedEndDate: teachingClass.plannedEndDate || plannedEnd,
+          status: teachingClass.status === 'draft' ? 'ready' : teachingClass.status,
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.currentUser?.name
+        };
+        set((current) => {
+          pushAudit(current, {
+            action: 'generate_class_schedule',
+            entity: 'class_masters',
+            recordId: classId,
+            newValue: { sessions: created.length, startDate, weekdays, startTime }
+          });
+          return {
+            schedules: [...created, ...current.schedules],
+            classMasters: current.classMasters.map((item) => (item.id === classId ? updatedClass : item)),
+            auditLogs: current.auditLogs
+          };
+        });
+        void safeRemote(async () => {
+          await upsertClassMasterRemote(updatedClass);
+          for (const session of created) await upsertScheduleRemote(session);
+        }, 'Generate jadwal berulang');
+        toast.success(`${created.length} sesi digenerate (Sesi 1–${created.length} dari ${teachingClass.requiredMeetings})`);
+        return created.length;
+      },
       upsertUser: (user) => {
         set((state) => {
           const id = user.id ?? createId();
@@ -915,6 +1040,7 @@ export function useScopedData() {
   const currentUser = useDashboardStore((state) => state.currentUser);
   const sensei = useDashboardStore((state) => state.sensei);
   const students = useDashboardStore((state) => state.students);
+  const classMasters = useDashboardStore((state) => state.classMasters);
   const schedules = useDashboardStore((state) => state.schedules);
   const availability = useDashboardStore((state) => state.availability);
   const sessionLogs = useDashboardStore((state) => state.sessionLogs);
@@ -927,13 +1053,24 @@ export function useScopedData() {
   });
 
   if (permissions.canViewAllSchedules) {
-    return { sensei, students, schedules, availability, sessionLogs, sessionReports, qaScores, linkedSenseiId };
+    return {
+      sensei,
+      students,
+      classMasters,
+      schedules,
+      availability,
+      sessionLogs,
+      sessionReports,
+      qaScores,
+      linkedSenseiId
+    };
   }
 
   const senseiId = linkedSenseiId;
   return {
     sensei: sensei.filter((item) => item.id === senseiId),
     students: students.filter((item) => item.senseiId === senseiId),
+    classMasters: classMasters.filter((item) => item.senseiId === senseiId),
     schedules: schedules.filter((item) => item.senseiId === senseiId),
     availability: availability.filter((item) => item.senseiId === senseiId),
     sessionLogs: sessionLogs.filter((item) => item.senseiId === senseiId),

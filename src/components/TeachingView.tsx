@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ATTENDANCE_OPTIONS } from '../constants';
+import { getSessionOrdinal } from '../lib/classProgress';
 import { formatDateTime } from '../lib/dates';
 import { ATTENDANCE_TONE, displayName, TYPE_TONE, WORKFLOW_TONE } from '../lib/display';
 import { getSessionWorkflow, workflowLabel } from '../lib/session';
@@ -22,6 +23,7 @@ export function TeachingView() {
   const permissions = usePermissions();
   const allStudents = useDashboardStore((state) => state.students);
   const allSensei = useDashboardStore((state) => state.sensei);
+  const classMasters = useDashboardStore((state) => state.classMasters);
   const clockIn = useDashboardStore((state) => state.clockIn);
   const clockOut = useDashboardStore((state) => state.clockOut);
   const overrideClock = useDashboardStore((state) => state.overrideClock);
@@ -41,14 +43,17 @@ export function TeachingView() {
         .map((session) => {
           const log = sessionLogs.find((item) => item.scheduleId === session.id);
           const report = sessionReports.find((item) => item.scheduleId === session.id);
+          const teachingClass = classMasters.find((item) => item.id === session.classId);
+          const ordinal = getSessionOrdinal(session, schedules, teachingClass);
           return {
             session,
             log,
             report,
-            state: getSessionWorkflow(session, log, report)
+            state: getSessionWorkflow(session, log, report),
+            ordinal
           };
         }),
-    [schedules, sessionLogs, sessionReports]
+    [schedules, sessionLogs, sessionReports, classMasters]
   );
 
   const selectedLog = selected ? sessionLogs.find((item) => item.scheduleId === selected.id) : undefined;
@@ -73,7 +78,7 @@ export function TeachingView() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ session, log, state }) => (
+            {rows.map(({ session, log, state, ordinal }) => (
               <tr key={session.id} className="border-t border-[#efe4d2] hover:bg-white/70">
                 <td className="px-4 py-3">
                   <button className="text-left" onClick={() => {
@@ -89,6 +94,7 @@ export function TeachingView() {
                     <div className="text-xs text-ink-soft">
                       {session.studentIds.map((id) => displayName(allStudents, id)).join(', ') || 'Tanpa siswa'}
                     </div>
+                    {ordinal ? <div className="text-xs font-semibold text-maple">{ordinal.label}</div> : null}
                   </button>
                 </td>
                 <td className="px-4 py-3">{displayName(allSensei, session.senseiId)}</td>
@@ -168,6 +174,10 @@ function SessionDrawer(props: {
   onOverridePerformance: (reportId: string, studentId: string, score: number, reason: string) => void;
   canInput: boolean;
 }) {
+  const classMasters = useDashboardStore((state) => state.classMasters);
+  const schedules = useDashboardStore((state) => state.schedules);
+  const teachingClass = classMasters.find((item) => item.id === props.session.classId);
+  const ordinal = getSessionOrdinal(props.session, schedules, teachingClass);
   const [records, setRecords] = useState<StudentSessionRecord[]>(
     props.report?.students ??
       props.session.studentIds.map((studentId) => ({
@@ -193,6 +203,8 @@ function SessionDrawer(props: {
     >
       <div className="flex flex-wrap gap-2">
         <Badge tone={WORKFLOW_TONE[props.state]}>{workflowLabel(props.state)}</Badge>
+        {ordinal ? <Badge tone="maple">{ordinal.label}</Badge> : null}
+        {teachingClass ? <Badge>{teachingClass.displayName}</Badge> : null}
         {props.log?.lateJoin ? <Badge tone="danger">Late join</Badge> : null}
         {props.log?.overridden ? <Badge tone="gold">Clock override</Badge> : null}
       </div>

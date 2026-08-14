@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  ClassMaster,
   DashboardSnapshot,
   LevelCompletion,
   SenseiTimezone,
@@ -9,8 +10,10 @@ import type {
 import { WEEKLY_HOUR_TARGET } from '../constants';
 import {
   availabilityToRow,
+  classMasterToRow,
   mapAudit,
   mapAvailability,
+  mapClassMaster,
   mapLeaveFromStatus,
   mapLevelCompletion,
   mapProfile,
@@ -60,7 +63,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     auditRes,
     profilesRes,
     settingsRes,
-    levelRes
+    levelRes,
+    classRes
   ] = await Promise.all([
     supabase.from('sensei').select('*'),
     supabase.from('sensei_status').select('*'),
@@ -75,7 +79,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
     supabase.from('profiles').select('*'),
     supabase.from('app_settings').select('key, value'),
-    supabase.from('level_completions').select('*').order('completed_at', { ascending: false })
+    supabase.from('level_completions').select('*').order('completed_at', { ascending: false }),
+    supabase.from('class_masters').select('*').order('updated_at', { ascending: false })
   ]);
 
   const firstError = [
@@ -139,6 +144,10 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     ? []
     : ((levelRes.data || []) as Record<string, unknown>[]).map(mapLevelCompletion);
 
+  const classMasters = classRes.error
+    ? []
+    : ((classRes.data || []) as Record<string, unknown>[]).map(mapClassMaster);
+
   return {
     users,
     sensei,
@@ -149,6 +158,7 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
       studentIds: Array.isArray(row.student_ids) ? row.student_ids.map(String) : [],
       level: ''
     })),
+    classMasters,
     availability: ((availabilityRes.data || []) as Record<string, unknown>[]).map(mapAvailability),
     schedules: ((schedulesRes.data || []) as Record<string, unknown>[]).map(mapSchedule),
     sessionLogs: ((logsRes.data || []) as Record<string, unknown>[]).map(mapSessionLog),
@@ -350,5 +360,12 @@ export async function upsertStudentRemote(student: Student) {
       is_active: student.isActive
     })
     .eq('id', student.id);
+  if (error) throw new Error(error.message);
+}
+
+export async function upsertClassMasterRemote(teachingClass: ClassMaster) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('class_masters').upsert(classMasterToRow(teachingClass));
   if (error) throw new Error(error.message);
 }

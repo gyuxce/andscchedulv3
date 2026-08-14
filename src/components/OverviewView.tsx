@@ -14,7 +14,9 @@ const KIND_ICON = {
   schedule_conflict: AlertTriangle,
   unassigned_sensei: Users,
   hours_below_target: Gauge,
-  low_availability: Clock
+  low_availability: Clock,
+  ending_soon: Clock,
+  overdue_class: AlertTriangle
 };
 
 const KIND_LABEL = {
@@ -24,7 +26,9 @@ const KIND_LABEL = {
   schedule_conflict: 'Konflik jadwal',
   unassigned_sensei: 'UNASSIGNED',
   hours_below_target: 'Di bawah 16 jam',
-  low_availability: 'Ketersediaan rendah'
+  low_availability: 'Ketersediaan rendah',
+  ending_soon: 'Ending soon',
+  overdue_class: 'Overdue'
 };
 
 export function OverviewView() {
@@ -33,7 +37,7 @@ export function OverviewView() {
   const weekAnchor = useDashboardStore((state) => state.weekAnchor);
   const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const setTab = useDashboardStore((state) => state.setTab);
-  const { sensei, schedules, availability, sessionLogs, sessionReports } = useScopedData();
+  const { sensei, schedules, availability, sessionLogs, sessionReports, classMasters } = useScopedData();
   const allSensei = useDashboardStore((state) => state.sensei);
 
   const items = buildActionItems({
@@ -43,6 +47,7 @@ export function OverviewView() {
     logs: sessionLogs,
     reports: sessionReports,
     leavePeriods,
+    classMasters,
     weekAnchor
   });
 
@@ -60,7 +65,7 @@ export function OverviewView() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-ink-soft">
-          Action Center menampilkan pengecualian yang butuh tindakan: laporan, rekaman, keterlambatan, konflik, Sensei UNASSIGNED, dan gap jam mingguan.
+          Action Center menampilkan laporan hilang, rekaman, late join, konflik, ending soon / overdue Class Master, UNASSIGNED, dan gap jam.
         </p>
         <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
       </div>

@@ -14,18 +14,54 @@ export const CLASS_LEVELS = [
   'Intensif Pra Guntai',
   'Intensif N5',
   'Intensif N4',
+  'Intensif N3',
+  'Intensif N2',
   'Pra Guntai',
   'Guntai 1',
   'Guntai 2',
   'Guntai 3',
   'Guntai 4',
+  'Guntai 5',
+  'Guntai 6',
+  'Guntai 7',
+  'Guntai 8',
+  'Guntai 9',
+  'Guntai 10',
+  'Daimyou 1',
+  'Daimyou 2',
+  'Daimyou 3',
+  'Daimyou 4',
+  'Daimyou 5',
+  'Daimyou 6',
+  'Shogun 1',
+  'Shogun 2',
+  'Shogun 3',
+  'Shogun 4',
+  'Shogun 5',
+  'Shogun 6',
+  'Shogun 7',
+  'Shogun 8',
   'N5',
   'N4',
   'N3',
+  'N2',
+  'Custom N5',
+  'Custom N4',
+  'Custom N3',
   'Custom Kaiwa',
-  'Level 1 Kids',
-  'Level 2 Kids'
+  'Custom Intensif N5',
+  'Custom Intensif N4',
+  'Irodori',
+  ...Array.from({ length: 18 }, (_, index) => `Level ${index} Kids`)
 ];
+
+export const CLASS_MASTER_STATUSES = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'ready', label: 'Ready to Start' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' }
+] as const;
 
 export const DAYS_OF_WEEK = [
   { label: 'Senin', value: 1 },
@@ -68,6 +104,7 @@ export const ROLE_COPY: Record<AppRole, { title: string; subtitle: string }> = {
 export const NAV_BY_ROLE: Record<AppRole, TabId[]> = {
   'Super Admin': [
     'overview',
+    'classes',
     'schedule',
     'availability',
     'teaching',
@@ -81,6 +118,7 @@ export const NAV_BY_ROLE: Record<AppRole, TabId[]> = {
   ],
   Kyouiku: [
     'overview',
+    'classes',
     'schedule',
     'availability',
     'teaching',
@@ -90,11 +128,12 @@ export const NAV_BY_ROLE: Record<AppRole, TabId[]> = {
     'disciplinary',
     'audit'
   ],
-  Sensei: ['overview', 'schedule', 'availability', 'teaching', 'students', 'qa', 'disciplinary']
+  Sensei: ['overview', 'classes', 'schedule', 'availability', 'teaching', 'students', 'qa', 'disciplinary']
 };
 
 export const TAB_LABELS: Record<TabId, string> = {
   overview: 'Action Center',
+  classes: 'Class Master',
   schedule: 'Jadwal Resmi',
   availability: 'Ketersediaan',
   teaching: 'Sesi Mengajar',

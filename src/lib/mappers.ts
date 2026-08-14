@@ -7,6 +7,8 @@ import type {
   ClassType,
   LeavePeriod,
   LevelCompletion,
+  ClassMaster,
+  ClassMasterStatus,
   RecordingStatus,
   Sensei,
   SenseiPrimaryStatus,
@@ -80,6 +82,7 @@ export function mapSchedule(row: Record<string, unknown>): ClassSession {
       : [];
   return {
     id: String(row.id),
+    classId: row.class_id ? String(row.class_id) : null,
     senseiId: String(row.sensei_id || ''),
     studentIds,
     groupId: row.group_id ? String(row.group_id) : null,
@@ -97,6 +100,30 @@ export function mapSchedule(row: Record<string, unknown>): ClassSession {
     originalSenseiId: row.original_sensei_id ? String(row.original_sensei_id) : null,
     swapInitiator: (row.swap_initiator as ClassSession['swapInitiator']) || null,
     swapReason: row.swap_reason ? String(row.swap_reason) : null,
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+    updatedBy: row.updated_by ? String(row.updated_by) : undefined
+  };
+}
+
+export function mapClassMaster(row: Record<string, unknown>): ClassMaster {
+  return {
+    id: String(row.id),
+    displayName: String(row.display_name || ''),
+    code: row.code ? String(row.code) : null,
+    type: (row.type as ClassType) || 'Private',
+    level: String(row.level || ''),
+    senseiId: String(row.sensei_id || ''),
+    studentIds: Array.isArray(row.student_ids) ? row.student_ids.map(String) : [],
+    requiredMeetings: Number(row.required_meetings ?? 10),
+    sessionDurationMinutes: Number(row.session_duration_minutes ?? 90),
+    startDate: row.start_date ? String(row.start_date).slice(0, 10) : null,
+    plannedEndDate: row.planned_end_date ? String(row.planned_end_date).slice(0, 10) : null,
+    meetLink: row.meet_link ? String(row.meet_link) : null,
+    classroomLink: row.classroom_link ? String(row.classroom_link) : null,
+    chatLink: row.chat_link ? String(row.chat_link) : null,
+    materialLink: row.material_link ? String(row.material_link) : null,
+    teachingNotes: row.teaching_notes ? String(row.teaching_notes) : null,
+    status: (row.status as ClassMasterStatus) || 'draft',
     updatedAt: row.updated_at ? String(row.updated_at) : undefined,
     updatedBy: row.updated_by ? String(row.updated_by) : undefined
   };
@@ -223,6 +250,7 @@ export function mapLevelCompletion(row: Record<string, unknown>): LevelCompletio
 export function scheduleToRow(session: ClassSession) {
   return {
     id: session.id,
+    class_id: session.classId || null,
     sensei_id: session.senseiId || null,
     student_id: session.studentIds[0] || null,
     student_ids: session.studentIds,
@@ -242,6 +270,30 @@ export function scheduleToRow(session: ClassSession) {
     swap_reason: session.swapReason || null,
     updated_at: session.updatedAt || new Date().toISOString(),
     updated_by: session.updatedBy || null
+  };
+}
+
+export function classMasterToRow(teachingClass: ClassMaster) {
+  return {
+    id: teachingClass.id,
+    display_name: teachingClass.displayName,
+    code: teachingClass.code || null,
+    type: teachingClass.type,
+    level: teachingClass.level,
+    sensei_id: teachingClass.senseiId || null,
+    student_ids: teachingClass.studentIds,
+    required_meetings: teachingClass.requiredMeetings,
+    session_duration_minutes: teachingClass.sessionDurationMinutes,
+    start_date: teachingClass.startDate || null,
+    planned_end_date: teachingClass.plannedEndDate || null,
+    meet_link: teachingClass.meetLink || null,
+    classroom_link: teachingClass.classroomLink || null,
+    chat_link: teachingClass.chatLink || null,
+    material_link: teachingClass.materialLink || null,
+    teaching_notes: teachingClass.teachingNotes || null,
+    status: teachingClass.status,
+    updated_at: teachingClass.updatedAt || new Date().toISOString(),
+    updated_by: teachingClass.updatedBy || null
   };
 }
 
