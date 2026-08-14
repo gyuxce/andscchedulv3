@@ -2,6 +2,12 @@ import { useMemo, useState } from 'react';
 import { ATTENDANCE_OPTIONS } from '../constants';
 import { getSessionOrdinal } from '../lib/classProgress';
 import { formatDateTime } from '../lib/dates';
+import {
+  actualDurationMinutes,
+  durationVarianceMinutes,
+  formatDurationMinutes,
+  scheduledDurationMinutes
+} from '../lib/duration';
 import { ATTENDANCE_TONE, displayName, TYPE_TONE, WORKFLOW_TONE } from '../lib/display';
 import { getSessionWorkflow, workflowLabel } from '../lib/session';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
@@ -45,12 +51,18 @@ export function TeachingView() {
           const report = sessionReports.find((item) => item.scheduleId === session.id);
           const teachingClass = classMasters.find((item) => item.id === session.classId);
           const ordinal = getSessionOrdinal(session, schedules, teachingClass);
+          const scheduled = scheduledDurationMinutes(session);
+          const actual = actualDurationMinutes(log);
+          const variance = durationVarianceMinutes(session, log);
           return {
             session,
             log,
             report,
             state: getSessionWorkflow(session, log, report),
-            ordinal
+            ordinal,
+            scheduled,
+            actual,
+            variance
           };
         }),
     [schedules, sessionLogs, sessionReports, classMasters]
@@ -64,7 +76,7 @@ export function TeachingView() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-soft">
-        Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Absensi dan performa diisi per siswa, termasuk kelas Group/Semi-Private.
+        Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Durasi aktual = Clock Out − Clock In.
       </p>
       <div className="ui-card overflow-hidden">
         <table className="w-full text-sm">
@@ -73,12 +85,13 @@ export function TeachingView() {
               <th className="px-4 py-3">Kelas</th>
               <th className="px-4 py-3">Sensei</th>
               <th className="px-4 py-3">Waktu</th>
+              <th className="px-4 py-3">Durasi</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Clock</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ session, log, state, ordinal }) => (
+            {rows.map(({ session, log, state, ordinal, scheduled, actual, variance }) => (
               <tr key={session.id} className="border-t border-[#efe4d2] hover:bg-white/70">
                 <td className="px-4 py-3">
                   <button className="text-left" onClick={() => {
@@ -99,6 +112,15 @@ export function TeachingView() {
                 </td>
                 <td className="px-4 py-3">{displayName(allSensei, session.senseiId)}</td>
                 <td className="px-4 py-3">{session.date} · {session.startTime}–{session.endTime}</td>
+                <td className="px-4 py-3 text-xs">
+                  <div>Jadwal {formatDurationMinutes(scheduled)}</div>
+                  <div>Aktual {formatDurationMinutes(actual)}</div>
+                  {variance != null ? (
+                    <div className={variance < 0 ? 'font-semibold text-rose-700' : 'text-ink-soft'}>
+                      Selisih {formatDurationMinutes(variance)}
+                    </div>
+                  ) : null}
+                </td>
                 <td className="px-4 py-3"><Badge tone={WORKFLOW_TONE[state]}>{workflowLabel(state)}</Badge></td>
                 <td className="px-4 py-3 text-xs">
                   {log?.clockInAt ? formatDateTime(log.clockInAt) : '—'}
@@ -164,6 +186,7 @@ function SessionDrawer(props: {
     payload: {
       students: StudentSessionRecord[];
       materialCovered: string;
+      materialUrl?: string;
       levelProgress: string;
       sessionNotes?: string;
       recordingUrl?: string;
@@ -178,6 +201,9 @@ function SessionDrawer(props: {
   const schedules = useDashboardStore((state) => state.schedules);
   const teachingClass = classMasters.find((item) => item.id === props.session.classId);
   const ordinal = getSessionOrdinal(props.session, schedules, teachingClass);
+  const scheduled = scheduledDurationMinutes(props.session);
+  const actual = actualDurationMinutes(props.log);
+  const variance = durationVarianceMinutes(props.session, props.log);
   const [records, setRecords] = useState<StudentSessionRecord[]>(
     props.report?.students ??
       props.session.studentIds.map((studentId) => ({
@@ -188,6 +214,7 @@ function SessionDrawer(props: {
       }))
   );
   const [materialCovered, setMaterialCovered] = useState(props.report?.materialCovered ?? '');
+  const [materialUrl, setMaterialUrl] = useState(props.report?.materialUrl ?? teachingClass?.materialLink ?? '');
   const [levelProgress, setLevelProgress] = useState(props.report?.levelProgress ?? '');
   const [sessionNotes, setSessionNotes] = useState(props.report?.sessionNotes ?? '');
   const [recordingUrl, setRecordingUrl] = useState(props.report?.recordingUrl ?? '');
@@ -207,6 +234,23 @@ function SessionDrawer(props: {
         {teachingClass ? <Badge>{teachingClass.displayName}</Badge> : null}
         {props.log?.lateJoin ? <Badge tone="danger">Late join</Badge> : null}
         {props.log?.overridden ? <Badge tone="gold">Clock override</Badge> : null}
+      </div>
+      <div className="grid gap-2 rounded-2xl border border-[#efe4d2] p-3 text-sm md:grid-cols-3">
+        <div>
+          <p className="ui-label">Durasi jadwal</p>
+          <p className="font-semibold">{formatDurationMinutes(scheduled)}</p>
+        </div>
+        <div>
+          <p className="ui-label">Durasi aktual</p>
+          <p className="font-semibold">{formatDurationMinutes(actual)}</p>
+          <p className="text-xs text-ink-soft">Clock Out − Clock In</p>
+        </div>
+        <div>
+          <p className="ui-label">Selisih</p>
+          <p className={`font-semibold ${variance != null && variance < 0 ? 'text-rose-700' : ''}`}>
+            {formatDurationMinutes(variance)}
+          </p>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {props.canOperate && props.state === 'ready' ? <Button tone="primary" onClick={props.onClockIn}>Clock in</Button> : null}
@@ -267,6 +311,10 @@ function SessionDrawer(props: {
         <input className="ui-input" value={materialCovered} disabled={!props.canInput} onChange={(event) => setMaterialCovered(event.target.value)} />
       </label>
       <label>
+        <span className="ui-label">Link materi (opsional)</span>
+        <input className="ui-input" value={materialUrl} disabled={!props.canInput} onChange={(event) => setMaterialUrl(event.target.value)} />
+      </label>
+      <label>
         <span className="ui-label">Progres level</span>
         <input className="ui-input" value={levelProgress} disabled={!props.canInput} onChange={(event) => setLevelProgress(event.target.value)} />
       </label>
@@ -296,6 +344,7 @@ function SessionDrawer(props: {
             props.onSubmit(props.session.id, {
               students: records,
               materialCovered,
+              materialUrl: materialUrl || undefined,
               levelProgress,
               sessionNotes,
               recordingUrl,

@@ -95,6 +95,23 @@ export interface LevelCompletion {
   notes?: string;
 }
 
+export type EnrollmentStatus = 'active' | 'completed' | 'transferred' | 'cancelled';
+
+export interface Enrollment {
+  id: string;
+  studentId: string;
+  level: string;
+  classType?: ClassType | null;
+  classId?: string | null;
+  senseiId?: string | null;
+  status: EnrollmentStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+  notes?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -183,6 +200,7 @@ export interface SessionReport {
   submittedAt: string;
   students: StudentSessionRecord[];
   materialCovered: string;
+  materialUrl?: string;
   levelProgress: string;
   sessionNotes?: string;
   recordingUrl?: string;
@@ -237,6 +255,7 @@ export interface DashboardSnapshot {
   leavePeriods: LeavePeriod[];
   auditLogs: AuditLog[];
   levelCompletions: LevelCompletion[];
+  enrollments: Enrollment[];
   settings: AppSettings;
 }
 

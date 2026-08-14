@@ -9,6 +9,13 @@ import { filterAcademicReportRows, hasActiveOrCompletedMakeup } from '../makeup'
 import { generateRecurringDates } from '../recurring';
 import { getClassHealth, getClassProgress, getSessionOrdinal } from '../classProgress';
 import { buildActionItems } from '../actionCenter';
+import {
+  actualDurationMinutes,
+  durationVarianceMinutes,
+  formatDurationMinutes,
+  scheduledDurationMinutes
+} from '../duration';
+import { ensureClassEnrollments, progressEnrollmentJourney } from '../enrollment';
 import type { ClassMaster, ClassSession, Sensei } from '../../types';
 
 const yuki: Sensei = {
@@ -297,5 +304,75 @@ describe('recurring + session X of X + class health', () => {
     expect(getClassProgress(teachingClass, schedules, []).completed).toBe(1);
     expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-14')).status).toBe('overdue');
     expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-09')).status).toBe('ending_soon');
+  });
+});
+
+describe('duration clock', () => {
+  it('computes scheduled, actual, and variance from clock in/out', () => {
+    const session = classOf({ id: 'd1', date: '2026-08-14', startTime: '09:00', endTime: '10:30' });
+    expect(scheduledDurationMinutes(session)).toBe(90);
+    expect(actualDurationMinutes(null)).toBeNull();
+    const log = {
+      id: 'l1',
+      scheduleId: 'd1',
+      senseiId: 's1',
+      clockInAt: '2026-08-14T02:05:00.000Z',
+      clockOutAt: '2026-08-14T03:20:00.000Z',
+      lateJoin: true,
+      overridden: false
+    };
+    expect(actualDurationMinutes(log)).toBe(75);
+    expect(durationVarianceMinutes(session, log)).toBe(-15);
+    expect(formatDurationMinutes(-15)).toBe('−15m');
+  });
+});
+
+describe('enrollment journey', () => {
+  it('closes completed level and opens next without overwriting history', () => {
+    const existing = [
+      {
+        id: 'e1',
+        studentId: 'st1',
+        level: 'N5',
+        status: 'active' as const,
+        startDate: '2026-07-01',
+        endDate: null
+      }
+    ];
+    const { enrollments, changed } = progressEnrollmentJourney({
+      enrollments: existing,
+      studentId: 'st1',
+      completedLevel: 'N5',
+      nextLevel: 'N4',
+      createId: () => 'e2',
+      actorName: 'Kyouiku'
+    });
+    expect(changed).toHaveLength(2);
+    expect(enrollments.find((item) => item.id === 'e1')?.status).toBe('completed');
+    expect(enrollments.find((item) => item.id === 'e1')?.endDate).toBeTruthy();
+    expect(enrollments.find((item) => item.id === 'e2')?.status).toBe('active');
+    expect(enrollments.find((item) => item.id === 'e2')?.level).toBe('N4');
+  });
+
+  it('ensures class master students get active enrollments', () => {
+    const teachingClass: ClassMaster = {
+      id: 'c1',
+      displayName: 'N5 Private A',
+      type: 'Private',
+      level: 'N5',
+      senseiId: 's1',
+      studentIds: ['st1', 'st2'],
+      requiredMeetings: 10,
+      sessionDurationMinutes: 90,
+      startDate: '2026-08-01',
+      status: 'active'
+    };
+    const { enrollments, changed } = ensureClassEnrollments({
+      enrollments: [],
+      teachingClass,
+      createId: () => crypto.randomUUID()
+    });
+    expect(changed).toHaveLength(2);
+    expect(enrollments.every((item) => item.status === 'active' && item.level === 'N5')).toBe(true);
   });
 });

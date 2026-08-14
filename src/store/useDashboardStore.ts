@@ -22,10 +22,12 @@ import {
   upsertSenseiStatusRemote,
   upsertSenseiTimezoneRemote,
   upsertSessionLogRemote,
+  upsertEnrollmentRemote,
   upsertSessionReportRemote,
   upsertStudentRemote,
   writeAudit
 } from '../services/supabaseData';
+import { ensureClassEnrollments, progressEnrollmentJourney } from '../lib/enrollment';
 import type {
   AppRole,
   AppSettings,
@@ -66,6 +68,7 @@ function emptySnapshot(): DashboardSnapshot {
     leavePeriods: [],
     auditLogs: [],
     levelCompletions: [],
+    enrollments: [],
     settings: {
       lateGraceMinutes: 0,
       minAttendancePercent: null,
@@ -126,6 +129,7 @@ interface DashboardStore extends DashboardSnapshot {
     payload: {
       students: StudentSessionRecord[];
       materialCovered: string;
+      materialUrl?: string;
       levelProgress: string;
       sessionNotes?: string;
       recordingUrl?: string;
@@ -874,17 +878,29 @@ export const useDashboardStore = create<DashboardStore>()(
             ? [student.academicNotes, `Completed ${level}: ${notes}`].filter(Boolean).join(' · ')
             : student.academicNotes
         };
+        const journey = progressEnrollmentJourney({
+          enrollments: state.enrollments,
+          studentId,
+          completedLevel: level,
+          nextLevel,
+          createId,
+          actorName: state.currentUser?.name,
+          classType: student.type,
+          senseiId: student.senseiId ?? null,
+          notes
+        });
         set((current) => {
           pushAudit(current, {
             action: 'complete_level',
             entity: 'level_completions',
             recordId: completion.id,
             oldValue: { currentLevel: student.currentLevel },
-            newValue: { level, nextLevel },
+            newValue: { level, nextLevel, enrollments: journey.changed.map((item) => item.id) },
             reason: notes
           });
           return {
             levelCompletions: [completion, ...current.levelCompletions],
+            enrollments: journey.enrollments,
             students: current.students.map((item) => (item.id === studentId ? updatedStudent : item)),
             auditLogs: current.auditLogs
           };
@@ -892,6 +908,9 @@ export const useDashboardStore = create<DashboardStore>()(
         void safeRemote(async () => {
           await upsertLevelCompletionRemote(completion);
           await upsertStudentRemote(updatedStudent);
+          for (const enrollment of journey.changed) {
+            await upsertEnrollmentRemote(enrollment);
+          }
         }, 'Tandai level selesai');
         toast.success(nextLevel ? `Level ${level} completed → ${nextLevel}` : `Level ${level} completed`);
         return true;
@@ -919,22 +938,34 @@ export const useDashboardStore = create<DashboardStore>()(
           updatedAt: new Date().toISOString(),
           updatedBy: state.currentUser?.name
         };
+        const ensured = ensureClassEnrollments({
+          enrollments: state.enrollments,
+          teachingClass: next,
+          createId,
+          actorName: state.currentUser?.name
+        });
         set((current) => {
           const exists = current.classMasters.some((item) => item.id === id);
           pushAudit(current, {
             action: exists ? 'update_class_master' : 'create_class_master',
             entity: 'class_masters',
             recordId: id,
-            newValue: next
+            newValue: { class: next, enrollmentIds: ensured.changed.map((item) => item.id) }
           });
           return {
             classMasters: exists
               ? current.classMasters.map((item) => (item.id === id ? next : item))
               : [next, ...current.classMasters],
+            enrollments: ensured.enrollments,
             auditLogs: current.auditLogs
           };
         });
-        void safeRemote(() => upsertClassMasterRemote(next), 'Simpan Class Master');
+        void safeRemote(async () => {
+          await upsertClassMasterRemote(next);
+          for (const enrollment of ensured.changed) {
+            await upsertEnrollmentRemote(enrollment);
+          }
+        }, 'Simpan Class Master');
         toast.success('Class Master disimpan');
         return id;
       },

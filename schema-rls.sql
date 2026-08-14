@@ -120,6 +120,7 @@ ALTER TABLE session_student_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_qa_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE level_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE class_masters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- =========================================================
@@ -556,6 +557,31 @@ CREATE POLICY v3_class_masters_write_ops
   ON class_masters FOR ALL TO authenticated
   USING (public.is_ops())
   WITH CHECK (public.is_ops());
+
+-- =========================================================
+-- ENROLLMENTS / LEARNING JOURNEY
+-- =========================================================
+
+CREATE POLICY v3_enrollments_select
+  ON enrollments FOR SELECT TO authenticated
+  USING (
+    public.is_kyouiku_or_ops()
+    OR sensei_id = public.current_sensei_id()
+    OR EXISTS (
+      SELECT 1
+      FROM schedules sch
+      WHERE sch.sensei_id = public.current_sensei_id()
+        AND (
+          sch.student_id = enrollments.student_id
+          OR sch.student_ids ? enrollments.student_id::text
+        )
+    )
+  );
+
+CREATE POLICY v3_enrollments_write
+  ON enrollments FOR ALL TO authenticated
+  USING (public.is_kyouiku_or_ops())
+  WITH CHECK (public.is_kyouiku_or_ops());
 
 -- =========================================================
 -- QUICK VERIFY (optional)

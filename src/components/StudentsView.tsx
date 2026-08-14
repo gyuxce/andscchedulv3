@@ -11,6 +11,7 @@ export function StudentsView() {
   const permissions = usePermissions();
   const allSensei = useDashboardStore((state) => state.sensei);
   const levelCompletions = useDashboardStore((state) => state.levelCompletions);
+  const enrollments = useDashboardStore((state) => state.enrollments);
   const completeLevel = useDashboardStore((state) => state.completeLevel);
   const { students, sessionReports, schedules } = useScopedData();
   const [selectedId, setSelectedId] = useState(students[0]?.id ?? '');
@@ -42,6 +43,20 @@ export function StudentsView() {
   const currentLevelCompleted = selected
     ? studentCompletions.some((item) => item.level === selected.currentLevel)
     : false;
+
+  const studentEnrollments = useMemo(() => {
+    if (!selected) return [];
+    return enrollments
+      .filter((item) => item.studentId === selected.id)
+      .sort((a, b) => {
+        const aKey = a.startDate || a.updatedAt || '';
+        const bKey = b.startDate || b.updatedAt || '';
+        return bKey.localeCompare(aKey);
+      });
+  }, [enrollments, selected]);
+
+  const activeEnrollment = studentEnrollments.find((item) => item.status === 'active');
+  const learningHistory = studentEnrollments.filter((item) => item.status !== 'active');
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
@@ -81,7 +96,7 @@ export function StudentsView() {
               </div>
             </div>
             <p className="mt-3 text-xs text-ink-soft">
-              Data siswa di V3 hanya untuk operasional belajar. Makeup tidak dihitung dobel di riwayat.
+              Enrollment disimpan per level (history tidak di-overwrite). Makeup tidak dihitung dobel di riwayat sesi.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
@@ -91,15 +106,58 @@ export function StudentsView() {
               value={attendanceRate === null ? '—' : `${Math.round(attendanceRate * 100)}%`}
               hint="Kebijakan Late/Excused/Partial masih TBC Kyouiku"
             />
-            <StatCard label="Level saat ini" value={selected.currentLevel} />
+            <StatCard label="Level saat ini" value={activeEnrollment?.level || selected.currentLevel} />
           </div>
+
+          <div className="ui-card p-4">
+            <p className="font-bold text-ink">Current Learning</p>
+            {activeEnrollment ? (
+              <div className="mt-2 space-y-1 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="success">{activeEnrollment.status}</Badge>
+                  <span className="font-semibold">{activeEnrollment.level}</span>
+                  {activeEnrollment.classType ? <span className="text-ink-soft">· {activeEnrollment.classType}</span> : null}
+                </div>
+                <p className="text-xs text-ink-soft">
+                  Mulai {activeEnrollment.startDate || '—'}
+                  {activeEnrollment.senseiId ? ` · Sensei ${displayName(allSensei, activeEnrollment.senseiId)}` : ''}
+                </p>
+                {activeEnrollment.notes ? <p className="text-xs text-ink-soft">{activeEnrollment.notes}</p> : null}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-ink-soft">
+                Belum ada enrollment aktif. Buat Class Master atau complete level dengan naik level untuk membuka journey baru.
+              </p>
+            )}
+          </div>
+
+          {learningHistory.length > 0 ? (
+            <div className="ui-card overflow-hidden">
+              <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Learning History</div>
+              <ul className="divide-y divide-[#efe4d2] text-sm">
+                {learningHistory.map((item) => (
+                  <li key={item.id} className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={item.status === 'completed' ? 'success' : 'muted'}>{item.status}</Badge>
+                      <span className="font-semibold">{item.level}</span>
+                      {item.classType ? <span className="text-ink-soft">· {item.classType}</span> : null}
+                    </div>
+                    <div className="text-xs text-ink-soft">
+                      {item.startDate || '—'} → {item.endDate || '—'}
+                      {item.notes ? ` · ${item.notes}` : ''}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {permissions.canOverrideAcademic ? (
             <div className="ui-card space-y-3 p-4">
               <div>
                 <p className="font-bold text-ink">Tandai level selesai</p>
                 <p className="text-xs text-ink-soft">
-                  1 siswa × 1 level = 1 perjalanan. Syarat % absensi belum di-hardcode (masih TBC Kyouiku).
+                  Menutup enrollment level saat ini dan (opsional) membuka enrollment level baru — history tetap tersimpan.
                 </p>
               </div>
               <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">

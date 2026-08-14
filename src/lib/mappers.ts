@@ -3,12 +3,14 @@ import type {
   AttendanceStatus,
   AvailabilitySlot,
   AuditLog,
-  ClassSession,
-  ClassType,
-  LeavePeriod,
-  LevelCompletion,
   ClassMaster,
   ClassMasterStatus,
+  ClassSession,
+  ClassType,
+  Enrollment,
+  EnrollmentStatus,
+  LeavePeriod,
+  LevelCompletion,
   RecordingStatus,
   Sensei,
   SenseiPrimaryStatus,
@@ -172,6 +174,7 @@ export function mapSessionReport(
       performanceNote: item.performance_note ? String(item.performance_note) : undefined
     })),
     materialCovered: String(row.material_covered || ''),
+    materialUrl: row.material_url ? String(row.material_url) : undefined,
     levelProgress: String(row.level_progress || ''),
     sessionNotes: row.session_notes ? String(row.session_notes) : undefined,
     recordingUrl: row.recording_url ? String(row.recording_url) : undefined,
@@ -244,6 +247,40 @@ export function mapLevelCompletion(row: Record<string, unknown>): LevelCompletio
     completedAt: String(row.completed_at || new Date().toISOString()),
     completedBy: String(row.completed_by || ''),
     notes: row.notes ? String(row.notes) : undefined
+  };
+}
+
+export function mapEnrollment(row: Record<string, unknown>): Enrollment {
+  return {
+    id: String(row.id),
+    studentId: String(row.student_id),
+    level: String(row.level || ''),
+    classType: (row.class_type as ClassType) || null,
+    classId: row.class_id ? String(row.class_id) : null,
+    senseiId: row.sensei_id ? String(row.sensei_id) : null,
+    status: (row.status as EnrollmentStatus) || 'active',
+    startDate: row.start_date ? String(row.start_date).slice(0, 10) : null,
+    endDate: row.end_date ? String(row.end_date).slice(0, 10) : null,
+    notes: row.notes ? String(row.notes) : undefined,
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+    updatedBy: row.updated_by ? String(row.updated_by) : undefined
+  };
+}
+
+export function enrollmentToRow(enrollment: Enrollment) {
+  return {
+    id: enrollment.id,
+    student_id: enrollment.studentId,
+    level: enrollment.level,
+    class_type: enrollment.classType || null,
+    class_id: enrollment.classId || null,
+    sensei_id: enrollment.senseiId || null,
+    status: enrollment.status,
+    start_date: enrollment.startDate || null,
+    end_date: enrollment.endDate || null,
+    notes: enrollment.notes || null,
+    updated_at: enrollment.updatedAt || new Date().toISOString(),
+    updated_by: enrollment.updatedBy || null
   };
 }
 

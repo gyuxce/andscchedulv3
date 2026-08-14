@@ -210,6 +210,7 @@ CREATE TABLE IF NOT EXISTS session_reports (
   submitted_by TEXT,
   submitted_at TIMESTAMPTZ DEFAULT NOW(),
   material_covered TEXT,
+  material_url TEXT,
   level_progress TEXT,
   session_notes TEXT,
   recording_url TEXT,
@@ -280,6 +281,23 @@ CREATE TABLE IF NOT EXISTS class_masters (
 
 ALTER TABLE schedules ADD COLUMN IF NOT EXISTS class_id UUID REFERENCES class_masters(id) ON DELETE SET NULL;
 
+CREATE TABLE IF NOT EXISTS enrollments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  level TEXT NOT NULL,
+  class_type TEXT,
+  class_id UUID REFERENCES class_masters(id) ON DELETE SET NULL,
+  sensei_id UUID REFERENCES sensei(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'completed', 'transferred', 'cancelled')),
+  start_date DATE,
+  end_date DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT
+);
+
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
@@ -309,6 +327,9 @@ CREATE INDEX IF NOT EXISTS idx_teaching_qa_sensei_month ON teaching_qa_scores(se
 CREATE INDEX IF NOT EXISTS idx_level_completions_student ON level_completions(student_id);
 CREATE INDEX IF NOT EXISTS idx_class_masters_sensei ON class_masters(sensei_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_class_id ON schedules(class_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_status ON enrollments(status);
+CREATE INDEX IF NOT EXISTS idx_enrollments_class ON enrollments(class_id);
 
 -- =========================================================
 -- BASIC RLS HELPERS (staging-friendly)
@@ -332,6 +353,7 @@ ALTER TABLE session_student_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_qa_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE level_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE class_masters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.current_profile_role()

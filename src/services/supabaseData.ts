@@ -2,6 +2,7 @@ import type {
   AppSettings,
   ClassMaster,
   DashboardSnapshot,
+  Enrollment,
   LevelCompletion,
   SenseiTimezone,
   Student,
@@ -11,9 +12,11 @@ import { WEEKLY_HOUR_TARGET } from '../constants';
 import {
   availabilityToRow,
   classMasterToRow,
+  enrollmentToRow,
   mapAudit,
   mapAvailability,
   mapClassMaster,
+  mapEnrollment,
   mapLeaveFromStatus,
   mapLevelCompletion,
   mapProfile,
@@ -64,7 +67,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     profilesRes,
     settingsRes,
     levelRes,
-    classRes
+    classRes,
+    enrollmentRes
   ] = await Promise.all([
     supabase.from('sensei').select('*'),
     supabase.from('sensei_status').select('*'),
@@ -80,7 +84,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     supabase.from('profiles').select('*'),
     supabase.from('app_settings').select('key, value'),
     supabase.from('level_completions').select('*').order('completed_at', { ascending: false }),
-    supabase.from('class_masters').select('*').order('updated_at', { ascending: false })
+    supabase.from('class_masters').select('*').order('updated_at', { ascending: false }),
+    supabase.from('enrollments').select('*').order('updated_at', { ascending: false })
   ]);
 
   const firstError = [
@@ -148,6 +153,10 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     ? []
     : ((classRes.data || []) as Record<string, unknown>[]).map(mapClassMaster);
 
+  const enrollments = enrollmentRes.error
+    ? []
+    : ((enrollmentRes.data || []) as Record<string, unknown>[]).map(mapEnrollment);
+
   return {
     users,
     sensei,
@@ -167,6 +176,7 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     leavePeriods,
     auditLogs: ((auditRes.data || []) as Record<string, unknown>[]).map(mapAudit),
     levelCompletions,
+    enrollments,
     settings
   };
 }
@@ -254,6 +264,7 @@ export async function upsertSessionReportRemote(report: SessionReport) {
     submitted_by: report.submittedBy,
     submitted_at: report.submittedAt,
     material_covered: report.materialCovered,
+    material_url: report.materialUrl || null,
     level_progress: report.levelProgress,
     session_notes: report.sessionNotes || null,
     recording_url: report.recordingUrl || null,
@@ -367,5 +378,12 @@ export async function upsertClassMasterRemote(teachingClass: ClassMaster) {
   const supabase = getSupabase();
   if (!supabase) return;
   const { error } = await supabase.from('class_masters').upsert(classMasterToRow(teachingClass));
+  if (error) throw new Error(error.message);
+}
+
+export async function upsertEnrollmentRemote(enrollment: Enrollment) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('enrollments').upsert(enrollmentToRow(enrollment));
   if (error) throw new Error(error.message);
 }
