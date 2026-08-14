@@ -69,7 +69,7 @@ export function OverviewView() {
         </p>
         <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
       </div>
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
         <StatCard label="Perlu tindakan" value={items.length} hint={`${high} prioritas tinggi`} icon={<AlertTriangle size={18} />} />
         <StatCard label="Laporan belum masuk" value={missingReports} icon={<Clock size={18} />} />
         <StatCard label="Konflik jadwal" value={conflicts} icon={<AlertTriangle size={18} />} />

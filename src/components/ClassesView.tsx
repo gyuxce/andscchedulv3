@@ -116,7 +116,7 @@ export function ClassesView() {
           membuat sesi kalender; progress memakai Session X of X.
         </p>
         {canEdit ? (
-          <Button tone="primary" onClick={openCreate}>
+          <Button tone="primary" className="w-full sm:w-auto" onClick={openCreate}>
             Tambah Class Master
           </Button>
         ) : null}

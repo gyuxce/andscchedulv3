@@ -117,8 +117,8 @@ export function ScheduleView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <p className="text-sm text-ink-soft">
             Objek terpisah dari ketersediaan Sensei. Makeup tertaut ke sesi asli agar absensi/progress tidak dihitung dobel.
           </p>
@@ -126,17 +126,18 @@ export function ScheduleView() {
             <p className="mt-1 text-sm font-semibold text-rose-700">{conflicts.length} konflik perlu diselesaikan.</p>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
           <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
           {permissions.canEditOfficialSchedule ? (
-            <Button tone="primary" onClick={openCreate}>
+            <Button tone="primary" className="w-full sm:w-auto" onClick={openCreate}>
               Tambah kelas
             </Button>
           ) : null}
         </div>
       </div>
+      <p className="text-xs text-ink-soft lg:hidden">Geser ke samping untuk melihat jadwal mingguan.</p>
       <div className="ui-card overflow-auto">
-        <div className="grid min-w-[980px] grid-cols-8 border-b border-[#efe4d2] bg-paper/70 text-xs font-bold uppercase tracking-wide text-ink-soft">
+        <div className="grid min-w-[720px] grid-cols-8 border-b border-[#efe4d2] bg-paper/70 text-xs font-bold uppercase tracking-wide text-ink-soft sm:min-w-[980px]">
           <div className="px-3 py-3">Jam</div>
           {days.map((day) => (
             <div key={day.toISOString()} className="px-3 py-3">
@@ -147,7 +148,7 @@ export function ScheduleView() {
         {hours.map((hour, index) => {
           const next = hours[index + 1] ?? '21:00';
           return (
-            <div key={hour} className="grid min-w-[980px] grid-cols-8 border-b border-[#efe4d2]">
+            <div key={hour} className="grid min-w-[720px] grid-cols-8 border-b border-[#efe4d2] sm:min-w-[980px]">
               <div className="px-3 py-3 text-xs font-semibold text-ink-soft">{hour}</div>
               {days.map((day) => {
                 const date = toDateKey(day);

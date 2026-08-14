@@ -79,6 +79,7 @@ export function TeachingView() {
         Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Durasi aktual = Clock Out − Clock In.
       </p>
       <div className="ui-card overflow-hidden">
+        <div className="ui-table-wrap">
         <table className="w-full text-sm">
           <thead className="bg-paper/80 text-left text-xs uppercase tracking-wide text-ink-soft">
             <tr>
@@ -130,6 +131,7 @@ export function TeachingView() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {selected ? (
         <SessionDrawer

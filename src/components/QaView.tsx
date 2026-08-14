@@ -32,6 +32,7 @@ export function QaView() {
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="ui-card p-4">
           <h3 className="font-extrabold">Skor Teaching Performance</h3>
+          <div className="ui-table-wrap">
           <table className="mt-3 w-full text-sm">
             <thead className="text-left text-xs uppercase text-ink-soft">
               <tr>
@@ -50,6 +51,7 @@ export function QaView() {
               ))}
             </tbody>
           </table>
+          </div>
           {permissions.canEditQa ? (
             <div className="mt-4 space-y-2 rounded-2xl bg-paper p-3">
               <select className="ui-select" value={scoreForm.senseiId} onChange={(event) => setScoreForm({ ...scoreForm, senseiId: event.target.value })}>
