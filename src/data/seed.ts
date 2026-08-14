@@ -19,6 +19,7 @@ export function createSeedData(now = new Date()): DashboardSnapshot {
       minAttendancePercent: null,
       weeklyHourTarget: WEEKLY_HOUR_TARGET
     },
+    levelCompletions: [],
     users: [
       {
         id: 'user-admin',

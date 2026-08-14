@@ -243,6 +243,17 @@ CREATE TABLE IF NOT EXISTS teaching_qa_scores (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS level_completions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  level TEXT NOT NULL,
+  next_level TEXT,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_by TEXT,
+  notes TEXT,
+  UNIQUE (student_id, level)
+);
+
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
@@ -269,6 +280,7 @@ CREATE INDEX IF NOT EXISTS idx_sensei_availability_sensei ON sensei_availability
 CREATE INDEX IF NOT EXISTS idx_session_logs_schedule ON session_logs(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_session_reports_schedule ON session_reports(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_teaching_qa_sensei_month ON teaching_qa_scores(sensei_id, month);
+CREATE INDEX IF NOT EXISTS idx_level_completions_student ON level_completions(student_id);
 
 -- =========================================================
 -- BASIC RLS HELPERS (staging-friendly)
@@ -290,6 +302,7 @@ ALTER TABLE session_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_student_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_qa_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE level_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.current_profile_role()

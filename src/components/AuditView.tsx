@@ -5,6 +5,10 @@ import { Badge } from './ui/Badge';
 
 const ACTION_LABELS: Record<string, string> = {
   create_class: 'Membuat kelas resmi',
+  create_makeup_class: 'Membuat makeup class',
+  complete_level: 'Menandai level selesai',
+  update_sensei_timezone: 'Mengubah timezone Sensei',
+  update_app_settings: 'Mengubah pengaturan',
   edit_class: 'Mengubah kelas resmi',
   cancel_class: 'Membatalkan kelas',
   swap_sensei: 'Menukar Sensei',

@@ -13,12 +13,14 @@ import {
   loadDashboardSnapshot,
   upsertAppSettingsRemote,
   upsertAvailabilityRemote,
+  upsertLevelCompletionRemote,
   upsertQaRemote,
   upsertScheduleRemote,
   upsertSenseiStatusRemote,
   upsertSenseiTimezoneRemote,
   upsertSessionLogRemote,
   upsertSessionReportRemote,
+  upsertStudentRemote,
   writeAudit
 } from '../services/supabaseData';
 import type {
@@ -29,6 +31,7 @@ import type {
   CancellationInitiator,
   ClassSession,
   DashboardSnapshot,
+  LevelCompletion,
   Permissions,
   RecordingStatus,
   SenseiTimezone,
@@ -39,6 +42,7 @@ import type {
   TeachingQaScore,
   UserAccount
 } from '../types';
+import { hasActiveOrCompletedMakeup } from '../lib/makeup';
 
 function createId() {
   return crypto.randomUUID();
@@ -67,6 +71,7 @@ interface ClassInput {
   date: string;
   startTime: string;
   endTime: string;
+  makeupOfSessionId?: string | null;
 }
 
 interface DashboardStore extends DashboardSnapshot {
@@ -123,6 +128,12 @@ interface DashboardStore extends DashboardSnapshot {
   overrideSenseiStatus: (senseiId: string, status: 'ACTIVE' | 'INACTIVE', reason: string) => void;
   updateSenseiTimezone: (senseiId: string, timezone: SenseiTimezone) => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
+  completeLevel: (input: {
+    studentId: string;
+    level: string;
+    nextLevel: string | null;
+    notes?: string;
+  }) => boolean;
   upsertUser: (user: Omit<UserAccount, 'id'> & { id?: string }) => void;
 }
 
@@ -362,9 +373,25 @@ export const useDashboardStore = create<DashboardStore>()(
       },
       createClass: (input, reason) => {
         const state = get();
+        if (input.makeupOfSessionId) {
+          const original = state.schedules.find((item) => item.id === input.makeupOfSessionId);
+          if (!original) {
+            toast.error('Sesi asli untuk makeup tidak ditemukan');
+            return false;
+          }
+          if (original.status !== 'cancelled') {
+            toast.error('Makeup hanya untuk kelas yang sudah dibatalkan');
+            return false;
+          }
+          if (hasActiveOrCompletedMakeup(original.id, state.schedules)) {
+            toast.error('Kelas ini sudah punya makeup aktif');
+            return false;
+          }
+        }
         const session: ClassSession = {
           id: createId(),
           ...input,
+          makeupOfSessionId: input.makeupOfSessionId ?? null,
           status: 'active',
           updatedAt: new Date().toISOString(),
           updatedBy: state.currentUser?.name
@@ -373,19 +400,36 @@ export const useDashboardStore = create<DashboardStore>()(
           toast.error('Bentrok dengan kelas Sensei yang sama. Selesaikan konflik dulu.');
           return false;
         }
+        let patchedOriginal: ClassSession | undefined;
         set((current) => {
           pushAudit(current, {
-            action: 'create_class',
+            action: input.makeupOfSessionId ? 'create_makeup_class' : 'create_class',
             entity: 'schedules',
             recordId: session.id,
             newValue: session,
             reason
           });
-          current.schedules = [session, ...current.schedules];
-          return { schedules: current.schedules, auditLogs: current.auditLogs };
+          let schedules = [session, ...current.schedules];
+          if (input.makeupOfSessionId) {
+            schedules = schedules.map((item) => {
+              if (item.id !== input.makeupOfSessionId) return item;
+              patchedOriginal = {
+                ...item,
+                replacementSecured: true,
+                updatedAt: new Date().toISOString(),
+                updatedBy: current.currentUser?.name
+              };
+              return patchedOriginal;
+            });
+          }
+          current.schedules = schedules;
+          return { schedules, auditLogs: current.auditLogs };
         });
-        void safeRemote(() => upsertScheduleRemote(session), 'Simpan kelas');
-        toast.success('Kelas resmi ditambahkan');
+        void safeRemote(async () => {
+          await upsertScheduleRemote(session);
+          if (patchedOriginal) await upsertScheduleRemote(patchedOriginal);
+        }, input.makeupOfSessionId ? 'Simpan makeup' : 'Simpan kelas');
+        toast.success(input.makeupOfSessionId ? 'Makeup class ditambahkan dan tertaut ke sesi asli' : 'Kelas resmi ditambahkan');
         return true;
       },
       updateClass: (id, input, reason) => {
@@ -797,6 +841,55 @@ export const useDashboardStore = create<DashboardStore>()(
         );
         toast.success('Pengaturan disimpan');
       },
+      completeLevel: ({ studentId, level, nextLevel, notes }) => {
+        const state = get();
+        const student = state.students.find((item) => item.id === studentId);
+        if (!student) {
+          toast.error('Siswa tidak ditemukan');
+          return false;
+        }
+        if (state.levelCompletions.some((item) => item.studentId === studentId && item.level === level)) {
+          toast.error('Level ini sudah ditandai completed');
+          return false;
+        }
+        const completion: LevelCompletion = {
+          id: createId(),
+          studentId,
+          level,
+          nextLevel,
+          completedAt: new Date().toISOString(),
+          completedBy: state.currentUser?.id ?? 'unknown',
+          notes
+        };
+        const updatedStudent = {
+          ...student,
+          currentLevel: nextLevel || student.currentLevel,
+          academicNotes: notes
+            ? [student.academicNotes, `Completed ${level}: ${notes}`].filter(Boolean).join(' · ')
+            : student.academicNotes
+        };
+        set((current) => {
+          pushAudit(current, {
+            action: 'complete_level',
+            entity: 'level_completions',
+            recordId: completion.id,
+            oldValue: { currentLevel: student.currentLevel },
+            newValue: { level, nextLevel },
+            reason: notes
+          });
+          return {
+            levelCompletions: [completion, ...current.levelCompletions],
+            students: current.students.map((item) => (item.id === studentId ? updatedStudent : item)),
+            auditLogs: current.auditLogs
+          };
+        });
+        void safeRemote(async () => {
+          await upsertLevelCompletionRemote(completion);
+          await upsertStudentRemote(updatedStudent);
+        }, 'Tandai level selesai');
+        toast.success(nextLevel ? `Level ${level} completed → ${nextLevel}` : `Level ${level} completed`);
+        return true;
+      },
       upsertUser: (user) => {
         set((state) => {
           const id = user.id ?? createId();
@@ -832,6 +925,7 @@ export const useDashboardStore = create<DashboardStore>()(
               qaScores: state.qaScores,
               leavePeriods: state.leavePeriods,
               auditLogs: state.auditLogs,
+              levelCompletions: state.levelCompletions,
               settings: state.settings,
               currentUser: state.currentUser,
               activeTab: state.activeTab,

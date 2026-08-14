@@ -1,10 +1,18 @@
-import type { AppSettings, DashboardSnapshot, SenseiTimezone, UserAccount } from '../types';
+import type {
+  AppSettings,
+  DashboardSnapshot,
+  LevelCompletion,
+  SenseiTimezone,
+  Student,
+  UserAccount
+} from '../types';
 import { WEEKLY_HOUR_TARGET } from '../constants';
 import {
   availabilityToRow,
   mapAudit,
   mapAvailability,
   mapLeaveFromStatus,
+  mapLevelCompletion,
   mapProfile,
   mapQaScore,
   mapSchedule,
@@ -51,7 +59,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     qaRes,
     auditRes,
     profilesRes,
-    settingsRes
+    settingsRes,
+    levelRes
   ] = await Promise.all([
     supabase.from('sensei').select('*'),
     supabase.from('sensei_status').select('*'),
@@ -65,7 +74,8 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     supabase.from('teaching_qa_scores').select('*'),
     supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
     supabase.from('profiles').select('*'),
-    supabase.from('app_settings').select('key, value')
+    supabase.from('app_settings').select('key, value'),
+    supabase.from('level_completions').select('*').order('completed_at', { ascending: false })
   ]);
 
   const firstError = [
@@ -125,6 +135,10 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     ? DEFAULT_SETTINGS
     : parseSettings((settingsRes.data || []) as Record<string, unknown>[]);
 
+  const levelCompletions = levelRes.error
+    ? []
+    : ((levelRes.data || []) as Record<string, unknown>[]).map(mapLevelCompletion);
+
   return {
     users,
     sensei,
@@ -142,6 +156,7 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     qaScores: ((qaRes.data || []) as Record<string, unknown>[]).map(mapQaScore),
     leavePeriods,
     auditLogs: ((auditRes.data || []) as Record<string, unknown>[]).map(mapAudit),
+    levelCompletions,
     settings
   };
 }
@@ -305,5 +320,35 @@ export async function upsertAppSettingsRemote(settings: AppSettings, updatedBy?:
     updated_at: new Date().toISOString(),
     updated_by: updatedBy || null
   });
+  if (error) throw new Error(error.message);
+}
+
+export async function upsertLevelCompletionRemote(completion: LevelCompletion) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('level_completions').upsert({
+    id: completion.id,
+    student_id: completion.studentId,
+    level: completion.level,
+    next_level: completion.nextLevel,
+    completed_at: completion.completedAt,
+    completed_by: completion.completedBy,
+    notes: completion.notes || null
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function upsertStudentRemote(student: Student) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('students')
+    .update({
+      level_sekarang: student.currentLevel,
+      level_awal: student.startingLevel,
+      special_note: student.academicNotes || null,
+      is_active: student.isActive
+    })
+    .eq('id', student.id);
   if (error) throw new Error(error.message);
 }

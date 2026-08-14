@@ -6,6 +6,7 @@ import type {
   ClassSession,
   ClassType,
   LeavePeriod,
+  LevelCompletion,
   RecordingStatus,
   Sensei,
   SenseiPrimaryStatus,
@@ -204,6 +205,18 @@ export function mapLeaveFromStatus(row: Record<string, unknown>): LeavePeriod | 
     endDate: String(row.leave_end),
     reason: 'Cuti',
     status: 'approved'
+  };
+}
+
+export function mapLevelCompletion(row: Record<string, unknown>): LevelCompletion {
+  return {
+    id: String(row.id),
+    studentId: String(row.student_id),
+    level: String(row.level || ''),
+    nextLevel: row.next_level ? String(row.next_level) : null,
+    completedAt: String(row.completed_at || new Date().toISOString()),
+    completedBy: String(row.completed_by || ''),
+    notes: row.notes ? String(row.notes) : undefined
   };
 }
 

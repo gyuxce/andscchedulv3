@@ -82,6 +82,16 @@ export interface Student {
   academicNotes?: string;
 }
 
+export interface LevelCompletion {
+  id: string;
+  studentId: string;
+  level: string;
+  nextLevel: string | null;
+  completedAt: string;
+  completedBy: string;
+  notes?: string;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -199,6 +209,7 @@ export interface DashboardSnapshot {
   qaScores: TeachingQaScore[];
   leavePeriods: LeavePeriod[];
   auditLogs: AuditLog[];
+  levelCompletions: LevelCompletion[];
   settings: AppSettings;
 }
 

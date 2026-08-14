@@ -1,19 +1,26 @@
 import { useMemo, useState } from 'react';
+import { CLASS_LEVELS } from '../constants';
 import { ATTENDANCE_TONE, displayName } from '../lib/display';
+import { filterAcademicReportRows, isMakeupSession, makeupLabel } from '../lib/makeup';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
 import { StatCard } from './ui/StatCard';
 
 export function StudentsView() {
   const permissions = usePermissions();
   const allSensei = useDashboardStore((state) => state.sensei);
+  const levelCompletions = useDashboardStore((state) => state.levelCompletions);
+  const completeLevel = useDashboardStore((state) => state.completeLevel);
   const { students, sessionReports, schedules } = useScopedData();
   const [selectedId, setSelectedId] = useState(students[0]?.id ?? '');
   const selected = students.find((item) => item.id === selectedId) ?? students[0];
+  const [nextLevel, setNextLevel] = useState('');
+  const [notes, setNotes] = useState('');
 
   const history = useMemo(() => {
     if (!selected) return [];
-    return sessionReports
+    const rows = sessionReports
       .flatMap((report) => {
         const record = report.students.find((item) => item.studentId === selected.id);
         const session = schedules.find((item) => item.id === report.scheduleId);
@@ -21,11 +28,20 @@ export function StudentsView() {
         return [{ report, record, session }];
       })
       .sort((a, b) => b.session.date.localeCompare(a.session.date));
+    return filterAcademicReportRows(rows, schedules);
   }, [selected, sessionReports, schedules]);
 
   const attendanceRate = history.length
-    ? history.filter((item) => item.record.attendance === 'Present' || item.record.attendance === 'Late').length / history.length
+    ? history.filter((item) => item.record.attendance === 'Present' || item.record.attendance === 'Late').length /
+      history.length
     : null;
+
+  const studentCompletions = selected
+    ? levelCompletions.filter((item) => item.studentId === selected.id)
+    : [];
+  const currentLevelCompleted = selected
+    ? studentCompletions.some((item) => item.level === selected.currentLevel)
+    : false;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
@@ -34,7 +50,11 @@ export function StudentsView() {
         {students.map((student) => (
           <button
             key={student.id}
-            onClick={() => setSelectedId(student.id)}
+            onClick={() => {
+              setSelectedId(student.id);
+              setNextLevel('');
+              setNotes('');
+            }}
             className={`block w-full border-b border-[#efe4d2] px-4 py-3 text-left ${selectedId === student.id ? 'bg-orange-50' : 'bg-white'}`}
           >
             <div className="font-bold">{student.name}</div>
@@ -49,20 +69,109 @@ export function StudentsView() {
               <div>
                 <h3 className="text-2xl font-extrabold">{selected.name}</h3>
                 <p className="text-sm text-ink-soft">
-                  Perjalanan: {selected.startingLevel} → {selected.currentLevel} · Sensei {displayName(allSensei, selected.senseiId)}
+                  Perjalanan: {selected.startingLevel} → {selected.currentLevel} · Sensei{' '}
+                  {displayName(allSensei, selected.senseiId)}
                 </p>
               </div>
-              <Badge tone={selected.isActive ? 'success' : 'muted'}>{selected.isActive ? 'Aktif belajar' : 'Tidak aktif'}</Badge>
+              <div className="flex flex-wrap gap-2">
+                {currentLevelCompleted ? <Badge tone="success">Level completed</Badge> : null}
+                <Badge tone={selected.isActive ? 'success' : 'muted'}>
+                  {selected.isActive ? 'Aktif belajar' : 'Tidak aktif'}
+                </Badge>
+              </div>
             </div>
             <p className="mt-3 text-xs text-ink-soft">
-              Data siswa di V3 hanya untuk operasional belajar. Pembayaran, churn, dan CRM tidak ditampilkan.
+              Data siswa di V3 hanya untuk operasional belajar. Makeup tidak dihitung dobel di riwayat.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
-            <StatCard label="Sesi tercatat" value={history.length} />
-            <StatCard label="Hadir / terlambat" value={attendanceRate === null ? '—' : `${Math.round(attendanceRate * 100)}%`} hint="Kebijakan Late/Excused/Partial masih TBC Kyouiku" />
+            <StatCard label="Sesi tercatat" value={history.length} hint="Sesi batal yang sudah punya makeup tidak dihitung" />
+            <StatCard
+              label="Hadir / terlambat"
+              value={attendanceRate === null ? '—' : `${Math.round(attendanceRate * 100)}%`}
+              hint="Kebijakan Late/Excused/Partial masih TBC Kyouiku"
+            />
             <StatCard label="Level saat ini" value={selected.currentLevel} />
           </div>
+
+          {permissions.canOverrideAcademic ? (
+            <div className="ui-card space-y-3 p-4">
+              <div>
+                <p className="font-bold text-ink">Tandai level selesai</p>
+                <p className="text-xs text-ink-soft">
+                  1 siswa × 1 level = 1 perjalanan. Syarat % absensi belum di-hardcode (masih TBC Kyouiku).
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                <div>
+                  <p className="ui-label">Level yang diselesaikan</p>
+                  <input className="ui-input" value={selected.currentLevel} disabled />
+                </div>
+                <label>
+                  <span className="ui-label">Naik ke level (opsional)</span>
+                  <select
+                    className="ui-select"
+                    value={nextLevel}
+                    onChange={(event) => setNextLevel(event.target.value)}
+                  >
+                    <option value="">Tetap di level ini</option>
+                    {CLASS_LEVELS.filter((level) => level !== selected.currentLevel).map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex items-end">
+                  <Button
+                    tone="primary"
+                    disabled={currentLevelCompleted}
+                    onClick={() => {
+                      const ok = completeLevel({
+                        studentId: selected.id,
+                        level: selected.currentLevel,
+                        nextLevel: nextLevel || null,
+                        notes: notes || undefined
+                      });
+                      if (ok) {
+                        setNotes('');
+                        setNextLevel('');
+                      }
+                    }}
+                  >
+                    Complete level
+                  </Button>
+                </div>
+              </div>
+              <input
+                className="ui-input"
+                placeholder="Catatan akademik (opsional)"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </div>
+          ) : null}
+
+          {studentCompletions.length > 0 ? (
+            <div className="ui-card overflow-hidden">
+              <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Riwayat level completed</div>
+              <ul className="divide-y divide-[#efe4d2] text-sm">
+                {studentCompletions.map((item) => (
+                  <li key={item.id} className="px-4 py-3">
+                    <div className="font-semibold">
+                      {item.level}
+                      {item.nextLevel ? ` → ${item.nextLevel}` : ''}
+                    </div>
+                    <div className="text-xs text-ink-soft">
+                      {item.completedAt.slice(0, 10)}
+                      {item.notes ? ` · ${item.notes}` : ''}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="ui-card overflow-hidden">
             <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Riwayat sesi</div>
             <table className="w-full text-sm">
@@ -77,8 +186,15 @@ export function StudentsView() {
               <tbody>
                 {history.map(({ report, record, session }) => (
                   <tr key={report.id} className="border-t border-[#efe4d2]">
-                    <td className="px-4 py-2">{session.date}</td>
-                    <td className="px-4 py-2"><Badge tone={ATTENDANCE_TONE[record.attendance]}>{record.attendance}</Badge></td>
+                    <td className="px-4 py-2">
+                      <div>{session.date}</div>
+                      {isMakeupSession(session) ? (
+                        <div className="text-[11px] text-sky-700">{makeupLabel(session, schedules)}</div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Badge tone={ATTENDANCE_TONE[record.attendance]}>{record.attendance}</Badge>
+                    </td>
                     <td className="px-4 py-2">{record.performanceScore ?? '—'}</td>
                     <td className="px-4 py-2">{report.materialCovered}</td>
                   </tr>

@@ -103,6 +103,17 @@ INSERT INTO app_settings (key, value)
 VALUES ('late_grace_minutes', '0'::jsonb)
 ON CONFLICT (key) DO NOTHING;
 
+CREATE TABLE IF NOT EXISTS level_completions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  level TEXT NOT NULL,
+  next_level TEXT,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_by TEXT,
+  notes TEXT,
+  UNIQUE (student_id, level)
+);
+
 ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 ALTER TABLE profiles ADD CONSTRAINT profiles_role_check
   CHECK (role IN ('Super Admin', 'Staff', 'Kyouiku', 'Sensei', 'Student'));

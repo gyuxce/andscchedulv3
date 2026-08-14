@@ -33,7 +33,7 @@ export function getPermissions(role: AppRole): Permissions {
       canClockOwn: false,
       canOverrideClock: false,
       canInputAttendance: false,
-      canOverrideAcademic: false,
+      canOverrideAcademic: true,
       canReviewQa: true,
       canEditQa: true,
       canViewOwnQa: false,

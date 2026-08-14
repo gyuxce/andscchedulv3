@@ -118,6 +118,7 @@ ALTER TABLE session_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_student_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_qa_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE level_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- =========================================================
@@ -210,6 +211,11 @@ CREATE POLICY v3_students_write_ops
   ON students FOR ALL TO authenticated
   USING (public.is_ops())
   WITH CHECK (public.is_ops());
+
+CREATE POLICY v3_students_update_academic
+  ON students FOR UPDATE TO authenticated
+  USING (public.is_kyouiku_or_ops())
+  WITH CHECK (public.is_kyouiku_or_ops());
 
 -- =========================================================
 -- GROUPS
@@ -509,6 +515,30 @@ CREATE POLICY v3_app_settings_write_ops
   ON app_settings FOR ALL TO authenticated
   USING (public.is_ops())
   WITH CHECK (public.is_ops());
+
+-- =========================================================
+-- LEVEL COMPLETIONS
+-- =========================================================
+
+CREATE POLICY v3_level_completions_select
+  ON level_completions FOR SELECT TO authenticated
+  USING (
+    public.is_kyouiku_or_ops()
+    OR EXISTS (
+      SELECT 1
+      FROM schedules sch
+      WHERE sch.sensei_id = public.current_sensei_id()
+        AND (
+          sch.student_id = level_completions.student_id
+          OR sch.student_ids ? level_completions.student_id::text
+        )
+    )
+  );
+
+CREATE POLICY v3_level_completions_write
+  ON level_completions FOR ALL TO authenticated
+  USING (public.is_kyouiku_or_ops())
+  WITH CHECK (public.is_kyouiku_or_ops());
 
 -- =========================================================
 -- QUICK VERIFY (optional)

@@ -5,6 +5,7 @@ import { getWorkloadMetrics } from '../workload';
 import { findConflicts } from '../schedule';
 import { getDisciplinaryMetrics } from '../disciplinary';
 import { getSessionWorkflow, isLateJoin } from '../session';
+import { filterAcademicReportRows, hasActiveOrCompletedMakeup } from '../makeup';
 import { buildActionItems } from '../actionCenter';
 import type { ClassSession, Sensei } from '../../types';
 
@@ -35,6 +36,7 @@ describe('RBAC', () => {
     expect(getPermissions('Sensei').canEditOfficialSchedule).toBe(false);
     expect(getPermissions('Sensei').canViewAllSchedules).toBe(false);
     expect(getPermissions('Kyouiku').canEditQa).toBe(true);
+    expect(getPermissions('Kyouiku').canOverrideAcademic).toBe(true);
     expect(getPermissions('Super Admin').canManageUsers).toBe(true);
   });
 });
@@ -205,5 +207,60 @@ describe('action center', () => {
     expect(items.some((item) => item.kind === 'missing_report')).toBe(true);
     expect(items.some((item) => item.kind === 'schedule_conflict')).toBe(true);
     expect(items.some((item) => item.kind === 'unassigned_sensei')).toBe(false);
+  });
+});
+
+describe('makeup class', () => {
+  it('links makeup to cancelled original and drops superseded original from academic rows', () => {
+    const original = classOf({
+      id: 'orig',
+      date: '2026-08-10',
+      startTime: '09:00',
+      endTime: '10:00',
+      status: 'cancelled'
+    });
+    const makeup = classOf({
+      id: 'mk',
+      date: '2026-08-14',
+      startTime: '09:00',
+      endTime: '10:00',
+      makeupOfSessionId: 'orig'
+    });
+    const schedules = [original, makeup];
+    expect(hasActiveOrCompletedMakeup('orig', schedules)).toBe(true);
+
+    const rows = [
+      {
+        session: original,
+        report: {
+          id: 'r1',
+          scheduleId: 'orig',
+          submittedBy: 'x',
+          submittedAt: '',
+          students: [],
+          materialCovered: 'old',
+          levelProgress: '',
+          recordingStatus: 'Missing' as const,
+          qaReviewStatus: 'Not Reviewed' as const
+        }
+      },
+      {
+        session: makeup,
+        report: {
+          id: 'r2',
+          scheduleId: 'mk',
+          submittedBy: 'x',
+          submittedAt: '',
+          students: [],
+          materialCovered: 'makeup',
+          levelProgress: '',
+          recordingStatus: 'Missing' as const,
+          qaReviewStatus: 'Not Reviewed' as const
+        }
+      }
+    ];
+    const filtered = filterAcademicReportRows(rows, schedules);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].session.id).toBe('mk');
   });
 });
