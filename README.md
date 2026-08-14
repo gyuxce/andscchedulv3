@@ -41,9 +41,26 @@ npm test
 npm run build
 ```
 
+## Supabase setup (penting)
+
+Ada **2 file SQL**, jangan tertukar:
+
+| File | Dipakai di mana |
+| --- | --- |
+| `schema.sql` | **Project Supabase BARU / kosong** (staging V3) |
+| `schema-v3.sql` | Project yang **sudah punya** tabel V2 (`sensei`, `schedules`, …) |
+
+### Yang kamu lakukan sekarang
+1. Buat / buka **project Supabase baru** (bukan produksi V2).
+2. Buka **SQL Editor**.
+3. Paste isi **`schema.sql`** → Run.
+4. Kalau sukses, di Table Editor harus muncul `sensei`, `schedules`, `session_reports`, dll.
+
+Jangan jalankan `schema-v3.sql` di project kosong — itu penyebab error `relation "sensei" does not exist`.
+
 ## V2 continuity
 
-V2 production stays live. `schema-v3.sql` is additive and must be applied only to staging after backup. Do not rename or drop V2 columns that the live app still writes.
+V2 production stays live. Additive changes go to staging first. Do not rename or drop V2 columns that the live app still writes.
 
 ## Open Kyouiku decisions still TBC
 

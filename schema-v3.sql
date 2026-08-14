@@ -1,6 +1,11 @@
--- ANS Dashboard V3 additive schema (staging).
--- V2 production tables remain the source of truth. Do not rename/drop live V2 columns.
--- Apply only after backup + staging validation.
+-- ANS Dashboard V3 — ADDITIVE only
+-- Pakai file ini HANYA jika project sudah punya tabel V2:
+-- sensei, students, schedules, profiles, dll.
+--
+-- Kalau project masih kosong → JANGAN pakai file ini.
+-- Pakai schema.sql (full) untuk project baru.
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS sensei_status (
   sensei_id UUID PRIMARY KEY REFERENCES sensei(id) ON DELETE CASCADE,
