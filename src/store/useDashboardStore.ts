@@ -1,0 +1,582 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { toast } from 'sonner';
+import { createSeedData } from '../data/seed';
+import { getPermissions } from '../lib/rbac';
+import { wouldConflict } from '../lib/schedule';
+import { isLateJoin } from '../lib/session';
+import type {
+  AppRole,
+  AttendanceStatus,
+  AvailabilitySlot,
+  CancellationInitiator,
+  ClassSession,
+  DashboardSnapshot,
+  Permissions,
+  RecordingStatus,
+  SessionReport,
+  StudentSessionRecord,
+  SwapInitiator,
+  TabId,
+  TeachingQaScore,
+  UserAccount
+} from '../types';
+
+function createId(prefix: string) {
+  return `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
+}
+
+function cloneSeed() {
+  return structuredClone(createSeedData());
+}
+
+interface ClassInput {
+  senseiId: string;
+  studentIds: string[];
+  groupId?: string | null;
+  type: ClassSession['type'];
+  level: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface DashboardStore extends DashboardSnapshot {
+  currentUser: UserAccount | null;
+  activeTab: TabId;
+  weekAnchor: string;
+  login: (userId: string) => void;
+  logout: () => void;
+  resetDemo: () => void;
+  setTab: (tab: TabId) => void;
+  setWeekAnchor: (date: string) => void;
+  upsertAvailability: (slot: Omit<AvailabilitySlot, 'id'> & { id?: string }) => void;
+  removeAvailability: (id: string) => void;
+  createClass: (input: ClassInput, reason?: string) => boolean;
+  updateClass: (id: string, input: Partial<ClassInput>, reason: string) => boolean;
+  cancelClass: (
+    id: string,
+    payload: { reason: string; initiator: CancellationInitiator; replacementSecured: boolean }
+  ) => void;
+  swapSensei: (id: string, newSenseiId: string, initiator: SwapInitiator, reason: string) => boolean;
+  clockIn: (scheduleId: string, at?: string) => void;
+  clockOut: (scheduleId: string, at?: string) => void;
+  overrideClock: (scheduleId: string, clockInAt: string, clockOutAt: string | null, reason: string) => void;
+  submitSessionReport: (
+    scheduleId: string,
+    payload: {
+      students: StudentSessionRecord[];
+      materialCovered: string;
+      levelProgress: string;
+      sessionNotes?: string;
+      recordingUrl?: string;
+      recordingStatus: RecordingStatus;
+    }
+  ) => void;
+  overrideAttendance: (
+    reportId: string,
+    studentId: string,
+    attendance: AttendanceStatus,
+    reason: string
+  ) => void;
+  overridePerformance: (
+    reportId: string,
+    studentId: string,
+    score: number,
+    reason: string
+  ) => void;
+  reviewRecording: (reportId: string, notes: string) => void;
+  upsertQaScore: (senseiId: string, month: string, score: number, notes: string) => void;
+  overrideSenseiStatus: (senseiId: string, status: 'ACTIVE' | 'INACTIVE', reason: string) => void;
+  upsertUser: (user: Omit<UserAccount, 'id'> & { id?: string }) => void;
+}
+
+function actor(state: DashboardStore) {
+  return {
+    actorId: state.currentUser?.id ?? 'system',
+    actorName: state.currentUser?.name ?? 'System'
+  };
+}
+
+function pushAudit(
+  state: DashboardStore,
+  entry: {
+    action: string;
+    entity: string;
+    recordId: string;
+    oldValue?: unknown;
+    newValue?: unknown;
+    reason?: string;
+  }
+) {
+  const who = actor(state);
+  state.auditLogs = [
+    {
+      id: createId('audit'),
+      ...who,
+      ...entry,
+      createdAt: new Date().toISOString()
+    },
+    ...state.auditLogs
+  ];
+}
+
+export const useDashboardStore = create<DashboardStore>()(
+  persist(
+    (set, get) => ({
+      ...cloneSeed(),
+      currentUser: null,
+      activeTab: 'overview',
+      weekAnchor: new Date().toISOString().slice(0, 10),
+      login: (userId) => {
+        const user = get().users.find((item) => item.id === userId && item.status === 'Approved');
+        if (!user) {
+          toast.error('Akun tidak ditemukan atau belum disetujui');
+          return;
+        }
+        set({ currentUser: user, activeTab: 'overview' });
+      },
+      logout: () => set({ currentUser: null }),
+      resetDemo: () => {
+        const seed = cloneSeed();
+        set({
+          ...seed,
+          currentUser: get().currentUser
+            ? seed.users.find((user) => user.id === get().currentUser?.id) ?? null
+            : null,
+          activeTab: 'overview',
+          weekAnchor: new Date().toISOString().slice(0, 10)
+        });
+        toast.success('Data demo dikembalikan ke kondisi awal');
+      },
+      setTab: (tab) => set({ activeTab: tab }),
+      setWeekAnchor: (date) => set({ weekAnchor: date }),
+      upsertAvailability: (slot) => {
+        set((state) => {
+          const id = slot.id ?? createId('av');
+          const next = { ...slot, id };
+          const exists = state.availability.some((item) => item.id === id);
+          return {
+            availability: exists
+              ? state.availability.map((item) => (item.id === id ? next : item))
+              : [next, ...state.availability]
+          };
+        });
+        toast.success('Ketersediaan Sensei disimpan. Jadwal resmi tidak berubah.');
+      },
+      removeAvailability: (id) => {
+        set((state) => ({
+          availability: state.availability.map((item) =>
+            item.id === id ? { ...item, isActive: false } : item
+          )
+        }));
+        toast.success('Slot ketersediaan dinonaktifkan');
+      },
+      createClass: (input, reason) => {
+        const state = get();
+        const session: ClassSession = {
+          id: createId('class'),
+          ...input,
+          status: 'active',
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.currentUser?.name
+        };
+        if (wouldConflict(state.schedules, session)) {
+          toast.error('Bentrok dengan kelas Sensei yang sama. Selesaikan konflik dulu.');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'create_class',
+            entity: 'schedules',
+            recordId: session.id,
+            newValue: session,
+            reason
+          });
+          current.schedules = [session, ...current.schedules];
+          return { schedules: current.schedules, auditLogs: current.auditLogs };
+        });
+        toast.success('Kelas resmi ditambahkan');
+        return true;
+      },
+      updateClass: (id, input, reason) => {
+        const state = get();
+        const existing = state.schedules.find((item) => item.id === id);
+        if (!existing) return false;
+        const next = {
+          ...existing,
+          ...input,
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.currentUser?.name
+        };
+        if (wouldConflict(state.schedules, next)) {
+          toast.error('Perubahan menyebabkan konflik jadwal');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'edit_class',
+            entity: 'schedules',
+            recordId: id,
+            oldValue: existing,
+            newValue: next,
+            reason
+          });
+          return {
+            schedules: current.schedules.map((item) => (item.id === id ? next : item)),
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Jadwal resmi diperbarui');
+        return true;
+      },
+      cancelClass: (id, payload) => {
+        set((state) => {
+          const existing = state.schedules.find((item) => item.id === id);
+          if (!existing) return state;
+          const next: ClassSession = {
+            ...existing,
+            status: 'cancelled',
+            cancellationReason: payload.reason,
+            cancellationInitiator: payload.initiator,
+            replacementSecured: payload.replacementSecured,
+            originalSenseiId: existing.originalSenseiId ?? existing.senseiId,
+            updatedAt: new Date().toISOString(),
+            updatedBy: state.currentUser?.name
+          };
+          pushAudit(state, {
+            action: 'cancel_class',
+            entity: 'schedules',
+            recordId: id,
+            oldValue: existing,
+            newValue: next,
+            reason: payload.reason
+          });
+          return {
+            schedules: state.schedules.map((item) => (item.id === id ? next : item)),
+            auditLogs: state.auditLogs
+          };
+        });
+        toast.success('Kelas dibatalkan dan tercatat di audit log');
+      },
+      swapSensei: (id, newSenseiId, initiator, reason) => {
+        const state = get();
+        const existing = state.schedules.find((item) => item.id === id);
+        if (!existing) return false;
+        const next: ClassSession = {
+          ...existing,
+          originalSenseiId: existing.originalSenseiId ?? existing.senseiId,
+          senseiId: newSenseiId,
+          swapInitiator: initiator,
+          swapReason: reason,
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.currentUser?.name
+        };
+        if (wouldConflict(state.schedules, next)) {
+          toast.error('Sensei pengganti sudah punya kelas di jam ini');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'swap_sensei',
+            entity: 'schedules',
+            recordId: id,
+            oldValue: { senseiId: existing.senseiId },
+            newValue: { senseiId: newSenseiId, swapInitiator: initiator },
+            reason
+          });
+          return {
+            schedules: current.schedules.map((item) => (item.id === id ? next : item)),
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Sensei diganti. Atribusi initiator tersimpan.');
+        return true;
+      },
+      clockIn: (scheduleId, at) => {
+        const state = get();
+        const session = state.schedules.find((item) => item.id === scheduleId);
+        if (!session) return;
+        const clockInAt = at ?? new Date().toISOString();
+        const lateJoin = isLateJoin(session, clockInAt, state.settings.lateGraceMinutes);
+        set((current) => {
+          const existing = current.sessionLogs.find((item) => item.scheduleId === scheduleId);
+          const log = {
+            id: existing?.id ?? createId('log'),
+            scheduleId,
+            senseiId: session.senseiId,
+            clockInAt,
+            clockOutAt: existing?.clockOutAt ?? null,
+            lateJoin,
+            overridden: false
+          };
+          return {
+            sessionLogs: existing
+              ? current.sessionLogs.map((item) => (item.scheduleId === scheduleId ? log : item))
+              : [log, ...current.sessionLogs]
+          };
+        });
+        toast.success(lateJoin ? 'Clock-in tercatat (terlambat)' : 'Clock-in tercatat');
+      },
+      clockOut: (scheduleId, at) => {
+        set((state) => ({
+          sessionLogs: state.sessionLogs.map((item) =>
+            item.scheduleId === scheduleId
+              ? { ...item, clockOutAt: at ?? new Date().toISOString() }
+              : item
+          )
+        }));
+        toast.success('Clock-out tercatat. Lanjut isi laporan sesi.');
+      },
+      overrideClock: (scheduleId, clockInAt, clockOutAt, reason) => {
+        const state = get();
+        const session = state.schedules.find((item) => item.id === scheduleId);
+        if (!session) return;
+        set((current) => {
+          const existing = current.sessionLogs.find((item) => item.scheduleId === scheduleId);
+          const log = {
+            id: existing?.id ?? createId('log'),
+            scheduleId,
+            senseiId: session.senseiId,
+            clockInAt,
+            clockOutAt,
+            lateJoin: isLateJoin(session, clockInAt, current.settings.lateGraceMinutes),
+            overridden: true
+          };
+          pushAudit(current, {
+            action: 'override_clock',
+            entity: 'session_logs',
+            recordId: log.id,
+            oldValue: existing,
+            newValue: log,
+            reason
+          });
+          return {
+            sessionLogs: existing
+              ? current.sessionLogs.map((item) => (item.scheduleId === scheduleId ? log : item))
+              : [log, ...current.sessionLogs],
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Clock-in/out di-override dengan audit');
+      },
+      submitSessionReport: (scheduleId, payload) => {
+        const state = get();
+        set((current) => {
+          const existing = current.sessionReports.find((item) => item.scheduleId === scheduleId);
+          const report: SessionReport = {
+            id: existing?.id ?? createId('rep'),
+            scheduleId,
+            submittedBy: state.currentUser?.id ?? 'unknown',
+            submittedAt: new Date().toISOString(),
+            qaReviewStatus: existing?.qaReviewStatus ?? 'Not Reviewed',
+            qaReviewerId: existing?.qaReviewerId,
+            qaReviewedAt: existing?.qaReviewedAt,
+            qaReviewNotes: existing?.qaReviewNotes,
+            ...payload
+          };
+          const schedules = current.schedules.map((item) =>
+            item.id === scheduleId && item.status === 'active'
+              ? { ...item, status: 'completed' as const }
+              : item
+          );
+          return {
+            sessionReports: existing
+              ? current.sessionReports.map((item) => (item.scheduleId === scheduleId ? report : item))
+              : [report, ...current.sessionReports],
+            schedules
+          };
+        });
+        toast.success('Laporan sesi tersimpan per siswa');
+      },
+      overrideAttendance: (reportId, studentId, attendance, reason) => {
+        set((state) => {
+          const report = state.sessionReports.find((item) => item.id === reportId);
+          if (!report) return state;
+          const old = report.students.find((item) => item.studentId === studentId);
+          const next: SessionReport = {
+            ...report,
+            students: report.students.map((item) =>
+              item.studentId === studentId ? { ...item, attendance } : item
+            )
+          };
+          pushAudit(state, {
+            action: 'override_attendance',
+            entity: 'session_reports',
+            recordId: reportId,
+            oldValue: old?.attendance,
+            newValue: attendance,
+            reason
+          });
+          return {
+            sessionReports: state.sessionReports.map((item) => (item.id === reportId ? next : item)),
+            auditLogs: state.auditLogs
+          };
+        });
+        toast.success('Koreksi absensi tercatat');
+      },
+      overridePerformance: (reportId, studentId, score, reason) => {
+        set((state) => {
+          const report = state.sessionReports.find((item) => item.id === reportId);
+          if (!report) return state;
+          const old = report.students.find((item) => item.studentId === studentId);
+          const next: SessionReport = {
+            ...report,
+            students: report.students.map((item) =>
+              item.studentId === studentId ? { ...item, performanceScore: score } : item
+            )
+          };
+          pushAudit(state, {
+            action: 'override_performance',
+            entity: 'session_reports',
+            recordId: reportId,
+            oldValue: old?.performanceScore,
+            newValue: score,
+            reason
+          });
+          return {
+            sessionReports: state.sessionReports.map((item) => (item.id === reportId ? next : item)),
+            auditLogs: state.auditLogs
+          };
+        });
+        toast.success('Koreksi nilai performa tercatat');
+      },
+      reviewRecording: (reportId, notes) => {
+        set((state) => ({
+          sessionReports: state.sessionReports.map((item) =>
+            item.id === reportId
+              ? {
+                  ...item,
+                  qaReviewStatus: 'Reviewed' as const,
+                  qaReviewerId: state.currentUser?.id,
+                  qaReviewedAt: new Date().toISOString(),
+                  qaReviewNotes: notes
+                }
+              : item
+          )
+        }));
+        toast.success('Review rekaman disimpan');
+      },
+      upsertQaScore: (senseiId, month, score, notes) => {
+        set((state) => {
+          const existing = state.qaScores.find((item) => item.senseiId === senseiId && item.month === month);
+          const next: TeachingQaScore = {
+            id: existing?.id ?? createId('qa'),
+            senseiId,
+            month,
+            score,
+            notes,
+            createdBy: state.currentUser?.id ?? 'unknown',
+            createdAt: existing?.createdAt ?? new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          if (existing && existing.score !== score) {
+            pushAudit(state, {
+              action: 'override_qa_score',
+              entity: 'teaching_qa',
+              recordId: next.id,
+              oldValue: existing.score,
+              newValue: score,
+              reason: notes || 'Koreksi skor Teaching Performance'
+            });
+          }
+          return {
+            qaScores: existing
+              ? state.qaScores.map((item) => (item.id === existing.id ? next : item))
+              : [next, ...state.qaScores],
+            auditLogs: state.auditLogs
+          };
+        });
+        toast.success('Skor Teaching Performance disimpan');
+      },
+      overrideSenseiStatus: (senseiId, status, reason) => {
+        set((state) => {
+          const existing = state.sensei.find((item) => item.id === senseiId);
+          if (!existing) return state;
+          pushAudit(state, {
+            action: 'override_sensei_status',
+            entity: 'sensei',
+            recordId: senseiId,
+            oldValue: existing.primaryStatus,
+            newValue: status,
+            reason
+          });
+          return {
+            sensei: state.sensei.map((item) =>
+              item.id === senseiId ? { ...item, primaryStatus: status } : item
+            ),
+            auditLogs: state.auditLogs
+          };
+        });
+        toast.success('Status Sensei diubah');
+      },
+      upsertUser: (user) => {
+        set((state) => {
+          const id = user.id ?? createId('user');
+          const next = { ...user, id };
+          const exists = state.users.some((item) => item.id === id);
+          return {
+            users: exists
+              ? state.users.map((item) => (item.id === id ? next : item))
+              : [...state.users, next]
+          };
+        });
+        toast.success('Pengguna disimpan');
+      }
+    }),
+    {
+      name: 'ans-dashboard-v3',
+      partialize: (state) => ({
+        users: state.users,
+        sensei: state.sensei,
+        students: state.students,
+        groups: state.groups,
+        availability: state.availability,
+        schedules: state.schedules,
+        sessionLogs: state.sessionLogs,
+        sessionReports: state.sessionReports,
+        qaScores: state.qaScores,
+        leavePeriods: state.leavePeriods,
+        auditLogs: state.auditLogs,
+        settings: state.settings,
+        currentUser: state.currentUser,
+        activeTab: state.activeTab,
+        weekAnchor: state.weekAnchor
+      })
+    }
+  )
+);
+
+export function usePermissions(): Permissions {
+  const role = useDashboardStore((state) => state.currentUser?.role ?? 'Sensei');
+  return getPermissions(role as AppRole);
+}
+
+export function useScopedData() {
+  const currentUser = useDashboardStore((state) => state.currentUser);
+  const sensei = useDashboardStore((state) => state.sensei);
+  const students = useDashboardStore((state) => state.students);
+  const schedules = useDashboardStore((state) => state.schedules);
+  const availability = useDashboardStore((state) => state.availability);
+  const sessionLogs = useDashboardStore((state) => state.sessionLogs);
+  const sessionReports = useDashboardStore((state) => state.sessionReports);
+  const qaScores = useDashboardStore((state) => state.qaScores);
+  const permissions = getPermissions(currentUser?.role ?? 'Sensei');
+
+  if (permissions.canViewAllSchedules) {
+    return { sensei, students, schedules, availability, sessionLogs, sessionReports, qaScores };
+  }
+
+  const senseiId = currentUser?.senseiId;
+  return {
+    sensei: sensei.filter((item) => item.id === senseiId),
+    students: students.filter((item) => item.senseiId === senseiId),
+    schedules: schedules.filter((item) => item.senseiId === senseiId),
+    availability: availability.filter((item) => item.senseiId === senseiId),
+    sessionLogs: sessionLogs.filter((item) => item.senseiId === senseiId),
+    sessionReports: sessionReports.filter((item) =>
+      schedules.some((session) => session.id === item.scheduleId && session.senseiId === senseiId)
+    ),
+    qaScores: qaScores.filter((item) => item.senseiId === senseiId)
+  };
+}

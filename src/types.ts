@@ -1,0 +1,255 @@
+export type AppRole = 'Super Admin' | 'Kyouiku' | 'Sensei';
+
+export type UserStatus = 'Approved' | 'Pending' | 'Suspended';
+
+export type SenseiPrimaryStatus = 'ACTIVE' | 'INACTIVE';
+
+export type SenseiOperationalLabel = 'NEW' | 'UNASSIGNED' | 'CUTI';
+
+export type ClassType = 'Private' | 'Semi-Private' | 'Group' | 'Kids Private' | 'Kids Semi Private';
+
+export type ClassStatus = 'active' | 'completed' | 'cancelled';
+
+export type AttendanceStatus = 'Present' | 'Late' | 'Excused' | 'Absent' | 'Partial';
+
+export type RecordingStatus = 'Available' | 'Missing' | 'Not Required';
+
+export type QaReviewStatus = 'Not Reviewed' | 'Reviewed';
+
+export type SessionWorkflowState = 'ready' | 'in_progress' | 'report_pending' | 'completed' | 'cancelled';
+
+export type CancellationInitiator = 'Sensei' | 'Admin' | 'Student' | 'Ops';
+
+export type SwapInitiator = 'Sensei' | 'Admin' | 'Student';
+
+export type AvailabilityPattern = 'specific_date' | 'weekly';
+
+export type TabId =
+  | 'overview'
+  | 'schedule'
+  | 'availability'
+  | 'teaching'
+  | 'sensei'
+  | 'students'
+  | 'qa'
+  | 'disciplinary'
+  | 'audit'
+  | 'users';
+
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: AppRole;
+  status: UserStatus;
+  senseiId?: string;
+}
+
+export interface Sensei {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  levels: string[];
+  primaryStatus: SenseiPrimaryStatus;
+  joinDate: string;
+  timezone: 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura';
+  notes?: string;
+}
+
+export interface LeavePeriod {
+  id: string;
+  senseiId: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: 'approved' | 'pending' | 'rejected';
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  type: ClassType;
+  currentLevel: string;
+  startingLevel: string;
+  senseiId?: string;
+  isActive: boolean;
+  academicNotes?: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  studentIds: string[];
+  level: string;
+}
+
+export interface AvailabilitySlot {
+  id: string;
+  senseiId: string;
+  pattern: AvailabilityPattern;
+  date?: string | null;
+  weekday?: number | null;
+  startTime: string;
+  endTime: string;
+  remarks?: string;
+  isActive: boolean;
+}
+
+export interface ClassSession {
+  id: string;
+  senseiId: string;
+  studentIds: string[];
+  groupId?: string | null;
+  type: ClassType;
+  level: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: ClassStatus;
+  makeupOfSessionId?: string | null;
+  cancellationReason?: string | null;
+  cancellationInitiator?: CancellationInitiator | null;
+  replacementSecured?: boolean | null;
+  originalSenseiId?: string | null;
+  swapInitiator?: SwapInitiator | null;
+  swapReason?: string | null;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface SessionLog {
+  id: string;
+  scheduleId: string;
+  senseiId: string;
+  clockInAt?: string | null;
+  clockOutAt?: string | null;
+  lateJoin: boolean;
+  overridden: boolean;
+}
+
+export interface StudentSessionRecord {
+  studentId: string;
+  attendance: AttendanceStatus;
+  performanceScore?: number | null;
+  performanceNote?: string;
+}
+
+export interface SessionReport {
+  id: string;
+  scheduleId: string;
+  submittedBy: string;
+  submittedAt: string;
+  students: StudentSessionRecord[];
+  materialCovered: string;
+  levelProgress: string;
+  sessionNotes?: string;
+  recordingUrl?: string;
+  recordingStatus: RecordingStatus;
+  qaReviewStatus: QaReviewStatus;
+  qaReviewerId?: string | null;
+  qaReviewedAt?: string | null;
+  qaReviewNotes?: string;
+}
+
+export interface TeachingQaScore {
+  id: string;
+  senseiId: string;
+  month: string;
+  score: number;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  actorId: string;
+  actorName: string;
+  action: string;
+  entity: string;
+  recordId: string;
+  oldValue?: unknown;
+  newValue?: unknown;
+  reason?: string;
+  createdAt: string;
+}
+
+export interface AppSettings {
+  lateGraceMinutes: number;
+  minAttendancePercent: number | null;
+  weeklyHourTarget: number;
+}
+
+export interface DashboardSnapshot {
+  users: UserAccount[];
+  sensei: Sensei[];
+  students: Student[];
+  groups: Group[];
+  availability: AvailabilitySlot[];
+  schedules: ClassSession[];
+  sessionLogs: SessionLog[];
+  sessionReports: SessionReport[];
+  qaScores: TeachingQaScore[];
+  leavePeriods: LeavePeriod[];
+  auditLogs: AuditLog[];
+  settings: AppSettings;
+}
+
+export interface Permissions {
+  role: AppRole;
+  canViewAllSchedules: boolean;
+  canEditOfficialSchedule: boolean;
+  canAssignSensei: boolean;
+  canMarkOwnAvailability: boolean;
+  canOverrideAvailability: boolean;
+  canClockOwn: boolean;
+  canOverrideClock: boolean;
+  canInputAttendance: boolean;
+  canOverrideAcademic: boolean;
+  canReviewQa: boolean;
+  canEditQa: boolean;
+  canViewOwnQa: boolean;
+  canManageUsers: boolean;
+  canViewAudit: boolean;
+  canViewAllSensei: boolean;
+}
+
+export interface WorkloadMetrics {
+  senseiId: string;
+  availableHours: number;
+  assignedHours: number;
+  remainingHours: number;
+  utilization: number | null;
+  targetHours: number;
+  targetGap: number;
+  targetProgress: number;
+}
+
+export interface ActionItem {
+  id: string;
+  kind:
+    | 'missing_report'
+    | 'missing_recording'
+    | 'late_join'
+    | 'schedule_conflict'
+    | 'unassigned_sensei'
+    | 'hours_below_target'
+    | 'low_availability';
+  severity: 'high' | 'medium' | 'low';
+  title: string;
+  detail: string;
+  senseiId?: string;
+  scheduleId?: string;
+}
+
+export interface DisciplinaryMetrics {
+  senseiId: string;
+  month: string;
+  senseiInitiatedSwaps: number;
+  cancelledNoReplacement: number;
+  lateJoins: number;
+}
