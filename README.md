@@ -21,25 +21,23 @@ Student login is reserved for V4. Student records in V3 exist only for learning 
 3. **Sensei management & QA** — ACTIVE/INACTIVE plus NEW, UNASSIGNED, CUTI labels; 16-hour weekly target; manual QA 0–100.
 4. **Operational monitoring** — Action Center for missing reports/recordings, late joins, conflicts, unassigned Sensei, weekly-hour gaps.
 
-## Local demo
+## Local run
 
-This staging app uses in-memory/localStorage demo data so V3 can be explored without touching the live V2 Supabase database.
+Login **wajib Supabase Auth** — mode demo lokal sudah dihapus.
 
 ```bash
+cp .env.example .env.local
+# isi VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
 npm install
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) and pick a demo role:
-
-- Super Admin — `ops@akinosora.co`
-- Kyouiku — `kyouiku@akinosora.co`
-- Sensei — `yuki.tanaka@akinosora.co`
 
 ```bash
 npm test
 npm run build
 ```
+
+Tanpa `.env.local` yang valid, layar login meminta konfigurasi (tidak ada role-picker demo).
 
 ## Supabase setup (penting)
 
@@ -83,8 +81,6 @@ Login 3 role, pastikan:
 - Sensei hanya lihat kelas / ketersediaan sendiri
 - Kyouiku bisa lihat semua + input QA + tandai level selesai, **tidak** bisa assign/swap kelas
 - Super Admin bisa manage users + jadwal resmi + settings + makeup
-
-Tanpa `.env.local`, app tetap bisa dibuka dalam **mode demo lokal**.
 
 ## V2 continuity
 

@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { toast } from 'sonner';
-import { createSeedData } from '../data/seed';
+import { WEEKLY_HOUR_TARGET } from '../constants';
 import { getPermissions } from '../lib/rbac';
 import { wouldConflict } from '../lib/schedule';
 import { isLateJoin } from '../lib/session';
 import { isUuid, resolveSenseiId } from '../lib/senseiLink';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { mapProfile } from '../lib/mappers';
+import { hasActiveOrCompletedMakeup } from '../lib/makeup';
 import {
   ensureProfile,
   loadDashboardSnapshot,
@@ -42,14 +43,31 @@ import type {
   TeachingQaScore,
   UserAccount
 } from '../types';
-import { hasActiveOrCompletedMakeup } from '../lib/makeup';
 
 function createId() {
   return crypto.randomUUID();
 }
 
-function cloneSeed() {
-  return structuredClone(createSeedData());
+function emptySnapshot(): DashboardSnapshot {
+  return {
+    users: [],
+    sensei: [],
+    students: [],
+    groups: [],
+    availability: [],
+    schedules: [],
+    sessionLogs: [],
+    sessionReports: [],
+    qaScores: [],
+    leavePeriods: [],
+    auditLogs: [],
+    levelCompletions: [],
+    settings: {
+      lateGraceMinutes: 0,
+      minAttendancePercent: null,
+      weeklyHourTarget: WEEKLY_HOUR_TARGET
+    }
+  };
 }
 
 async function safeRemote(task: () => Promise<void>, label: string) {
@@ -78,12 +96,10 @@ interface DashboardStore extends DashboardSnapshot {
   currentUser: UserAccount | null;
   activeTab: TabId;
   weekAnchor: string;
-  dataSource: 'demo' | 'supabase';
+  dataSource: 'supabase' | 'unconfigured';
   isBootstrapping: boolean;
-  login: (userId: string) => void;
   signInWithEmail: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  resetDemo: () => void;
   hydrateFromSupabase: () => Promise<void>;
   bootstrapAuth: () => Promise<void>;
   setTab: (tab: TabId) => void;
@@ -184,20 +200,12 @@ function pushAudit(
 export const useDashboardStore = create<DashboardStore>()(
   persist(
     (set, get) => ({
-      ...cloneSeed(),
+      ...emptySnapshot(),
       currentUser: null,
       activeTab: 'overview',
       weekAnchor: new Date().toISOString().slice(0, 10),
-      dataSource: isSupabaseConfigured() ? 'supabase' : 'demo',
+      dataSource: isSupabaseConfigured() ? 'supabase' : 'unconfigured',
       isBootstrapping: Boolean(isSupabaseConfigured()),
-      login: (userId) => {
-        const user = get().users.find((item) => item.id === userId && item.status === 'Approved');
-        if (!user) {
-          toast.error('Akun tidak ditemukan atau belum disetujui');
-          return;
-        }
-        set({ currentUser: user, activeTab: 'overview' });
-      },
       signInWithEmail: async (email, password) => {
         const supabase = getSupabase();
         if (!supabase) {
@@ -237,33 +245,17 @@ export const useDashboardStore = create<DashboardStore>()(
         if (supabase) await supabase.auth.signOut();
         set({ currentUser: null });
       },
-      resetDemo: () => {
-        if (get().dataSource === 'supabase') {
-          toast.message('Mode Supabase aktif. Reset demo hanya untuk mode lokal.');
-          return;
-        }
-        const seed = cloneSeed();
-        set({
-          ...seed,
-          currentUser: get().currentUser
-            ? seed.users.find((user) => user.id === get().currentUser?.id) ?? null
-            : null,
-          activeTab: 'overview',
-          weekAnchor: new Date().toISOString().slice(0, 10),
-          dataSource: 'demo'
-        });
-        toast.success('Data demo dikembalikan ke kondisi awal');
-      },
       hydrateFromSupabase: async () => {
         if (!isSupabaseConfigured()) {
-          set({ dataSource: 'demo', isBootstrapping: false });
+          set({ ...emptySnapshot(), dataSource: 'unconfigured', isBootstrapping: false, currentUser: null });
           return;
         }
         set({ isBootstrapping: true });
         try {
           const snapshot = await loadDashboardSnapshot();
           if (!snapshot) {
-            set({ dataSource: 'demo', isBootstrapping: false });
+            set({ dataSource: 'unconfigured', isBootstrapping: false });
+            toast.error('Gagal memuat data Supabase');
             return;
           }
           set({
@@ -280,7 +272,7 @@ export const useDashboardStore = create<DashboardStore>()(
       bootstrapAuth: async () => {
         const supabase = getSupabase();
         if (!supabase) {
-          set({ dataSource: 'demo', isBootstrapping: false });
+          set({ ...emptySnapshot(), dataSource: 'unconfigured', isBootstrapping: false, currentUser: null });
           return;
         }
         set({ isBootstrapping: true, dataSource: 'supabase' });
@@ -905,33 +897,11 @@ export const useDashboardStore = create<DashboardStore>()(
       }
     }),
     {
-      name: 'ans-dashboard-v3',
-      partialize: (state) =>
-        state.dataSource === 'supabase'
-          ? {
-              activeTab: state.activeTab,
-              weekAnchor: state.weekAnchor,
-              dataSource: state.dataSource
-            }
-          : {
-              users: state.users,
-              sensei: state.sensei,
-              students: state.students,
-              groups: state.groups,
-              availability: state.availability,
-              schedules: state.schedules,
-              sessionLogs: state.sessionLogs,
-              sessionReports: state.sessionReports,
-              qaScores: state.qaScores,
-              leavePeriods: state.leavePeriods,
-              auditLogs: state.auditLogs,
-              levelCompletions: state.levelCompletions,
-              settings: state.settings,
-              currentUser: state.currentUser,
-              activeTab: state.activeTab,
-              weekAnchor: state.weekAnchor,
-              dataSource: state.dataSource
-            }
+      name: 'ans-dashboard-v3-ui',
+      partialize: (state) => ({
+        activeTab: state.activeTab,
+        weekAnchor: state.weekAnchor
+      })
     }
   )
 );
