@@ -5,6 +5,7 @@ import { createSeedData } from '../data/seed';
 import { getPermissions } from '../lib/rbac';
 import { wouldConflict } from '../lib/schedule';
 import { isLateJoin } from '../lib/session';
+import { isUuid, resolveSenseiId } from '../lib/senseiLink';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { mapProfile } from '../lib/mappers';
 import {
@@ -193,13 +194,17 @@ export const useDashboardStore = create<DashboardStore>()(
         }
         const profile = await ensureProfile(data.user.id, data.user.email || email);
         await get().hydrateFromSupabase();
-        const linkedSensei = get().sensei.find(
-          (item) => item.email.toLowerCase() === (data.user.email || email).toLowerCase()
-        );
+        const linkedSenseiId = resolveSenseiId(get().sensei, {
+          email: data.user.email || email
+        });
+        const linkedSensei = get().sensei.find((item) => item.id === linkedSenseiId);
         const account: UserAccount = {
-          ...mapProfile(profile, linkedSensei?.id),
+          ...mapProfile(profile, linkedSenseiId),
           name: linkedSensei?.name || (data.user.email || email).split('@')[0]
         };
+        if (account.role === 'Sensei' && !linkedSenseiId) {
+          toast.error('Akun Sensei belum tertaut. Samakan email Auth dengan email di tabel sensei.');
+        }
         if (account.status !== 'Approved') {
           await supabase.auth.signOut();
           set({ currentUser: null });
@@ -270,17 +275,21 @@ export const useDashboardStore = create<DashboardStore>()(
         }
         try {
           const profile = await ensureProfile(data.session.user.id, data.session.user.email || '');
-          const linkedSensei = get().sensei.find(
-            (item) => item.email.toLowerCase() === (data.session?.user.email || '').toLowerCase()
-          );
+          const linkedSenseiId = resolveSenseiId(get().sensei, {
+            email: data.session.user.email || ''
+          });
+          const linkedSensei = get().sensei.find((item) => item.id === linkedSenseiId);
           const account: UserAccount = {
-            ...mapProfile(profile, linkedSensei?.id),
+            ...mapProfile(profile, linkedSenseiId),
             name: linkedSensei?.name || (data.session.user.email || '').split('@')[0]
           };
           set({
             currentUser: account.status === 'Approved' ? account : null,
             isBootstrapping: false
           });
+          if (account.status === 'Approved' && account.role === 'Sensei' && !linkedSenseiId) {
+            toast.error('Akun Sensei belum tertaut. Samakan email Auth dengan email di tabel sensei.');
+          }
         } catch (error) {
           console.error(error);
           set({ currentUser: null, isBootstrapping: false });
@@ -289,14 +298,39 @@ export const useDashboardStore = create<DashboardStore>()(
       setTab: (tab) => set({ activeTab: tab }),
       setWeekAnchor: (date) => set({ weekAnchor: date }),
       upsertAvailability: (slot) => {
-        const id = slot.id ?? createId();
-        const next = { ...slot, id };
-        set((state) => {
-          const exists = state.availability.some((item) => item.id === id);
+        const state = get();
+        const resolvedSenseiId =
+          resolveSenseiId(state.sensei, {
+            senseiId: slot.senseiId,
+            email: state.currentUser?.email
+          }) || slot.senseiId;
+
+        if (!isUuid(resolvedSenseiId)) {
+          toast.error(
+            'Sensei belum tertaut ke master data. Samakan email login dengan kolom email di tabel sensei.'
+          );
+          return;
+        }
+
+        const id = slot.id && isUuid(slot.id) ? slot.id : createId();
+        const next = {
+          ...slot,
+          id,
+          senseiId: resolvedSenseiId,
+          date: slot.pattern === 'specific_date' ? slot.date || null : null,
+          weekday: slot.pattern === 'weekly' ? slot.weekday ?? null : null
+        };
+        set((current) => {
+          const exists = current.availability.some((item) => item.id === id);
+          const currentUser =
+            current.currentUser && !current.currentUser.senseiId
+              ? { ...current.currentUser, senseiId: resolvedSenseiId }
+              : current.currentUser;
           return {
+            currentUser,
             availability: exists
-              ? state.availability.map((item) => (item.id === id ? next : item))
-              : [next, ...state.availability]
+              ? current.availability.map((item) => (item.id === id ? next : item))
+              : [next, ...current.availability]
           };
         });
         void safeRemote(() => upsertAvailabilityRemote(next), 'Simpan ketersediaan');
@@ -767,12 +801,16 @@ export function useScopedData() {
   const sessionReports = useDashboardStore((state) => state.sessionReports);
   const qaScores = useDashboardStore((state) => state.qaScores);
   const permissions = getPermissions(currentUser?.role ?? 'Sensei');
+  const linkedSenseiId = resolveSenseiId(sensei, {
+    senseiId: currentUser?.senseiId,
+    email: currentUser?.email
+  });
 
   if (permissions.canViewAllSchedules) {
-    return { sensei, students, schedules, availability, sessionLogs, sessionReports, qaScores };
+    return { sensei, students, schedules, availability, sessionLogs, sessionReports, qaScores, linkedSenseiId };
   }
 
-  const senseiId = currentUser?.senseiId;
+  const senseiId = linkedSenseiId;
   return {
     sensei: sensei.filter((item) => item.id === senseiId),
     students: students.filter((item) => item.senseiId === senseiId),
@@ -782,6 +820,7 @@ export function useScopedData() {
     sessionReports: sessionReports.filter((item) =>
       schedules.some((session) => session.id === item.scheduleId && session.senseiId === senseiId)
     ),
-    qaScores: qaScores.filter((item) => item.senseiId === senseiId)
+    qaScores: qaScores.filter((item) => item.senseiId === senseiId),
+    linkedSenseiId
   };
 }

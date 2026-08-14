@@ -20,7 +20,6 @@ import { Modal } from './ui/Modal';
 
 export function TeachingView() {
   const permissions = usePermissions();
-  const currentUser = useDashboardStore((state) => state.currentUser);
   const allStudents = useDashboardStore((state) => state.students);
   const allSensei = useDashboardStore((state) => state.sensei);
   const clockIn = useDashboardStore((state) => state.clockIn);
@@ -29,7 +28,7 @@ export function TeachingView() {
   const submitSessionReport = useDashboardStore((state) => state.submitSessionReport);
   const overrideAttendance = useDashboardStore((state) => state.overrideAttendance);
   const overridePerformance = useDashboardStore((state) => state.overridePerformance);
-  const { schedules, sessionLogs, sessionReports } = useScopedData();
+  const { schedules, sessionLogs, sessionReports, linkedSenseiId } = useScopedData();
   const [selected, setSelected] = useState<ClassSession | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
   const [clockInAt, setClockInAt] = useState('');
@@ -55,7 +54,7 @@ export function TeachingView() {
   const selectedLog = selected ? sessionLogs.find((item) => item.scheduleId === selected.id) : undefined;
   const selectedReport = selected ? sessionReports.find((item) => item.scheduleId === selected.id) : undefined;
   const selectedState = selected ? getSessionWorkflow(selected, selectedLog, selectedReport) : 'ready';
-  const canClock = Boolean(selected && permissions.canClockOwn && currentUser?.senseiId === selected.senseiId);
+  const canClock = Boolean(selected && permissions.canClockOwn && linkedSenseiId && linkedSenseiId === selected.senseiId);
 
   return (
     <div className="space-y-4">
@@ -129,7 +128,7 @@ export function TeachingView() {
           onSubmit={submitSessionReport}
           onOverrideAttendance={overrideAttendance}
           onOverridePerformance={overridePerformance}
-          canInput={Boolean(permissions.canInputAttendance && currentUser?.senseiId === selected.senseiId) || permissions.canOverrideAcademic}
+          canInput={Boolean(permissions.canInputAttendance && linkedSenseiId && linkedSenseiId === selected.senseiId) || permissions.canOverrideAcademic}
         />
       ) : null}
     </div>
