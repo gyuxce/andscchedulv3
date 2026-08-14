@@ -155,6 +155,22 @@ describe('disciplinary attribution', () => {
     expect(metrics.senseiInitiatedSwaps).toBe(1);
     expect(metrics.cancelledNoReplacement).toBe(1);
   });
+
+  it('attributes a Sensei-initiated swap to the original Sensei, not the replacement', () => {
+    const sessions = [
+      classOf({
+        id: 'c2',
+        date: '2026-08-12',
+        startTime: '11:00',
+        endTime: '12:00',
+        senseiId: 'replacement',
+        originalSenseiId: 's1',
+        swapInitiator: 'Sensei'
+      })
+    ];
+    expect(getDisciplinaryMetrics('s1', '2026-08', sessions, []).senseiInitiatedSwaps).toBe(1);
+    expect(getDisciplinaryMetrics('replacement', '2026-08', sessions, []).senseiInitiatedSwaps).toBe(0);
+  });
 });
 
 describe('action center', () => {

@@ -13,12 +13,11 @@ export function getDisciplinaryMetrics(
 ): DisciplinaryMetrics {
   const inMonth = (date: string) => date.startsWith(month);
 
-  const senseiInitiatedSwaps = schedules.filter(
-    (session) =>
-      (session.originalSenseiId === senseiId || session.senseiId === senseiId) &&
-      session.swapInitiator === 'Sensei' &&
-      inMonth(session.date)
-  ).length;
+  const senseiInitiatedSwaps = schedules.filter((session) => {
+    if (session.swapInitiator !== 'Sensei' || !inMonth(session.date)) return false;
+    const attributableId = session.originalSenseiId ?? session.senseiId;
+    return attributableId === senseiId;
+  }).length;
 
   const cancelledNoReplacement = schedules.filter(
     (session) =>
