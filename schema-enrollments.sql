@@ -1,6 +1,18 @@
 -- ANS Dashboard V3 — Enrollment / Learning Journey
 -- 1 siswa × 1 level = 1 journey. Jangan overwrite; buat record baru saat naik level.
+-- PRASYARAT: jalankan schema-class-master.sql dulu (butuh tabel class_masters).
 -- Aman diulang.
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Safety: class_masters harus sudah ada (dari schema-class-master.sql)
+DO $$
+BEGIN
+  IF to_regclass('public.class_masters') IS NULL THEN
+    RAISE EXCEPTION
+      'Tabel class_masters belum ada. Jalankan schema-class-master.sql dulu, lalu ulang schema-enrollments.sql';
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS enrollments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

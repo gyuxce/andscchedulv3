@@ -59,7 +59,14 @@ Ada **2 file SQL**, jangan tertukar:
 4. Kalau sukses, di Table Editor harus muncul `sensei`, `schedules`, `session_reports`, dll.
 
 ### Staging yang sudah pernah di-setup
-Jalankan **`schema-timezone-settings.sql`**, lalu **`schema-level-completions.sql`**, lalu **`schema-class-master.sql`**, lalu **`schema-enrollments.sql`**, lalu **`schema-rls.sql`** lagi (agar policy baru ikut terpasang).
+Jalankan berurutan (jangan loncat):
+1. `schema-timezone-settings.sql`
+2. `schema-level-completions.sql`
+3. **`schema-class-master.sql`** ← wajib sebelum enrollments
+4. **`schema-enrollments.sql`**
+5. `schema-rls.sql` ulang
+
+Kalau error `relation "class_masters" does not exist`, berarti langkah 3 belum dijalankan.
 
 ### Setelah schema.sql sukses
 1. **Wajib:** jalankan `schema-rls.sql` (kunci RBAC Super Admin / Kyouiku / Sensei)
