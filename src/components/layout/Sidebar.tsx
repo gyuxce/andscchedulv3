@@ -4,7 +4,6 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
-  RotateCcw,
   Shield,
   Users,
   Video,
@@ -34,7 +33,6 @@ export function Sidebar() {
   const activeTab = useDashboardStore((state) => state.activeTab);
   const setTab = useDashboardStore((state) => state.setTab);
   const logout = useDashboardStore((state) => state.logout);
-  const resetDemo = useDashboardStore((state) => state.resetDemo);
   if (!currentUser) return null;
   const tabs = NAV_BY_ROLE[currentUser.role];
 
@@ -68,12 +66,6 @@ export function Sidebar() {
           <div className="text-sm font-bold">{currentUser.name}</div>
           <div className="text-xs text-white/55">{currentUser.role}</div>
         </div>
-        <button
-          onClick={resetDemo}
-          className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs text-white/70 hover:bg-white/8"
-        >
-          <RotateCcw size={14} /> Reset data demo
-        </button>
         <button
           onClick={() => {
             void logout();

@@ -1,4 +1,5 @@
 import { formatDateTime } from '../lib/dates';
+import { displayName } from '../lib/display';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { Badge } from './ui/Badge';
 
@@ -52,6 +53,19 @@ const FIELD_LABELS: Record<string, string> = {
   updatedBy: 'Diperbarui oleh'
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Aktif',
+  completed: 'Selesai',
+  cancelled: 'Dibatalkan',
+  Present: 'Hadir',
+  Late: 'Terlambat',
+  Excused: 'Izin',
+  Absent: 'Alpa',
+  Partial: 'Parsial',
+  ACTIVE: 'Aktif',
+  INACTIVE: 'Tidak aktif'
+};
+
 function actionLabel(action: string) {
   return ACTION_LABELS[action] || action.replaceAll('_', ' ');
 }
@@ -60,29 +74,56 @@ function entityLabel(entity: string) {
   return ENTITY_LABELS[entity] || entity;
 }
 
-function formatValue(value: unknown): string {
+function formatValue(
+  value: unknown,
+  lookups: {
+    sensei: Array<{ id: string; name: string }>;
+    students: Array<{ id: string; name: string }>;
+  },
+  field?: string
+): string {
   if (value == null || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak';
-  if (Array.isArray(value)) return value.length ? value.map(String).join(', ') : '—';
+  if (Array.isArray(value)) {
+    if (field === 'studentIds') {
+      return value.length
+        ? value.map((id) => displayName(lookups.students, String(id))).join(', ')
+        : '—';
+    }
+    return value.length ? value.map(String).join(', ') : '—';
+  }
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
     const preferred = ['level', 'type', 'date', 'startTime', 'endTime', 'status', 'senseiId', 'score', 'attendance'];
     const parts = preferred
       .filter((key) => record[key] != null && record[key] !== '')
-      .map((key) => `${FIELD_LABELS[key] || key}: ${formatValue(record[key])}`);
+      .map((key) => `${FIELD_LABELS[key] || key}: ${formatValue(record[key], lookups, key)}`);
     if (parts.length) return parts.join(' · ');
     return Object.entries(record)
       .filter(([key]) => !['id', 'updatedAt', 'updatedBy', 'studentIds'].includes(key))
       .slice(0, 6)
-      .map(([key, val]) => `${FIELD_LABELS[key] || key}: ${formatValue(val)}`)
+      .map(([key, val]) => `${FIELD_LABELS[key] || key}: ${formatValue(val, lookups, key)}`)
       .join(' · ');
   }
-  return String(value);
+
+  const text = String(value);
+  if (field === 'senseiId' || field === 'originalSenseiId') {
+    return displayName(lookups.sensei, text);
+  }
+  if (STATUS_LABELS[text]) return STATUS_LABELS[text];
+  return text;
 }
 
-function summarizeChange(oldValue: unknown, newValue: unknown): string[] {
+function summarizeChange(
+  oldValue: unknown,
+  newValue: unknown,
+  lookups: {
+    sensei: Array<{ id: string; name: string }>;
+    students: Array<{ id: string; name: string }>;
+  }
+): string[] {
   if (oldValue == null && newValue != null && typeof newValue === 'object' && !Array.isArray(newValue)) {
-    return [`Data baru: ${formatValue(newValue)}`];
+    return [`Data baru: ${formatValue(newValue, lookups)}`];
   }
 
   if (
@@ -100,12 +141,15 @@ function summarizeChange(oldValue: unknown, newValue: unknown): string[] {
     );
     const lines = keys
       .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
-      .map((key) => `${FIELD_LABELS[key] || key}: ${formatValue(before[key])} → ${formatValue(after[key])}`);
+      .map(
+        (key) =>
+          `${FIELD_LABELS[key] || key}: ${formatValue(before[key], lookups, key)} → ${formatValue(after[key], lookups, key)}`
+      );
     return lines.length ? lines : ['Tidak ada detail field yang berubah'];
   }
 
   if (oldValue != null || newValue != null) {
-    return [`${formatValue(oldValue)} → ${formatValue(newValue)}`];
+    return [`${formatValue(oldValue, lookups)} → ${formatValue(newValue, lookups)}`];
   }
 
   return ['—'];
@@ -113,6 +157,10 @@ function summarizeChange(oldValue: unknown, newValue: unknown): string[] {
 
 export function AuditView() {
   const logs = useDashboardStore((state) => state.auditLogs);
+  const sensei = useDashboardStore((state) => state.sensei);
+  const students = useDashboardStore((state) => state.students);
+  const lookups = { sensei, students };
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-soft">
@@ -149,7 +197,7 @@ export function AuditView() {
                   <td className="px-4 py-3">{log.reason || '—'}</td>
                   <td className="px-4 py-3">
                     <ul className="space-y-1 text-xs leading-relaxed text-ink-soft">
-                      {summarizeChange(log.oldValue, log.newValue).map((line) => (
+                      {summarizeChange(log.oldValue, log.newValue, lookups).map((line) => (
                         <li key={line}>{line}</li>
                       ))}
                     </ul>
