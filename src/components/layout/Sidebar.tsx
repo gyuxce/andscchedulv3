@@ -39,7 +39,7 @@ export function Sidebar() {
   const tabs = NAV_BY_ROLE[currentUser.role];
 
   return (
-    <aside className="flex h-dvh w-[270px] shrink-0 flex-col bg-ink text-white">
+    <aside className="sticky top-0 flex h-dvh min-h-dvh w-[270px] shrink-0 flex-col self-stretch bg-ink text-white">
       <div className="border-b border-white/10 px-5 py-5">
         <p className="text-[10px] tracking-[0.28em] text-white/50">秋の空</p>
         <h1 className="mt-1 text-lg font-extrabold">ANS Dashboard V3</h1>
@@ -63,7 +63,7 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="space-y-2 border-t border-white/10 p-4">
+      <div className="mt-auto space-y-2 border-t border-white/10 p-4">
         <div>
           <div className="text-sm font-bold">{currentUser.name}</div>
           <div className="text-xs text-white/55">{currentUser.role}</div>

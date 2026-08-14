@@ -49,9 +49,9 @@ export default function App() {
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         <TopBar />
-        <main className="min-h-0 flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           {tab === 'overview' && <OverviewView />}
           {tab === 'schedule' && <ScheduleView />}
           {tab === 'availability' && <AvailabilityView />}
