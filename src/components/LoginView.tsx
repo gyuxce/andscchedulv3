@@ -21,30 +21,27 @@ export function LoginView() {
               <p className="text-sm tracking-[0.3em] text-white/60">秋の空 × ILUSA</p>
               <h1 className="mt-6 text-4xl font-extrabold leading-tight">ANS Dashboard V3</h1>
               <p className="mt-4 max-w-sm text-sm leading-6 text-white/75">
-                Operasional kelas, Sensei, dan QA. Login wajib lewat Supabase Auth (staging terpisah dari V2).
+                Dashboard operasional kelas, Sensei, dan QA untuk Aki No Sora × ILUSA.
               </p>
             </div>
-            <p className="text-xs text-white/50">Mode demo lokal sudah dinonaktifkan.</p>
+            <p className="text-xs text-white/50">Masuk dengan akun resmi yang sudah diaktifkan.</p>
           </div>
         </div>
         <div className="p-8">
           {!configured ? (
             <>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-maple">Konfigurasi diperlukan</p>
-              <h2 className="mt-2 text-2xl font-extrabold text-ink">Supabase belum terhubung</h2>
+              <h2 className="mt-2 text-2xl font-extrabold text-ink">Layanan belum terhubung</h2>
               <p className="mt-2 text-sm text-ink-soft">
-                Salin <code className="rounded bg-paper px-1">.env.example</code> ke{' '}
-                <code className="rounded bg-paper px-1">.env.local</code>, isi{' '}
-                <code className="rounded bg-paper px-1">VITE_SUPABASE_URL</code> dan{' '}
-                <code className="rounded bg-paper px-1">VITE_SUPABASE_ANON_KEY</code>, lalu restart app.
+                Hubungi admin operasional untuk memastikan environment aplikasi sudah dikonfigurasi.
               </p>
             </>
           ) : (
             <>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-maple">Supabase Auth</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-maple">Masuk</p>
               <h2 className="mt-2 text-2xl font-extrabold text-ink">Masuk dengan email</h2>
               <p className="mt-2 text-sm text-ink-soft">
-                User harus ada di Authentication dan `profiles.status = Approved`.
+                Gunakan email dan password akun yang sudah disetujui admin.
               </p>
               <form
                 className="mt-6 space-y-3"
@@ -61,6 +58,7 @@ export function LoginView() {
                     className="ui-input"
                     type="email"
                     required
+                    autoComplete="username"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                   />
@@ -71,6 +69,7 @@ export function LoginView() {
                     className="ui-input"
                     type="password"
                     required
+                    autoComplete="current-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                   />

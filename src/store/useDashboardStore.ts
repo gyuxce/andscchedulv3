@@ -83,7 +83,7 @@ async function safeRemote(task: () => Promise<void>, label: string) {
     await task();
   } catch (error) {
     console.error(error);
-    toast.error(`${label}: ${error instanceof Error ? error.message : 'gagal sync Supabase'}`);
+    toast.error(`${label}: ${error instanceof Error ? error.message : 'gagal menyimpan'}`);
   }
 }
 
@@ -226,7 +226,7 @@ export const useDashboardStore = create<DashboardStore>()(
       signInWithEmail: async (email, password) => {
         const supabase = getSupabase();
         if (!supabase) {
-          toast.error('Supabase belum dikonfigurasi di .env.local');
+          toast.error('Layanan autentikasi belum dikonfigurasi');
           return false;
         }
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -272,7 +272,7 @@ export const useDashboardStore = create<DashboardStore>()(
           const snapshot = await loadDashboardSnapshot();
           if (!snapshot) {
             set({ dataSource: 'unconfigured', isBootstrapping: false });
-            toast.error('Gagal memuat data Supabase');
+            toast.error('Gagal memuat data dashboard');
             return;
           }
           set({
@@ -282,7 +282,7 @@ export const useDashboardStore = create<DashboardStore>()(
           });
         } catch (error) {
           console.error(error);
-          toast.error(error instanceof Error ? error.message : 'Gagal memuat data Supabase');
+          toast.error(error instanceof Error ? error.message : 'Gagal memuat data dashboard');
           set({ isBootstrapping: false });
         }
       },

@@ -31,7 +31,7 @@ export default function App() {
   if (isBootstrapping) {
     return (
       <div className="flex min-h-dvh items-center justify-center text-sm font-semibold text-ink-soft">
-        Menyambungkan ke Supabase staging…
+        Memuat dashboard…
       </div>
     );
   }
