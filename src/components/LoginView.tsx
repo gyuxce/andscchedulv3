@@ -4,8 +4,9 @@ import { useDashboardStore } from '../store/useDashboardStore';
 import { Button } from './ui/Button';
 
 export function LoginView() {
-  const users = useDashboardStore((state) => state.users.filter((user) => user.status === 'Approved'));
+  const allUsers = useDashboardStore((state) => state.users);
   const login = useDashboardStore((state) => state.login);
+  const users = allUsers.filter((user) => user.status === 'Approved');
   const [selected, setSelected] = useState(users[0]?.id ?? '');
 
   return (
