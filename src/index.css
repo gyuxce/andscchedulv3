@@ -87,4 +87,14 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+
+  .ui-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ui-table-wrap > table {
+    min-width: 480px;
+  }
 }

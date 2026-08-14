@@ -60,8 +60,9 @@ export function StudentsView() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-      <div className="ui-card overflow-hidden">
+      <div className="ui-card max-h-64 overflow-hidden lg:max-h-none">
         <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Siswa operasional</div>
+        <div className="max-h-52 overflow-y-auto lg:max-h-[calc(100dvh-10rem)]">
         {students.map((student) => (
           <button
             key={student.id}
@@ -76,13 +77,14 @@ export function StudentsView() {
             <div className="text-xs text-ink-soft">{student.currentLevel} · {student.type}</div>
           </button>
         ))}
+        </div>
       </div>
       {selected ? (
         <div className="space-y-4">
           <div className="ui-card p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-2xl font-extrabold">{selected.name}</h3>
+                <h3 className="text-xl font-extrabold sm:text-2xl">{selected.name}</h3>
                 <p className="text-sm text-ink-soft">
                   Perjalanan: {selected.startingLevel} → {selected.currentLevel} · Sensei{' '}
                   {displayName(allSensei, selected.senseiId)}
@@ -183,6 +185,7 @@ export function StudentsView() {
                 <div className="flex items-end">
                   <Button
                     tone="primary"
+                    className="w-full md:w-auto"
                     disabled={currentLevelCompleted}
                     onClick={() => {
                       const ok = completeLevel({
@@ -232,6 +235,7 @@ export function StudentsView() {
 
           <div className="ui-card overflow-hidden">
             <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Riwayat sesi</div>
+            <div className="ui-table-wrap">
             <table className="w-full text-sm">
               <thead className="bg-paper/70 text-left text-xs uppercase text-ink-soft">
                 <tr>
@@ -259,6 +263,7 @@ export function StudentsView() {
                 ))}
               </tbody>
             </table>
+            </div>
             {permissions.canViewOwnQa ? (
               <p className="px-4 py-3 text-xs text-ink-soft">Sensei hanya melihat siswa di kelasnya sendiri.</p>
             ) : null}

@@ -175,6 +175,7 @@ export function AuditView() {
         dipakai, bukan hapus permanen.
       </p>
       <div className="ui-card overflow-hidden">
+        <div className="ui-table-wrap">
         <table className="w-full text-sm">
           <thead className="bg-paper/80 text-left text-xs uppercase text-ink-soft">
             <tr>
@@ -214,6 +215,7 @@ export function AuditView() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

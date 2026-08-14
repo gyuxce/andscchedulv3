@@ -21,11 +21,12 @@ export function UsersView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-ink-soft">Hanya Super Admin yang mengelola pengguna dan izin. Portal siswa ditunda ke V4.</p>
-        <Button tone="primary" onClick={() => setOpen(true)}>Tambah pengguna</Button>
+        <Button tone="primary" className="w-full sm:w-auto" onClick={() => setOpen(true)}>Tambah pengguna</Button>
       </div>
       <div className="ui-card overflow-hidden">
+        <div className="ui-table-wrap">
         <table className="w-full text-sm">
           <thead className="bg-paper/80 text-left text-xs uppercase text-ink-soft">
             <tr>
@@ -51,6 +52,7 @@ export function UsersView() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {open ? (
         <Modal
