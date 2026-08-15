@@ -21,6 +21,7 @@ import {
   upsertScheduleRemote,
   upsertSenseiStatusRemote,
   upsertSenseiTimezoneRemote,
+  upsertSenseiRemote,
   upsertSessionLogRemote,
   upsertEnrollmentRemote,
   upsertSessionReportRemote,
@@ -37,11 +38,14 @@ import type {
   ClassMaster,
   ClassSession,
   DashboardSnapshot,
+  Enrollment,
   LevelCompletion,
   Permissions,
   RecordingStatus,
+  Sensei,
   SenseiTimezone,
   SessionReport,
+  Student,
   StudentSessionRecord,
   SwapInitiator,
   TabId,
@@ -152,6 +156,14 @@ interface DashboardStore extends DashboardSnapshot {
   upsertQaScore: (senseiId: string, month: string, score: number, notes: string) => void;
   overrideSenseiStatus: (senseiId: string, status: 'ACTIVE' | 'INACTIVE', reason: string) => void;
   updateSenseiTimezone: (senseiId: string, timezone: SenseiTimezone) => void;
+  upsertSensei: (input: Omit<Sensei, 'id'> & { id?: string }) => string | null;
+  setSenseiLeave: (
+    senseiId: string,
+    leave: { startDate: string; endDate: string } | null,
+    reason: string
+  ) => boolean;
+  upsertStudent: (input: Omit<Student, 'id'> & { id?: string }) => string | null;
+  upsertEnrollment: (input: Omit<Enrollment, 'id' | 'updatedAt' | 'updatedBy'> & { id?: string }) => string | null;
   updateSettings: (patch: Partial<AppSettings>) => void;
   completeLevel: (input: {
     studentId: string;
@@ -831,6 +843,184 @@ export const useDashboardStore = create<DashboardStore>()(
         });
         void safeRemote(() => upsertSenseiTimezoneRemote(senseiId, timezone), 'Update timezone Sensei');
         toast.success('Timezone Sensei disimpan');
+      },
+      upsertSensei: (input) => {
+        if (!input.name.trim()) {
+          toast.error('Nama Sensei wajib');
+          return null;
+        }
+        if (!input.email.trim()) {
+          toast.error('Email Sensei wajib');
+          return null;
+        }
+        const id = input.id ?? createId();
+        const next: Sensei = {
+          ...input,
+          id,
+          name: input.name.trim(),
+          displayName: input.displayName?.trim() || undefined,
+          email: input.email.trim().toLowerCase(),
+          phone: input.phone?.trim() || '',
+          levels: input.levels || [],
+          joinDate: input.joinDate || new Date().toISOString().slice(0, 10),
+          timezone: input.timezone || 'Asia/Jakarta',
+          primaryStatus: input.primaryStatus || 'ACTIVE'
+        };
+        set((current) => {
+          const exists = current.sensei.some((item) => item.id === id);
+          pushAudit(current, {
+            action: exists ? 'update_sensei' : 'create_sensei',
+            entity: 'sensei',
+            recordId: id,
+            newValue: next
+          });
+          return {
+            sensei: exists
+              ? current.sensei.map((item) => (item.id === id ? next : item))
+              : [next, ...current.sensei],
+            auditLogs: current.auditLogs
+          };
+        });
+        void safeRemote(() => upsertSenseiRemote(next), 'Simpan Sensei');
+        toast.success('Sensei disimpan');
+        return id;
+      },
+      setSenseiLeave: (senseiId, leave, reason) => {
+        const sensei = get().sensei.find((item) => item.id === senseiId);
+        if (!sensei) {
+          toast.error('Sensei tidak ditemukan');
+          return false;
+        }
+        if (leave && leave.endDate < leave.startDate) {
+          toast.error('Tanggal cuti tidak valid');
+          return false;
+        }
+        set((current) => {
+          const without = current.leavePeriods.filter((item) => item.senseiId !== senseiId);
+          const nextLeave = leave
+            ? [
+                {
+                  id: createId(),
+                  senseiId,
+                  startDate: leave.startDate,
+                  endDate: leave.endDate,
+                  reason: reason || 'CUTI',
+                  status: 'approved' as const
+                },
+                ...without
+              ]
+            : without;
+          pushAudit(current, {
+            action: leave ? 'set_sensei_leave' : 'clear_sensei_leave',
+            entity: 'sensei_status',
+            recordId: senseiId,
+            newValue: leave,
+            reason
+          });
+          return { leavePeriods: nextLeave, auditLogs: current.auditLogs };
+        });
+        void safeRemote(
+          () =>
+            upsertSenseiStatusRemote({
+              senseiId,
+              primaryStatus: sensei.primaryStatus,
+              joinDate: sensei.joinDate,
+              leaveStart: leave?.startDate ?? null,
+              leaveEnd: leave?.endDate ?? null,
+              updatedBy: get().currentUser?.email
+            }),
+          'Simpan cuti Sensei'
+        );
+        toast.success(leave ? 'Periode CUTI disimpan' : 'Periode CUTI dihapus');
+        return true;
+      },
+      upsertStudent: (input) => {
+        if (!input.name.trim()) {
+          toast.error('Nama siswa wajib');
+          return null;
+        }
+        const id = input.id ?? createId();
+        const next: Student = {
+          ...input,
+          id,
+          name: input.name.trim(),
+          email: input.email?.trim() || undefined,
+          phone: input.phone?.trim() || undefined,
+          type: input.type || 'Private',
+          currentLevel: input.currentLevel || input.startingLevel || '',
+          startingLevel: input.startingLevel || input.currentLevel || '',
+          isActive: input.isActive !== false,
+          academicNotes: input.academicNotes?.trim() || undefined
+        };
+        set((current) => {
+          const exists = current.students.some((item) => item.id === id);
+          pushAudit(current, {
+            action: exists ? 'update_student' : 'create_student',
+            entity: 'students',
+            recordId: id,
+            newValue: next
+          });
+          return {
+            students: exists
+              ? current.students.map((item) => (item.id === id ? next : item))
+              : [next, ...current.students],
+            auditLogs: current.auditLogs
+          };
+        });
+        void safeRemote(() => upsertStudentRemote(next), 'Simpan siswa');
+        toast.success('Siswa disimpan');
+        return id;
+      },
+      upsertEnrollment: (input) => {
+        if (!input.studentId || !input.level.trim()) {
+          toast.error('Siswa dan level wajib');
+          return null;
+        }
+        const id = input.id ?? createId();
+        const next: Enrollment = {
+          ...input,
+          id,
+          level: input.level.trim(),
+          status: input.status || 'active',
+          paymentStatus: input.paymentStatus ?? 'BELUM_BAYAR',
+          requiredMeetings: input.requiredMeetings ?? null,
+          sessionsCompleted: input.sessionsCompleted ?? 0,
+          updatedAt: new Date().toISOString(),
+          updatedBy: get().currentUser?.name
+        };
+        set((current) => {
+          const exists = current.enrollments.some((item) => item.id === id);
+          pushAudit(current, {
+            action: exists ? 'update_enrollment' : 'create_enrollment',
+            entity: 'enrollments',
+            recordId: id,
+            newValue: next
+          });
+          const students = current.students.map((student) => {
+            if (student.id !== next.studentId) return student;
+            if (next.status !== 'active' && next.status !== 'ending_soon') return student;
+            return {
+              ...student,
+              currentLevel: next.level || student.currentLevel,
+              type: next.classType || student.type,
+              senseiId: next.senseiId || student.senseiId
+            };
+          });
+          return {
+            enrollments: exists
+              ? current.enrollments.map((item) => (item.id === id ? next : item))
+              : [next, ...current.enrollments],
+            students,
+            auditLogs: current.auditLogs
+          };
+        });
+        void safeRemote(async () => {
+          await upsertEnrollmentRemote(next);
+          const student = get().students.find((item) => item.id === next.studentId);
+          if (student) await upsertStudentRemote(student);
+        }, 'Simpan enrollment');
+        toast.success('Enrollment disimpan');
+        return id;
       },
       updateSettings: (patch) => {
         const previous = get().settings;

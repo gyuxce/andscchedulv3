@@ -15,7 +15,7 @@ import {
   formatDurationMinutes,
   scheduledDurationMinutes
 } from '../duration';
-import { ensureClassEnrollments, progressEnrollmentJourney } from '../enrollment';
+import { ensureClassEnrollments, progressEnrollmentJourney, deriveEnrollmentDisplayStatus, getEnrollmentProgress } from '../enrollment';
 import type { ClassMaster, ClassSession, Sensei } from '../../types';
 
 const yuki: Sensei = {
@@ -352,6 +352,20 @@ describe('enrollment journey', () => {
     expect(enrollments.find((item) => item.id === 'e1')?.endDate).toBeTruthy();
     expect(enrollments.find((item) => item.id === 'e2')?.status).toBe('active');
     expect(enrollments.find((item) => item.id === 'e2')?.level).toBe('N4');
+  });
+
+  it('marks ending soon near required meetings', () => {
+    const enrollment = {
+      id: 'e1',
+      studentId: 'st1',
+      level: 'N5',
+      status: 'active' as const,
+      requiredMeetings: 14,
+      sessionsCompleted: 12,
+      startDate: '2026-07-01'
+    };
+    expect(deriveEnrollmentDisplayStatus(enrollment, [], [])).toBe('ending_soon');
+    expect(getEnrollmentProgress(enrollment, [], []).completed).toBe(12);
   });
 
   it('ensures class master students get active enrollments', () => {

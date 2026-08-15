@@ -4,6 +4,7 @@ import type {
   DashboardSnapshot,
   Enrollment,
   LevelCompletion,
+  Sensei,
   SenseiTimezone,
   Student,
   UserAccount
@@ -27,7 +28,9 @@ import {
   mapSessionLog,
   mapSessionReport,
   mapStudent,
-  scheduleToRow
+  scheduleToRow,
+  senseiToRow,
+  studentToRow
 } from '../lib/mappers';
 import { getSupabase } from '../lib/supabase';
 import type { AvailabilitySlot, ClassSession, SessionLog, SessionReport, TeachingQaScore } from '../types';
@@ -311,6 +314,8 @@ export async function upsertSenseiStatusRemote(input: {
   senseiId: string;
   primaryStatus: 'ACTIVE' | 'INACTIVE';
   joinDate?: string;
+  leaveStart?: string | null;
+  leaveEnd?: string | null;
   updatedBy?: string;
 }) {
   const supabase = getSupabase();
@@ -319,10 +324,24 @@ export async function upsertSenseiStatusRemote(input: {
     sensei_id: input.senseiId,
     primary_status: input.primaryStatus,
     join_date: input.joinDate || null,
+    leave_start: input.leaveStart ?? null,
+    leave_end: input.leaveEnd ?? null,
     updated_at: new Date().toISOString(),
     updated_by: input.updatedBy || null
   });
   if (error) throw new Error(error.message);
+}
+
+export async function upsertSenseiRemote(sensei: Sensei) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('sensei').upsert(senseiToRow(sensei));
+  if (error) throw new Error(error.message);
+  await upsertSenseiStatusRemote({
+    senseiId: sensei.id,
+    primaryStatus: sensei.primaryStatus,
+    joinDate: sensei.joinDate
+  });
 }
 
 export async function upsertSenseiTimezoneRemote(senseiId: string, timezone: SenseiTimezone) {
@@ -362,15 +381,7 @@ export async function upsertLevelCompletionRemote(completion: LevelCompletion) {
 export async function upsertStudentRemote(student: Student) {
   const supabase = getSupabase();
   if (!supabase) return;
-  const { error } = await supabase
-    .from('students')
-    .update({
-      level_sekarang: student.currentLevel,
-      level_awal: student.startingLevel,
-      special_note: student.academicNotes || null,
-      is_active: student.isActive
-    })
-    .eq('id', student.id);
+  const { error } = await supabase.from('students').upsert(studentToRow(student));
   if (error) throw new Error(error.message);
 }
 

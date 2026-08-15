@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS sensei (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name TEXT NOT NULL,
+  display_name TEXT,
   note TEXT,
   no_wa TEXT,
   email TEXT,
@@ -289,9 +290,16 @@ CREATE TABLE IF NOT EXISTS enrollments (
   class_id UUID REFERENCES class_masters(id) ON DELETE SET NULL,
   sensei_id UUID REFERENCES sensei(id) ON DELETE SET NULL,
   status TEXT NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active', 'completed', 'transferred', 'cancelled')),
+    CHECK (status IN ('active', 'ending_soon', 'completed', 'stopped', 'transferred', 'cancelled')),
   start_date DATE,
   end_date DATE,
+  planned_end_date DATE,
+  required_meetings INT,
+  sessions_completed INT DEFAULT 0,
+  payment_status TEXT
+    CHECK (payment_status IS NULL OR payment_status IN ('LUNAS', 'CICILAN', 'BELUM_BAYAR')),
+  payment_remark TEXT,
+  enrollment_remark TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
