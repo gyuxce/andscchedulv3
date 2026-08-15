@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { CLASS_LEVELS } from '../constants';
 import { getOperationalLabels, senseiDisplayName } from '../lib/labels';
 import { timezoneAbbreviation, timezoneLabel, SENSEI_TIMEZONE_OPTIONS } from '../lib/timezone';
@@ -31,6 +32,7 @@ const emptyForm = (): Omit<Sensei, 'id'> => ({
 export function SenseiView() {
   const permissions = usePermissions();
   const sensei = useDashboardStore((state) => state.sensei);
+  const users = useDashboardStore((state) => state.users);
   const schedules = useDashboardStore((state) => state.schedules);
   const classMasters = useDashboardStore((state) => state.classMasters);
   const availability = useDashboardStore((state) => state.availability);
@@ -41,6 +43,7 @@ export function SenseiView() {
   const updateSenseiTimezone = useDashboardStore((state) => state.updateSenseiTimezone);
   const upsertSensei = useDashboardStore((state) => state.upsertSensei);
   const setSenseiLeave = useDashboardStore((state) => state.setSenseiLeave);
+  const createUserLogin = useDashboardStore((state) => state.createUserLogin);
   const currentUser = useDashboardStore((state) => state.currentUser);
   const visible = permissions.canViewAllSensei ? sensei : sensei.filter((item) => item.id === currentUser?.senseiId);
   const canEditOps = permissions.canManageUsers;
@@ -50,26 +53,35 @@ export function SenseiView() {
   const [form, setForm] = useState(emptyForm());
   const [leaveStart, setLeaveStart] = useState('');
   const [leaveEnd, setLeaveEnd] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginPassword2, setLoginPassword2] = useState('');
+  const [creatingLogin, setCreatingLogin] = useState(false);
   const selected = visible.find((item) => item.id === selectedId);
   const selectedLeave = useMemo(
-    () =>
-      leavePeriods.find(
-        (item) => item.senseiId === selectedId && item.status === 'approved'
-      ),
+    () => leavePeriods.find((item) => item.senseiId === selectedId && item.status === 'approved'),
     [leavePeriods, selectedId]
   );
+  const hasLogin = useMemo(() => {
+    const email = (creating ? form.email : selected?.email || form.email).trim().toLowerCase();
+    if (!email) return false;
+    return users.some((user) => user.email.trim().toLowerCase() === email);
+  }, [users, creating, form.email, selected?.email]);
 
   const openCreate = () => {
     setCreating(true);
     setSelectedId(null);
     setForm(emptyForm());
     setReason('');
+    setLoginPassword('');
+    setLoginPassword2('');
   };
 
   const openEdit = (item: Sensei) => {
     setCreating(false);
     setSelectedId(item.id);
     setReason('');
+    setLoginPassword('');
+    setLoginPassword2('');
     setForm({
       name: item.name,
       displayName: item.displayName || '',
@@ -86,17 +98,69 @@ export function SenseiView() {
     setLeaveEnd(leave?.endDate || '');
   };
 
-  const saveSensei = () => {
+  const saveSensei = async () => {
+    if (loginPassword) {
+      if (loginPassword.length < 6) {
+        toast.error('Password login minimal 6 karakter');
+        return;
+      }
+      if (loginPassword !== loginPassword2) {
+        toast.error('Password tidak sama');
+        return;
+      }
+    }
+
     const id = upsertSensei({
       ...form,
       id: creating ? undefined : selectedId || undefined,
       displayName: form.displayName || undefined,
       notes: form.notes || undefined
     });
-    if (id) {
-      setCreating(false);
-      setSelectedId(id);
+    if (!id) return;
+
+    if (loginPassword) {
+      setCreatingLogin(true);
+      await createUserLogin({
+        email: form.email,
+        password: loginPassword,
+        role: 'Sensei',
+        status: 'Approved',
+        name: form.name,
+        senseiId: id
+      });
+      setCreatingLogin(false);
+      setLoginPassword('');
+      setLoginPassword2('');
     }
+
+    setCreating(false);
+    setSelectedId(id);
+  };
+
+  const createLoginOnly = async () => {
+    if (!selected && !form.email) return;
+    if (loginPassword.length < 6) {
+      toast.error('Password login minimal 6 karakter');
+      return;
+    }
+    if (loginPassword !== loginPassword2) {
+      toast.error('Password tidak sama');
+      return;
+    }
+    const email = (selected?.email || form.email).trim();
+    const senseiId = selected?.id;
+    setCreatingLogin(true);
+    await createUserLogin({
+      email,
+      password: loginPassword,
+      role: 'Sensei',
+      status: 'Approved',
+      name: selected?.name || form.name,
+      senseiId
+    });
+    setCreatingLogin(false);
+    setLoginPassword('');
+    setLoginPassword2('');
   };
 
   return (
@@ -118,34 +182,34 @@ export function SenseiView() {
         {visible.map((item) => {
           const labels = getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters);
           const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
+          const linked = users.some((user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase());
           return (
             <button key={item.id} className="ui-card p-4 text-left" onClick={() => openEdit(item)}>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-lg font-extrabold text-ink">{senseiDisplayName(item)}</h3>
-                  <p className="text-xs text-ink-soft">
-                    {item.name !== senseiDisplayName(item) ? `${item.name} · ` : ''}
-                    {item.email} · {timezoneAbbreviation(item.timezone)} · join {item.joinDate}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <h3 className="text-lg font-extrabold text-ink">{senseiDisplayName(item)}</h3>
+                    <Badge tone={timezoneAbbreviation(item.timezone) === 'WIB' ? 'muted' : 'sky'}>
+                      {timezoneAbbreviation(item.timezone)}
+                    </Badge>
+                    {linked ? <Badge tone="success">Login OK</Badge> : <Badge tone="gold">Belum login</Badge>}
+                  </div>
+                  <p className="text-xs text-ink-soft">{item.email || '—'}</p>
                 </div>
-                <Badge tone={item.primaryStatus === 'ACTIVE' ? 'success' : 'muted'}>{item.primaryStatus}</Badge>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {labels.length === 0 ? (
-                  <Badge>Tanpa label</Badge>
-                ) : (
-                  labels.map((label) => (
+                <div className="flex flex-wrap justify-end gap-1">
+                  <Badge tone={item.primaryStatus === 'ACTIVE' ? 'success' : 'danger'}>{item.primaryStatus}</Badge>
+                  {labels.map((label) => (
                     <Badge key={label} tone={LABEL_TONE[label]}>
                       {label}
                     </Badge>
-                  ))
-                )}
+                  ))}
+                </div>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-ink-soft sm:grid-cols-4">
                 <div>
-                  Tersedia
+                  Target
                   <br />
-                  <b>{formatHours(workload.availableHours)}</b>
+                  <b>{formatHours(workload.targetHours)}</b>
                 </div>
                 <div>
                   Terisi
@@ -187,8 +251,8 @@ export function SenseiView() {
                 Tutup
               </Button>
               {canEditOps ? (
-                <Button tone="primary" onClick={saveSensei}>
-                  Simpan
+                <Button tone="primary" onClick={() => void saveSensei()} disabled={creatingLogin}>
+                  {creatingLogin ? 'Menyimpan…' : 'Simpan'}
                 </Button>
               ) : null}
             </>
@@ -289,8 +353,68 @@ export function SenseiView() {
             </div>
           )}
 
+          {canEditOps ? (
+            <div className="mt-3 space-y-2 rounded-2xl border border-sky-200 bg-sky-50 p-3">
+              <p className="ui-label">Akun login dashboard</p>
+              {hasLogin ? (
+                <p className="text-sm text-ink-soft">
+                  Email ini sudah punya profil login. Sensei bisa masuk dengan password yang sudah diset. Reset password
+                  lewat Supabase Authentication bila lupa.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-ink-soft">
+                    Isi password di bawah untuk membuat akun login langsung dari dashboard (role Sensei, status
+                    Approved). Email login = email Sensei di atas.
+                  </p>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <label>
+                      <span className="ui-label">Password login</span>
+                      <input
+                        className="ui-input"
+                        type="password"
+                        autoComplete="new-password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="Minimal 6 karakter"
+                      />
+                    </label>
+                    <label>
+                      <span className="ui-label">Ulangi password</span>
+                      <input
+                        className="ui-input"
+                        type="password"
+                        autoComplete="new-password"
+                        value={loginPassword2}
+                        onChange={(e) => setLoginPassword2(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  {loginPassword && loginPassword !== loginPassword2 ? (
+                    <p className="text-xs font-semibold text-rose-700">Password tidak sama.</p>
+                  ) : null}
+                  {!creating && selected ? (
+                    <Button
+                      tone="primary"
+                      disabled={
+                        creatingLogin || loginPassword.length < 6 || loginPassword !== loginPassword2 || !form.email
+                      }
+                      onClick={() => void createLoginOnly()}
+                    >
+                      {creatingLogin ? 'Membuat…' : 'Buat akun login sekarang'}
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-ink-soft">
+                      Saat Simpan, master Sensei + akun login dibuat bersamaan jika password diisi.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          ) : null}
+
           {!creating && selected && canEditOps ? (
-            <div className="space-y-3">
+            <div className="mt-3 space-y-3">
               <div className="space-y-2 rounded-2xl border border-[#efe4d2] p-3">
                 <p className="ui-label">Periode CUTI</p>
                 {selectedLeave ? (
