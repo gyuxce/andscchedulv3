@@ -19,7 +19,15 @@ const ACTION_LABELS: Record<string, string> = {
   override_attendance: 'Koreksi absensi',
   override_performance: 'Koreksi nilai performa',
   override_qa_score: 'Koreksi skor QA',
-  override_sensei_status: 'Mengubah status Sensei'
+  override_sensei_status: 'Mengubah status Sensei',
+  create_sensei: 'Tambah Sensei',
+  update_sensei: 'Ubah Sensei',
+  set_sensei_leave: 'Set CUTI Sensei',
+  clear_sensei_leave: 'Hapus CUTI Sensei',
+  create_student: 'Tambah siswa',
+  update_student: 'Ubah siswa',
+  create_enrollment: 'Tambah enrollment',
+  update_enrollment: 'Ubah enrollment'
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -28,7 +36,10 @@ const ENTITY_LABELS: Record<string, string> = {
   session_reports: 'Laporan sesi',
   teaching_qa: 'Teaching Performance',
   sensei: 'Master Sensei',
-  sensei_availability: 'Ketersediaan'
+  sensei_status: 'Status Sensei',
+  sensei_availability: 'Ketersediaan',
+  students: 'Master siswa',
+  enrollments: 'Enrollment'
 };
 
 const FIELD_LABELS: Record<string, string> = {

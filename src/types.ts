@@ -54,6 +54,7 @@ export type SenseiTimezone = 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura';
 export interface Sensei {
   id: string;
   name: string;
+  displayName?: string;
   email: string;
   phone: string;
   levels: string[];
@@ -95,7 +96,15 @@ export interface LevelCompletion {
   notes?: string;
 }
 
-export type EnrollmentStatus = 'active' | 'completed' | 'transferred' | 'cancelled';
+export type EnrollmentStatus =
+  | 'active'
+  | 'ending_soon'
+  | 'completed'
+  | 'stopped'
+  | 'transferred'
+  | 'cancelled';
+
+export type PaymentStatus = 'LUNAS' | 'CICILAN' | 'BELUM_BAYAR';
 
 export interface Enrollment {
   id: string;
@@ -107,6 +116,12 @@ export interface Enrollment {
   status: EnrollmentStatus;
   startDate?: string | null;
   endDate?: string | null;
+  plannedEndDate?: string | null;
+  requiredMeetings?: number | null;
+  sessionsCompleted?: number | null;
+  paymentStatus?: PaymentStatus | null;
+  paymentRemark?: string;
+  enrollmentRemark?: string;
   notes?: string;
   updatedAt?: string;
   updatedBy?: string;
@@ -307,6 +322,8 @@ export interface ActionItem {
   senseiId?: string;
   scheduleId?: string;
   classId?: string;
+  studentId?: string;
+  enrollmentId?: string;
 }
 
 export interface DisciplinaryMetrics {

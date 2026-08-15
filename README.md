@@ -46,7 +46,8 @@ npm run build
 | `schema-timezone-settings.sql` | Additive — timezone Sensei + `app_settings` |
 | `schema-level-completions.sql` | Additive — `level_completions` |
 | `schema-class-master.sql` | Additive — Class Master + `schedules.class_id` |
-| `schema-enrollments.sql` | Additive — Enrollment / Learning Journey + `material_url` |
+| `schema-enrollments.sql` | Additive — Enrollment dasar |
+| `schema-v31-master-data.sql` | Additive — V3.1 Sensei display_name + enrollment payment/progress/status |
 | `schema-rls.sql` | RBAC policies (jalankan ulang setelah schema additive) |
 | `cleanup-demo-data.sql` | Hapus data seed/demo dari project live |
 
@@ -63,7 +64,8 @@ Jalankan berurutan (jangan loncat):
 2. `schema-level-completions.sql`
 3. `schema-class-master.sql`
 4. `schema-enrollments.sql`
-5. `schema-rls.sql` ulang
+5. **`schema-v31-master-data.sql`**
+6. `schema-rls.sql` ulang
 
 Kalau masih ada data seed lama, jalankan **`cleanup-demo-data.sql`**, lalu hapus user demo di Authentication → Users.
 

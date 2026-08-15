@@ -1,4 +1,11 @@
-import type { AppRole, AttendanceStatus, ClassType, TabId } from './types';
+import type {
+  AppRole,
+  AttendanceStatus,
+  ClassType,
+  EnrollmentStatus,
+  PaymentStatus,
+  TabId
+} from './types';
 
 export const WEEKLY_HOUR_TARGET = 16;
 
@@ -9,6 +16,30 @@ export const CLASS_TYPES: ClassType[] = [
   'Kids Private',
   'Kids Semi Private'
 ];
+
+export const PAYMENT_STATUSES: PaymentStatus[] = ['LUNAS', 'CICILAN', 'BELUM_BAYAR'];
+
+export const ENROLLMENT_STATUSES: EnrollmentStatus[] = [
+  'active',
+  'ending_soon',
+  'completed',
+  'stopped'
+];
+
+export const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, string> = {
+  active: 'ACTIVE',
+  ending_soon: 'ENDING SOON',
+  completed: 'COMPLETED',
+  stopped: 'STOPPED',
+  transferred: 'TRANSFERRED',
+  cancelled: 'CANCELLED'
+};
+
+export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
+  LUNAS: 'Lunas',
+  CICILAN: 'Cicilan',
+  BELUM_BAYAR: 'Belum bayar'
+};
 
 export const CLASS_LEVELS = [
   'Intensif Pra Guntai',

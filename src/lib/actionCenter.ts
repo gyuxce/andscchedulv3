@@ -3,14 +3,21 @@ import type {
   AvailabilitySlot,
   ClassMaster,
   ClassSession,
+  Enrollment,
   LeavePeriod,
   Sensei,
   SessionLog,
-  SessionReport
+  SessionReport,
+  Student
 } from '../types';
 import { WEEKLY_HOUR_TARGET } from '../constants';
 import { getClassHealth } from './classProgress';
 import { toDateKey } from './dates';
+import {
+  deriveEnrollmentDisplayStatus,
+  getEnrollmentProgress,
+  isCurrentEnrollmentStatus
+} from './enrollment';
 import { getOperationalLabels } from './labels';
 import { findConflicts } from './schedule';
 import { getSessionWorkflow } from './session';
@@ -24,19 +31,25 @@ export function buildActionItems(input: {
   reports: SessionReport[];
   leavePeriods: LeavePeriod[];
   classMasters?: ClassMaster[];
+  enrollments?: Enrollment[];
+  students?: Student[];
   weekAnchor: Date | string;
   now?: Date;
 }): ActionItem[] {
   const items: ActionItem[] = [];
   const now = input.now ?? new Date();
   const todayKey = toDateKey(now);
+  const classMasters = input.classMasters ?? [];
+  const enrollments = input.enrollments ?? [];
+  const students = input.students ?? [];
 
   for (const session of input.schedules) {
     if (session.status === 'cancelled') continue;
     const log = input.logs.find((item) => item.scheduleId === session.id);
     const report = input.reports.find((item) => item.scheduleId === session.id);
     const workflow = getSessionWorkflow(session, log, report);
-    const ended = `${session.date}T${session.endTime}:00` < now.toISOString().slice(0, 19) || session.date < todayKey;
+    const ended =
+      `${session.date}T${session.endTime}:00` < now.toISOString().slice(0, 19) || session.date < todayKey;
 
     if (!report && (workflow === 'report_pending' || ended)) {
       items.push({
@@ -90,7 +103,30 @@ export function buildActionItems(input: {
     });
   }
 
-  for (const teachingClass of input.classMasters ?? []) {
+  for (const enrollment of enrollments) {
+    if (!isCurrentEnrollmentStatus(enrollment.status)) continue;
+    const display = deriveEnrollmentDisplayStatus(enrollment, input.schedules, input.reports, now);
+    const progress = getEnrollmentProgress(enrollment, input.schedules, input.reports);
+    const studentName = students.find((item) => item.id === enrollment.studentId)?.name ?? 'Siswa';
+    if (display === 'ending_soon' && (progress.remaining == null || progress.remaining > 0)) {
+      items.push({
+        id: `ending_soon_enroll:${enrollment.id}`,
+        kind: 'ending_soon',
+        severity: 'medium',
+        title: `${studentName} ending soon`,
+        detail:
+          progress.required > 0
+            ? `${enrollment.level} · ${progress.completed}/${progress.required} sesi`
+            : `${enrollment.level} · mendekati planned end`,
+        senseiId: enrollment.senseiId ?? undefined,
+        classId: enrollment.classId ?? undefined,
+        studentId: enrollment.studentId,
+        enrollmentId: enrollment.id
+      });
+    }
+  }
+
+  for (const teachingClass of classMasters) {
     const health = getClassHealth(teachingClass, input.schedules, input.reports, now);
     if (health.status === 'overdue') {
       items.push({
@@ -102,21 +138,11 @@ export function buildActionItems(input: {
         senseiId: teachingClass.senseiId,
         classId: teachingClass.id
       });
-    } else if (health.status === 'ending_soon') {
-      items.push({
-        id: `ending_soon:${teachingClass.id}`,
-        kind: 'ending_soon',
-        severity: 'medium',
-        title: `${teachingClass.displayName} ending soon`,
-        detail: health.detail,
-        senseiId: teachingClass.senseiId,
-        classId: teachingClass.id
-      });
     }
   }
 
   for (const sensei of input.sensei) {
-    const labels = getOperationalLabels(sensei, input.schedules, input.leavePeriods, now);
+    const labels = getOperationalLabels(sensei, input.schedules, input.leavePeriods, now, classMasters);
     if (labels.includes('UNASSIGNED')) {
       items.push({
         id: `unassigned:${sensei.id}`,

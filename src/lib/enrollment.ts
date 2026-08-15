@@ -1,7 +1,18 @@
-import type { ClassMaster, Enrollment, EnrollmentStatus } from '../types';
+import type {
+  ClassMaster,
+  ClassSession,
+  Enrollment,
+  EnrollmentStatus,
+  SessionReport
+} from '../types';
+import { toDateKey } from './dates';
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function isCurrentEnrollmentStatus(status: EnrollmentStatus) {
+  return status === 'active' || status === 'ending_soon';
 }
 
 export function findActiveEnrollment(
@@ -12,12 +23,71 @@ export function findActiveEnrollment(
   return enrollments.find(
     (item) =>
       item.studentId === studentId &&
-      item.status === 'active' &&
+      isCurrentEnrollmentStatus(item.status) &&
       (level == null || item.level === level)
   );
 }
 
-/** Close active enrollment for a level; optionally open next. Never overwrites history. */
+export function countEnrollmentSessionsCompleted(
+  enrollment: Enrollment,
+  schedules: ClassSession[],
+  reports: SessionReport[]
+) {
+  if (typeof enrollment.sessionsCompleted === 'number' && enrollment.sessionsCompleted >= 0) {
+    // Prefer stored value when set by Ops, but never undercount completed reports for the journey.
+    const computed = schedules.filter((session) => {
+      if (session.status === 'cancelled') return false;
+      if (!session.studentIds.includes(enrollment.studentId)) return false;
+      if (session.level !== enrollment.level) return false;
+      if (enrollment.classId && session.classId && session.classId !== enrollment.classId) return false;
+      const report = reports.find((item) => item.scheduleId === session.id);
+      return Boolean(report) || session.status === 'completed';
+    }).length;
+    return Math.max(enrollment.sessionsCompleted, computed);
+  }
+
+  return schedules.filter((session) => {
+    if (session.status === 'cancelled') return false;
+    if (!session.studentIds.includes(enrollment.studentId)) return false;
+    if (session.level !== enrollment.level) return false;
+    if (enrollment.classId && session.classId && session.classId !== enrollment.classId) return false;
+    const report = reports.find((item) => item.scheduleId === session.id);
+    return Boolean(report) || session.status === 'completed';
+  }).length;
+}
+
+export function getEnrollmentProgress(
+  enrollment: Enrollment,
+  schedules: ClassSession[],
+  reports: SessionReport[]
+) {
+  const required = Math.max(0, enrollment.requiredMeetings ?? 0);
+  const completed = countEnrollmentSessionsCompleted(enrollment, schedules, reports);
+  const remaining = required > 0 ? Math.max(required - completed, 0) : null;
+  return { required, completed, remaining };
+}
+
+export function deriveEnrollmentDisplayStatus(
+  enrollment: Enrollment,
+  schedules: ClassSession[],
+  reports: SessionReport[],
+  now = new Date()
+): EnrollmentStatus {
+  if (!isCurrentEnrollmentStatus(enrollment.status)) return enrollment.status;
+  const { required, completed, remaining } = getEnrollmentProgress(enrollment, schedules, reports);
+  const today = toDateKey(now);
+  const plannedSoon =
+    Boolean(enrollment.plannedEndDate) &&
+    enrollment.plannedEndDate! >= today &&
+    (new Date(`${enrollment.plannedEndDate}T00:00:00`).getTime() - now.getTime()) / 86400000 <= 7;
+
+  if (required > 0 && remaining != null && remaining > 0 && remaining <= 2) return 'ending_soon';
+  if (plannedSoon && (remaining == null || remaining > 0)) return 'ending_soon';
+  if (required > 0 && completed >= required) return enrollment.status === 'ending_soon' ? 'ending_soon' : 'active';
+  return enrollment.status === 'ending_soon' ? 'active' : enrollment.status;
+}
+
+/** Close current enrollment for a level; optionally open next. Never overwrites history. */
 export function progressEnrollmentJourney(input: {
   enrollments: Enrollment[];
   studentId: string;
@@ -37,11 +107,11 @@ export function progressEnrollmentJourney(input: {
     if (
       item.studentId === input.studentId &&
       item.level === input.completedLevel &&
-      item.status === 'active'
+      isCurrentEnrollmentStatus(item.status)
     ) {
       const closed: Enrollment = {
         ...item,
-        status: 'completed' as EnrollmentStatus,
+        status: 'completed',
         endDate,
         notes: input.notes ? [item.notes, input.notes].filter(Boolean).join(' · ') : item.notes,
         updatedAt: now,
@@ -66,6 +136,7 @@ export function progressEnrollmentJourney(input: {
         status: 'active',
         startDate: endDate,
         endDate: null,
+        paymentStatus: 'BELUM_BAYAR',
         notes: input.notes,
         updatedAt: now,
         updatedBy: input.actorName
@@ -93,18 +164,22 @@ export function ensureClassEnrollments(input: {
   for (const studentId of input.teachingClass.studentIds) {
     const activeSameLevel = findActiveEnrollment(next, studentId, input.teachingClass.level);
     if (activeSameLevel) {
+      const linked: Enrollment = {
+        ...activeSameLevel,
+        classId: input.teachingClass.id,
+        senseiId: input.teachingClass.senseiId,
+        classType: input.teachingClass.type,
+        requiredMeetings: activeSameLevel.requiredMeetings ?? input.teachingClass.requiredMeetings,
+        plannedEndDate: activeSameLevel.plannedEndDate ?? input.teachingClass.plannedEndDate ?? null,
+        updatedAt: now,
+        updatedBy: input.actorName
+      };
       if (
-        activeSameLevel.classId !== input.teachingClass.id ||
-        activeSameLevel.senseiId !== input.teachingClass.senseiId
+        linked.classId !== activeSameLevel.classId ||
+        linked.senseiId !== activeSameLevel.senseiId ||
+        linked.requiredMeetings !== activeSameLevel.requiredMeetings ||
+        linked.plannedEndDate !== activeSameLevel.plannedEndDate
       ) {
-        const linked: Enrollment = {
-          ...activeSameLevel,
-          classId: input.teachingClass.id,
-          senseiId: input.teachingClass.senseiId,
-          classType: input.teachingClass.type,
-          updatedAt: now,
-          updatedBy: input.actorName
-        };
         changed.push(linked);
         next = next.map((item) => (item.id === linked.id ? linked : item));
       }
@@ -121,6 +196,10 @@ export function ensureClassEnrollments(input: {
       status: 'active',
       startDate,
       endDate: null,
+      plannedEndDate: input.teachingClass.plannedEndDate ?? null,
+      requiredMeetings: input.teachingClass.requiredMeetings,
+      sessionsCompleted: 0,
+      paymentStatus: 'BELUM_BAYAR',
       updatedAt: now,
       updatedBy: input.actorName
     };

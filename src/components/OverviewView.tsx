@@ -34,6 +34,8 @@ const KIND_LABEL = {
 export function OverviewView() {
   const permissions = usePermissions();
   const leavePeriods = useDashboardStore((state) => state.leavePeriods);
+  const enrollments = useDashboardStore((state) => state.enrollments);
+  const allStudents = useDashboardStore((state) => state.students);
   const weekAnchor = useDashboardStore((state) => state.weekAnchor);
   const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const setTab = useDashboardStore((state) => state.setTab);
@@ -48,6 +50,8 @@ export function OverviewView() {
     reports: sessionReports,
     leavePeriods,
     classMasters,
+    enrollments,
+    students: allStudents,
     weekAnchor
   });
 
@@ -114,7 +118,11 @@ export function OverviewView() {
                             ? 'qa'
                             : item.kind === 'schedule_conflict'
                               ? 'schedule'
-                              : 'sensei'
+                              : item.kind === 'ending_soon'
+                                ? 'students'
+                                : item.kind === 'overdue_class'
+                                  ? 'classes'
+                                  : 'sensei'
                       )
                     }
                   >

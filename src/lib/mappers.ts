@@ -38,6 +38,7 @@ export function mapSensei(row: Record<string, unknown>): Sensei {
   return {
     id: String(row.id),
     name: String(row.name || ''),
+    displayName: row.display_name ? String(row.display_name) : undefined,
     email: String(row.email || ''),
     phone: String(row.no_wa || ''),
     levels,
@@ -251,6 +252,17 @@ export function mapLevelCompletion(row: Record<string, unknown>): LevelCompletio
 }
 
 export function mapEnrollment(row: Record<string, unknown>): Enrollment {
+  const statusRaw = String(row.status || 'active');
+  const status = (
+    ['active', 'ending_soon', 'completed', 'stopped', 'transferred', 'cancelled'].includes(statusRaw)
+      ? statusRaw
+      : 'active'
+  ) as EnrollmentStatus;
+  const paymentRaw = row.payment_status ? String(row.payment_status) : null;
+  const paymentStatus =
+    paymentRaw === 'LUNAS' || paymentRaw === 'CICILAN' || paymentRaw === 'BELUM_BAYAR'
+      ? paymentRaw
+      : null;
   return {
     id: String(row.id),
     studentId: String(row.student_id),
@@ -258,9 +270,21 @@ export function mapEnrollment(row: Record<string, unknown>): Enrollment {
     classType: (row.class_type as ClassType) || null,
     classId: row.class_id ? String(row.class_id) : null,
     senseiId: row.sensei_id ? String(row.sensei_id) : null,
-    status: (row.status as EnrollmentStatus) || 'active',
+    status,
     startDate: row.start_date ? String(row.start_date).slice(0, 10) : null,
     endDate: row.end_date ? String(row.end_date).slice(0, 10) : null,
+    plannedEndDate: row.planned_end_date ? String(row.planned_end_date).slice(0, 10) : null,
+    requiredMeetings:
+      row.required_meetings == null || row.required_meetings === ''
+        ? null
+        : Number(row.required_meetings),
+    sessionsCompleted:
+      row.sessions_completed == null || row.sessions_completed === ''
+        ? null
+        : Number(row.sessions_completed),
+    paymentStatus,
+    paymentRemark: row.payment_remark ? String(row.payment_remark) : undefined,
+    enrollmentRemark: row.enrollment_remark ? String(row.enrollment_remark) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
     updatedAt: row.updated_at ? String(row.updated_at) : undefined,
     updatedBy: row.updated_by ? String(row.updated_by) : undefined
@@ -278,9 +302,43 @@ export function enrollmentToRow(enrollment: Enrollment) {
     status: enrollment.status,
     start_date: enrollment.startDate || null,
     end_date: enrollment.endDate || null,
+    planned_end_date: enrollment.plannedEndDate || null,
+    required_meetings: enrollment.requiredMeetings ?? null,
+    sessions_completed: enrollment.sessionsCompleted ?? 0,
+    payment_status: enrollment.paymentStatus || null,
+    payment_remark: enrollment.paymentRemark || null,
+    enrollment_remark: enrollment.enrollmentRemark || null,
     notes: enrollment.notes || null,
     updated_at: enrollment.updatedAt || new Date().toISOString(),
     updated_by: enrollment.updatedBy || null
+  };
+}
+
+export function senseiToRow(sensei: Sensei) {
+  return {
+    id: sensei.id,
+    name: sensei.name,
+    display_name: sensei.displayName || null,
+    email: sensei.email || null,
+    no_wa: sensei.phone || null,
+    level_mengajar: sensei.levels.join(','),
+    timezone: sensei.timezone,
+    note: sensei.notes || null
+  };
+}
+
+export function studentToRow(student: Student) {
+  return {
+    id: student.id,
+    name: student.name,
+    email: student.email || null,
+    phone: student.phone || null,
+    type: student.type,
+    level: student.currentLevel,
+    level_awal: student.startingLevel,
+    level_sekarang: student.currentLevel,
+    special_note: student.academicNotes || null,
+    is_active: student.isActive
   };
 }
 

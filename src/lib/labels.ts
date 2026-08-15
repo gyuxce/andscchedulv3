@@ -1,5 +1,12 @@
 import { addMonths, isWithinInterval, parseISO } from 'date-fns';
-import type { ClassSession, LeavePeriod, Sensei, SenseiOperationalLabel, SenseiPrimaryStatus } from '../types';
+import type {
+  ClassMaster,
+  ClassSession,
+  LeavePeriod,
+  Sensei,
+  SenseiOperationalLabel,
+  SenseiPrimaryStatus
+} from '../types';
 
 export function isNewSensei(sensei: Sensei, today = new Date()) {
   if (sensei.primaryStatus !== 'ACTIVE') return false;
@@ -18,7 +25,19 @@ export function isOnCuti(senseiId: string, leavePeriods: LeavePeriod[], today = 
   });
 }
 
-export function hasActiveClasses(senseiId: string, schedules: ClassSession[]) {
+export function hasActiveAssignment(
+  senseiId: string,
+  schedules: ClassSession[],
+  classMasters: ClassMaster[] = []
+) {
+  if (
+    classMasters.some(
+      (item) =>
+        item.senseiId === senseiId && (item.status === 'active' || item.status === 'ready')
+    )
+  ) {
+    return true;
+  }
   return schedules.some((session) => session.senseiId === senseiId && session.status === 'active');
 }
 
@@ -26,16 +45,21 @@ export function getOperationalLabels(
   sensei: Sensei,
   schedules: ClassSession[],
   leavePeriods: LeavePeriod[],
-  today = new Date()
+  today = new Date(),
+  classMasters: ClassMaster[] = []
 ): SenseiOperationalLabel[] {
   if (sensei.primaryStatus !== 'ACTIVE') return [];
   const labels: SenseiOperationalLabel[] = [];
   if (isNewSensei(sensei, today)) labels.push('NEW');
-  if (!hasActiveClasses(sensei.id, schedules)) labels.push('UNASSIGNED');
+  if (!hasActiveAssignment(sensei.id, schedules, classMasters)) labels.push('UNASSIGNED');
   if (isOnCuti(sensei.id, leavePeriods, today)) labels.push('CUTI');
   return labels;
 }
 
 export function statusTone(status: SenseiPrimaryStatus) {
   return status === 'ACTIVE' ? 'success' : 'muted';
+}
+
+export function senseiDisplayName(sensei: Pick<Sensei, 'name' | 'displayName'>) {
+  return sensei.displayName?.trim() || sensei.name;
 }
