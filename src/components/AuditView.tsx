@@ -6,9 +6,11 @@ import { Badge } from './ui/Badge';
 const ACTION_LABELS: Record<string, string> = {
   create_class: 'Membuat kelas resmi',
   create_makeup_class: 'Membuat makeup class',
+  create_extra_meeting: 'Membuat extra meeting',
   create_class_master: 'Membuat Class Master',
   update_class_master: 'Mengubah Class Master',
   generate_class_schedule: 'Generate jadwal berulang',
+  bulk_schedule_generated: 'Bulk generate kelas & jadwal',
   complete_level: 'Menandai level selesai',
   update_sensei_timezone: 'Mengubah timezone Sensei',
   update_app_settings: 'Mengubah pengaturan',

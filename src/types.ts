@@ -38,7 +38,8 @@ export type TabId =
   | 'disciplinary'
   | 'audit'
   | 'users'
-  | 'settings';
+  | 'settings'
+  | 'reports';
 
 export interface UserAccount {
   id: string;
@@ -146,6 +147,8 @@ export interface ClassMaster {
   sessionDurationMinutes: number;
   startDate?: string | null;
   plannedEndDate?: string | null;
+  /** Latest projected end from calendar; never overwrites plannedEndDate. */
+  projectedEndDate?: string | null;
   meetLink?: string | null;
   classroomLink?: string | null;
   chatLink?: string | null;
@@ -181,6 +184,8 @@ export interface ClassSession {
   endTime: string;
   status: ClassStatus;
   makeupOfSessionId?: string | null;
+  /** Extra meeting beyond original required plan (not a makeup). */
+  isExtra?: boolean;
   cancellationReason?: string | null;
   cancellationInitiator?: CancellationInitiator | null;
   replacementSecured?: boolean | null;
@@ -291,6 +296,8 @@ export interface Permissions {
   canManageUsers: boolean;
   canViewAudit: boolean;
   canViewAllSensei: boolean;
+  /** Super Admin/Ops: export all Sensei EOM. Sensei: view own only (no export). */
+  canExportEomReport: boolean;
 }
 
 export interface WorkloadMetrics {

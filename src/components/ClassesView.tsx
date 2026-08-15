@@ -147,6 +147,9 @@ export function ClassesView() {
                 {progress.calendarCount ? ` · kalender ${progress.calendarCount}` : ''}
               </p>
               <p className="mt-1 text-xs text-ink-soft">
+                Original end {item.plannedEndDate || '—'} · Projected {item.projectedEndDate || '—'}
+              </p>
+              <p className="mt-1 text-xs text-ink-soft">
                 Health: {health.status.replace('_', ' ')} — {health.detail}
               </p>
             </button>

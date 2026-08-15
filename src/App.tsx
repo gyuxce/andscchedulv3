@@ -15,6 +15,7 @@ import { DisciplinaryView } from './components/DisciplinaryView';
 import { AuditView } from './components/AuditView';
 import { UsersView } from './components/UsersView';
 import { SettingsView } from './components/SettingsView';
+import { ReportsView } from './components/ReportsView';
 import { NAV_BY_ROLE } from './constants';
 import { useDashboardStore } from './store/useDashboardStore';
 
@@ -68,6 +69,7 @@ export default function App() {
           {tab === 'students' && <StudentsView />}
           {tab === 'qa' && <QaView />}
           {tab === 'disciplinary' && <DisciplinaryView />}
+          {tab === 'reports' && <ReportsView />}
           {tab === 'audit' && <AuditView />}
           {tab === 'users' && <UsersView />}
           {tab === 'settings' && <SettingsView />}

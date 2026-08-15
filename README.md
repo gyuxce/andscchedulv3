@@ -48,6 +48,7 @@ npm run build
 | `schema-class-master.sql` | Additive — Class Master + `schedules.class_id` |
 | `schema-enrollments.sql` | Additive — Enrollment dasar |
 | `schema-v31-master-data.sql` | Additive — V3.1 Sensei display_name + enrollment payment/progress/status |
+| `schema-v31-recurring-eom.sql` | Additive — projected_end_date + schedules.is_extra (CONTEXT Update 11.14) |
 | `schema-rls.sql` | RBAC policies (jalankan ulang setelah schema additive) |
 | `cleanup-demo-data.sql` | Hapus data seed/demo dari project live |
 
@@ -65,7 +66,8 @@ Jalankan berurutan (jangan loncat):
 3. `schema-class-master.sql`
 4. `schema-enrollments.sql`
 5. **`schema-v31-master-data.sql`**
-6. `schema-rls.sql` ulang
+6. **`schema-v31-recurring-eom.sql`**
+7. `schema-rls.sql` ulang
 
 Kalau masih ada data seed lama, jalankan **`cleanup-demo-data.sql`**, lalu hapus user demo di Authentication → Users.
 

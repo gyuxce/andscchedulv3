@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Clock3,
   Scale,
+  FileSpreadsheet,
   X
 } from 'lucide-react';
 import { NAV_BY_ROLE, TAB_LABELS } from '../../constants';
@@ -29,6 +30,7 @@ const ICONS: Record<TabId, typeof LayoutDashboard> = {
   students: GraduationCap,
   qa: Video,
   disciplinary: Scale,
+  reports: FileSpreadsheet,
   audit: Shield,
   users: Activity,
   settings: Settings

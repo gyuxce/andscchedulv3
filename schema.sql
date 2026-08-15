@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   substitution_sensei_name TEXT,
   -- kolom V3
   makeup_of_session_id UUID,
+  is_extra BOOLEAN DEFAULT FALSE,
   cancellation_reason TEXT,
   cancellation_initiator TEXT,
   replacement_secured BOOLEAN,
@@ -268,6 +269,7 @@ CREATE TABLE IF NOT EXISTS class_masters (
   session_duration_minutes INT NOT NULL DEFAULT 90 CHECK (session_duration_minutes > 0),
   start_date DATE,
   planned_end_date DATE,
+  projected_end_date DATE,
   meet_link TEXT,
   classroom_link TEXT,
   chat_link TEXT,
@@ -386,3 +388,7 @@ $$;
 -- RLS diaktifkan di atas, tapi policy ketat ada di schema-rls.sql
 -- Setelah file ini sukses, LANGSUNG jalankan schema-rls.sql
 -- (jangan biarkan staging tanpa policy / dengan policy longgar).
+
+-- V3.1 CONTEXT Update 11.14 (additive; aman diulang)
+ALTER TABLE class_masters ADD COLUMN IF NOT EXISTS projected_end_date DATE;
+ALTER TABLE schedules ADD COLUMN IF NOT EXISTS is_extra BOOLEAN DEFAULT FALSE;
