@@ -29,7 +29,8 @@ const ACTION_LABELS: Record<string, string> = {
   create_student: 'Tambah siswa',
   update_student: 'Ubah siswa',
   create_enrollment: 'Tambah enrollment',
-  update_enrollment: 'Ubah enrollment'
+  update_enrollment: 'Ubah enrollment',
+  create_user_login: 'Buat akun login'
 };
 
 const ENTITY_LABELS: Record<string, string> = {

@@ -52,6 +52,15 @@ npm run build
 | `schema-rls.sql` | RBAC policies (jalankan ulang setelah schema additive) |
 | `cleanup-demo-data.sql` | Hapus data seed/demo dari project live |
 
+### Buat akun login Sensei dari dashboard
+1. Login sebagai **Super Admin**
+2. **Sensei → + Tambah Sensei** (atau buka Sensei yang sudah ada)
+3. Isi email + **Password login** / ulangi password
+4. Simpan / **Buat akun login sekarang**
+5. Sensei login di halaman masuk dengan email + password itu
+
+Catatan: di Supabase → Authentication → Providers → Email, matikan **Confirm email** untuk staging agar akun langsung bisa dipakai.
+
 ### Project baru
 1. Buka SQL Editor.
 2. Jalankan **`schema.sql`**, lalu **`schema-rls.sql`**.

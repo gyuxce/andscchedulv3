@@ -9,6 +9,7 @@ import { isUuid, resolveSenseiId } from '../lib/senseiLink';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { mapProfile } from '../lib/mappers';
 import { hasActiveOrCompletedMakeup } from '../lib/makeup';
+import { createAuthLogin } from '../lib/createAuthLogin';
 import { computeProjectedEndDate } from '../lib/classProgress';
 import { addMinutesToTime, generateRecurringDates, suggestPlannedEndDate } from '../lib/recurring';
 import { previewConflicts, buildRecurringPreview } from '../lib/schedulePreview';
@@ -52,7 +53,8 @@ import type {
   SwapInitiator,
   TabId,
   TeachingQaScore,
-  UserAccount
+  UserAccount,
+  UserStatus
 } from '../types';
 
 function createId() {
@@ -198,6 +200,15 @@ interface DashboardStore extends DashboardSnapshot {
     startTime: string;
     meetings?: number;
   }) => number;
+  /** Create Supabase Auth login + profile (Admin stays signed in). */
+  createUserLogin: (input: {
+    email: string;
+    password: string;
+    role: AppRole;
+    status?: UserStatus;
+    name?: string;
+    senseiId?: string;
+  }) => Promise<boolean>;
   upsertUser: (user: Omit<UserAccount, 'id'> & { id?: string }) => void;
 }
 
@@ -1447,6 +1458,57 @@ export const useDashboardStore = create<DashboardStore>()(
           };
         });
         toast.success('Pengguna disimpan');
+      },
+      createUserLogin: async (input) => {
+        const state = get();
+        if (state.currentUser?.role !== 'Super Admin') {
+          toast.error('Hanya Super Admin yang bisa membuat akun login');
+          return false;
+        }
+        const result = await createAuthLogin({
+          email: input.email,
+          password: input.password,
+          role: input.role,
+          status: input.status ?? 'Approved',
+          name: input.name
+        });
+        if (!result.ok) {
+          toast.error(result.error);
+          return false;
+        }
+        const account: UserAccount = {
+          id: result.userId,
+          name: input.name || input.email.split('@')[0],
+          email: input.email.trim().toLowerCase(),
+          role: input.role,
+          status: input.status ?? 'Approved',
+          senseiId: input.senseiId
+        };
+        set((current) => {
+          pushAudit(current, {
+            action: 'create_user_login',
+            entity: 'profiles',
+            recordId: result.userId,
+            newValue: {
+              email: account.email,
+              role: account.role,
+              status: account.status,
+              senseiId: account.senseiId || null
+            },
+            reason: 'Akun login dibuat dari dashboard'
+          });
+          const exists = current.users.some((item) => item.id === account.id || item.email === account.email);
+          return {
+            users: exists
+              ? current.users.map((item) =>
+                  item.id === account.id || item.email === account.email ? { ...item, ...account } : item
+                )
+              : [account, ...current.users],
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success(`Akun login ${account.email} siap (Approved). Sensei bisa masuk sekarang.`);
+        return true;
       }
     }),
     {
