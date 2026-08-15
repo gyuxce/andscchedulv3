@@ -1,16 +1,16 @@
 import type { ClassMaster, ClassSession, SessionReport } from '../types';
 
-/** Non-cancelled calendar sessions for a class, oldest first. */
+/** Non-cancelled academic calendar sessions (excludes Extra meetings). */
 export function classCalendarSessions(classId: string, schedules: ClassSession[]) {
   return schedules
-    .filter((session) => session.classId === classId && session.status !== 'cancelled')
+    .filter(
+      (session) =>
+        session.classId === classId && session.status !== 'cancelled' && !session.isExtra
+    )
     .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
 }
 
-export function isSessionCompleted(
-  session: ClassSession,
-  reports: SessionReport[]
-) {
+export function isSessionCompleted(session: ClassSession, reports: SessionReport[]) {
   if (session.status === 'cancelled') return false;
   if (session.status === 'completed') return true;
   return reports.some((report) => report.scheduleId === session.id);
@@ -36,13 +36,16 @@ export function getClassProgress(
   };
 }
 
-/** Session X of required Y — X is 1-based index among non-cancelled calendar sessions. */
+/** Session X of required Y — X among non-cancelled non-extra sessions. */
 export function getSessionOrdinal(
   session: ClassSession,
   schedules: ClassSession[],
   teachingClass?: ClassMaster | null
 ) {
   if (!session.classId || !teachingClass) return null;
+  if (session.isExtra) {
+    return { index: 0, required: teachingClass.requiredMeetings, label: 'Extra' };
+  }
   const calendar = classCalendarSessions(session.classId, schedules);
   const index = calendar.findIndex((item) => item.id === session.id);
   if (index < 0) return null;
@@ -51,6 +54,12 @@ export function getSessionOrdinal(
     required: teachingClass.requiredMeetings,
     label: `Sesi ${index + 1} dari ${teachingClass.requiredMeetings}`
   };
+}
+
+export function computeProjectedEndDate(classId: string, schedules: ClassSession[]) {
+  const calendar = classCalendarSessions(classId, schedules);
+  if (!calendar.length) return null;
+  return calendar[calendar.length - 1]?.date ?? null;
 }
 
 export type ClassHealthStatus =
@@ -77,18 +86,33 @@ export function getClassHealth(
 
   const today = now.toISOString().slice(0, 10);
   const plannedEnd = teachingClass.plannedEndDate;
+  const projectedEnd =
+    teachingClass.projectedEndDate || computeProjectedEndDate(teachingClass.id, schedules);
 
   if (plannedEnd && plannedEnd < today && progress.remaining > 0) {
     return {
       status: 'overdue',
-      detail: `Target ${plannedEnd} lewat · sisa ${progress.remaining} sesi`
+      detail: `Original plan ${plannedEnd} lewat · sisa ${progress.remaining} sesi` +
+        (projectedEnd ? ` · projected ${projectedEnd}` : '')
     };
   }
 
   if (progress.remaining <= 2 || (plannedEnd && daysUntil(plannedEnd, today) <= 7)) {
     return {
       status: 'ending_soon',
-      detail: `Sisa ${progress.remaining} sesi` + (plannedEnd ? ` · rencana selesai ${plannedEnd}` : '')
+      detail: `ENDING SOON — ${progress.completed}/${progress.required}`
+    };
+  }
+
+  if (
+    projectedEnd &&
+    plannedEnd &&
+    projectedEnd > plannedEnd &&
+    progress.remaining > 0
+  ) {
+    return {
+      status: 'delayed',
+      detail: `Original ${plannedEnd} · projected ${projectedEnd} · ${progress.completed}/${progress.required}`
     };
   }
 

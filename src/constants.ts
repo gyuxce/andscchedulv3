@@ -143,6 +143,7 @@ export const NAV_BY_ROLE: Record<AppRole, TabId[]> = {
     'students',
     'qa',
     'disciplinary',
+    'reports',
     'audit',
     'users',
     'settings'
@@ -157,9 +158,10 @@ export const NAV_BY_ROLE: Record<AppRole, TabId[]> = {
     'students',
     'qa',
     'disciplinary',
+    'reports',
     'audit'
   ],
-  Sensei: ['overview', 'classes', 'schedule', 'availability', 'teaching', 'students', 'qa', 'disciplinary']
+  Sensei: ['overview', 'classes', 'schedule', 'availability', 'teaching', 'students', 'qa', 'disciplinary', 'reports']
 };
 
 export const TAB_LABELS: Record<TabId, string> = {
@@ -172,6 +174,7 @@ export const TAB_LABELS: Record<TabId, string> = {
   students: 'Akademik Siswa',
   qa: 'QA & Rekaman',
   disciplinary: 'Disiplin',
+  reports: 'Laporan EOM',
   audit: 'Audit Log',
   users: 'Pengguna',
   settings: 'Pengaturan'

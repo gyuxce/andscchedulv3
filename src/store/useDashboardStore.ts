@@ -9,7 +9,9 @@ import { isUuid, resolveSenseiId } from '../lib/senseiLink';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { mapProfile } from '../lib/mappers';
 import { hasActiveOrCompletedMakeup } from '../lib/makeup';
+import { computeProjectedEndDate } from '../lib/classProgress';
 import { addMinutesToTime, generateRecurringDates, suggestPlannedEndDate } from '../lib/recurring';
+import { previewConflicts, buildRecurringPreview } from '../lib/schedulePreview';
 import {
   ensureProfile,
   loadDashboardSnapshot,
@@ -102,6 +104,21 @@ interface ClassInput {
   startTime: string;
   endTime: string;
   makeupOfSessionId?: string | null;
+  isExtra?: boolean;
+}
+
+interface RecurringOfficialInput {
+  displayName: string;
+  senseiId: string;
+  studentIds: string[];
+  type: ClassSession['type'];
+  level: string;
+  startDate: string;
+  weekdays: number[];
+  startTime: string;
+  durationMinutes: number;
+  requiredMeetings: number;
+  acknowledgeConflicts?: boolean;
 }
 
 interface DashboardStore extends DashboardSnapshot {
@@ -119,6 +136,8 @@ interface DashboardStore extends DashboardSnapshot {
   upsertAvailability: (slot: Omit<AvailabilitySlot, 'id'> & { id?: string }) => void;
   removeAvailability: (id: string) => void;
   createClass: (input: ClassInput, reason?: string) => boolean;
+  createRecurringOfficialClass: (input: RecurringOfficialInput) => boolean;
+  createExtraSession: (input: ClassInput & { classId: string }, reason?: string) => boolean;
   updateClass: (id: string, input: Partial<ClassInput>, reason: string) => boolean;
   cancelClass: (
     id: string,
@@ -186,6 +205,22 @@ function actor(state: DashboardStore) {
   return {
     actorId: state.currentUser?.id ?? 'system',
     actorName: state.currentUser?.name ?? 'System'
+  };
+}
+
+/** Patch ClassMaster projectedEndDate from calendar without touching plannedEndDate. */
+function withRefreshedProjectedEnd(
+  teachingClass: ClassMaster,
+  schedules: ClassSession[],
+  actorName?: string
+): ClassMaster {
+  const projected = computeProjectedEndDate(teachingClass.id, schedules);
+  if ((teachingClass.projectedEndDate || null) === (projected || null)) return teachingClass;
+  return {
+    ...teachingClass,
+    projectedEndDate: projected,
+    updatedAt: new Date().toISOString(),
+    updatedBy: actorName
   };
 }
 
@@ -414,6 +449,7 @@ export const useDashboardStore = create<DashboardStore>()(
           ...input,
           classId: input.classId ?? null,
           makeupOfSessionId: input.makeupOfSessionId ?? null,
+          isExtra: Boolean(input.isExtra),
           status: 'active',
           updatedAt: new Date().toISOString(),
           updatedBy: state.currentUser?.name
@@ -423,9 +459,14 @@ export const useDashboardStore = create<DashboardStore>()(
           return false;
         }
         let patchedOriginal: ClassSession | undefined;
+        let patchedClass: ClassMaster | undefined;
         set((current) => {
           pushAudit(current, {
-            action: input.makeupOfSessionId ? 'create_makeup_class' : 'create_class',
+            action: input.makeupOfSessionId
+              ? 'create_makeup_class'
+              : input.isExtra
+                ? 'create_extra_meeting'
+                : 'create_class',
             entity: 'schedules',
             recordId: session.id,
             newValue: session,
@@ -444,15 +485,148 @@ export const useDashboardStore = create<DashboardStore>()(
               return patchedOriginal;
             });
           }
+          let classMasters = current.classMasters;
+          if (session.classId) {
+            classMasters = current.classMasters.map((item) => {
+              if (item.id !== session.classId) return item;
+              patchedClass = withRefreshedProjectedEnd(item, schedules, current.currentUser?.name);
+              return patchedClass;
+            });
+          }
           current.schedules = schedules;
-          return { schedules, auditLogs: current.auditLogs };
+          current.classMasters = classMasters;
+          return { schedules, classMasters, auditLogs: current.auditLogs };
         });
         void safeRemote(async () => {
           await upsertScheduleRemote(session);
           if (patchedOriginal) await upsertScheduleRemote(patchedOriginal);
-        }, input.makeupOfSessionId ? 'Simpan makeup' : 'Simpan kelas');
-        toast.success(input.makeupOfSessionId ? 'Makeup class ditambahkan dan tertaut ke sesi asli' : 'Kelas resmi ditambahkan');
+          if (patchedClass) await upsertClassMasterRemote(patchedClass);
+        }, input.makeupOfSessionId ? 'Simpan makeup' : input.isExtra ? 'Simpan extra meeting' : 'Simpan kelas');
+        toast.success(
+          input.makeupOfSessionId
+            ? 'Makeup class ditambahkan dan tertaut ke sesi asli'
+            : input.isExtra
+              ? 'Extra meeting ditambahkan (tidak mengubah required meetings)'
+              : 'Kelas resmi ditambahkan'
+        );
         return true;
+      },
+      createRecurringOfficialClass: (input) => {
+        const state = get();
+        if (!input.displayName.trim()) {
+          toast.error('Nama kelas wajib diisi');
+          return false;
+        }
+        if (!input.senseiId || input.studentIds.length === 0) {
+          toast.error('Sensei dan minimal 1 siswa wajib');
+          return false;
+        }
+        if (input.weekdays.length === 0) {
+          toast.error('Pilih minimal 1 hari berulang');
+          return false;
+        }
+        const requiredMeetings = Math.max(1, input.requiredMeetings || 1);
+        const durationMinutes = Math.max(30, input.durationMinutes || 90);
+        const preview = buildRecurringPreview({
+          startDate: input.startDate,
+          weekdays: input.weekdays,
+          startTime: input.startTime,
+          durationMinutes,
+          requiredMeetings
+        });
+        if (!preview.length) {
+          toast.error('Tidak ada tanggal yang bisa digenerate');
+          return false;
+        }
+        const conflicts = previewConflicts(
+          state.schedules,
+          preview,
+          input.senseiId,
+          input.studentIds,
+          input.type,
+          input.level
+        );
+        if (conflicts.length > 0 && !input.acknowledgeConflicts) {
+          toast.error(
+            `${conflicts.length} konflik dengan jadwal resmi. Tinjau preview lalu centang konfirmasi sebelum simpan.`
+          );
+          return false;
+        }
+        const classId = createId();
+        const plannedEnd = preview[preview.length - 1]!.date;
+        const teachingClass: ClassMaster = {
+          id: classId,
+          displayName: input.displayName.trim(),
+          type: input.type,
+          level: input.level,
+          senseiId: input.senseiId,
+          studentIds: input.studentIds,
+          requiredMeetings,
+          sessionDurationMinutes: durationMinutes,
+          startDate: input.startDate,
+          plannedEndDate: plannedEnd,
+          projectedEndDate: plannedEnd,
+          status: 'ready',
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.currentUser?.name
+        };
+        const created: ClassSession[] = preview.map((row) => ({
+          id: createId(),
+          classId,
+          senseiId: input.senseiId,
+          studentIds: input.studentIds,
+          type: input.type,
+          level: input.level,
+          date: row.date,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          status: 'active',
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.currentUser?.name
+        }));
+        const ensured = ensureClassEnrollments({
+          enrollments: state.enrollments,
+          teachingClass,
+          createId,
+          actorName: state.currentUser?.name
+        });
+        set((current) => {
+          pushAudit(current, {
+            action: 'bulk_schedule_generated',
+            entity: 'class_masters',
+            recordId: classId,
+            newValue: {
+              class: teachingClass,
+              sessions: created.length,
+              requiredMeetings,
+              weekdays: input.weekdays,
+              conflictsAcknowledged: Boolean(input.acknowledgeConflicts),
+              conflictCount: conflicts.length,
+              enrollmentIds: ensured.changed.map((item) => item.id)
+            }
+          });
+          return {
+            classMasters: [teachingClass, ...current.classMasters],
+            schedules: [...created, ...current.schedules],
+            enrollments: ensured.enrollments,
+            auditLogs: current.auditLogs
+          };
+        });
+        void safeRemote(async () => {
+          await upsertClassMasterRemote(teachingClass);
+          for (const enrollment of ensured.changed) await upsertEnrollmentRemote(enrollment);
+          for (const session of created) await upsertScheduleRemote(session);
+        }, 'Simpan kelas & jadwal berulang');
+        toast.success(
+          `1 kelas + ${created.length} sesi disimpan (${preview[0]?.date} → ${plannedEnd})`
+        );
+        return true;
+      },
+      createExtraSession: (input, reason) => {
+        return get().createClass(
+          { ...input, isExtra: true, makeupOfSessionId: null },
+          reason || 'Extra meeting di luar rencana required meetings'
+        );
       },
       updateClass: (id, input, reason) => {
         const state = get();
@@ -468,6 +642,7 @@ export const useDashboardStore = create<DashboardStore>()(
           toast.error('Perubahan menyebabkan konflik jadwal');
           return false;
         }
+        let patchedClass: ClassMaster | undefined;
         set((current) => {
           pushAudit(current, {
             action: 'edit_class',
@@ -477,17 +652,32 @@ export const useDashboardStore = create<DashboardStore>()(
             newValue: next,
             reason
           });
+          const schedules = current.schedules.map((item) => (item.id === id ? next : item));
+          let classMasters = current.classMasters;
+          const classId = next.classId;
+          if (classId) {
+            classMasters = current.classMasters.map((item) => {
+              if (item.id !== classId) return item;
+              patchedClass = withRefreshedProjectedEnd(item, schedules, current.currentUser?.name);
+              return patchedClass;
+            });
+          }
           return {
-            schedules: current.schedules.map((item) => (item.id === id ? next : item)),
+            schedules,
+            classMasters,
             auditLogs: current.auditLogs
           };
         });
-        void safeRemote(() => upsertScheduleRemote(next), 'Update kelas');
+        void safeRemote(async () => {
+          await upsertScheduleRemote(next);
+          if (patchedClass) await upsertClassMasterRemote(patchedClass);
+        }, 'Update kelas');
         toast.success('Jadwal resmi diperbarui');
         return true;
       },
       cancelClass: (id, payload) => {
         let nextSession: ClassSession | undefined;
+        let patchedClass: ClassMaster | undefined;
         set((state) => {
           const existing = state.schedules.find((item) => item.id === id);
           if (!existing) return state;
@@ -509,12 +699,27 @@ export const useDashboardStore = create<DashboardStore>()(
             newValue: nextSession,
             reason: payload.reason
           });
+          const schedules = state.schedules.map((item) => (item.id === id ? nextSession! : item));
+          let classMasters = state.classMasters;
+          if (existing.classId) {
+            classMasters = state.classMasters.map((item) => {
+              if (item.id !== existing.classId) return item;
+              patchedClass = withRefreshedProjectedEnd(item, schedules, state.currentUser?.name);
+              return patchedClass;
+            });
+          }
           return {
-            schedules: state.schedules.map((item) => (item.id === id ? nextSession! : item)),
+            schedules,
+            classMasters,
             auditLogs: state.auditLogs
           };
         });
-        if (nextSession) void safeRemote(() => upsertScheduleRemote(nextSession!), 'Batalkan kelas');
+        if (nextSession) {
+          void safeRemote(async () => {
+            await upsertScheduleRemote(nextSession!);
+            if (patchedClass) await upsertClassMasterRemote(patchedClass);
+          }, 'Batalkan kelas');
+        }
         toast.success('Kelas dibatalkan dan tercatat di audit log');
       },
       swapSensei: (id, newSenseiId, initiator, reason) => {
@@ -1200,10 +1405,12 @@ export const useDashboardStore = create<DashboardStore>()(
           created.push(session);
         }
         const plannedEnd = suggestPlannedEndDate(startDate, weekdays, count);
+        const schedulesAfter = [...created, ...state.schedules];
         const updatedClass: ClassMaster = {
           ...teachingClass,
           startDate,
           plannedEndDate: teachingClass.plannedEndDate || plannedEnd,
+          projectedEndDate: computeProjectedEndDate(classId, schedulesAfter) || plannedEnd,
           status: teachingClass.status === 'draft' ? 'ready' : teachingClass.status,
           updatedAt: new Date().toISOString(),
           updatedBy: state.currentUser?.name

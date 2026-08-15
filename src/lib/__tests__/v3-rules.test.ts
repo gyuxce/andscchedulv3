@@ -7,7 +7,9 @@ import { getDisciplinaryMetrics } from '../disciplinary';
 import { getSessionWorkflow, isLateJoin } from '../session';
 import { filterAcademicReportRows, hasActiveOrCompletedMakeup } from '../makeup';
 import { generateRecurringDates } from '../recurring';
-import { getClassHealth, getClassProgress, getSessionOrdinal } from '../classProgress';
+import { getClassHealth, getClassProgress, getSessionOrdinal, computeProjectedEndDate } from '../classProgress';
+import { buildRecurringPreview } from '../schedulePreview';
+import { buildEomSessionRows, eomRowsToCsv, summarizeEomBySensei } from '../eomReport';
 import { buildActionItems } from '../actionCenter';
 import {
   actualDurationMinutes,
@@ -47,6 +49,9 @@ describe('RBAC', () => {
     expect(getPermissions('Kyouiku').canEditQa).toBe(true);
     expect(getPermissions('Kyouiku').canOverrideAcademic).toBe(true);
     expect(getPermissions('Super Admin').canManageUsers).toBe(true);
+    expect(getPermissions('Super Admin').canExportEomReport).toBe(true);
+    expect(getPermissions('Kyouiku').canExportEomReport).toBe(false);
+    expect(getPermissions('Sensei').canExportEomReport).toBe(false);
   });
 });
 
@@ -304,6 +309,117 @@ describe('recurring + session X of X + class health', () => {
     expect(getClassProgress(teachingClass, schedules, []).completed).toBe(1);
     expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-14')).status).toBe('overdue');
     expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-09')).status).toBe('ending_soon');
+  });
+
+  it('builds Mon+Tue recurring preview for 10 meetings at 19:00–20:30', () => {
+    const preview = buildRecurringPreview({
+      startDate: '2026-08-17',
+      weekdays: [1, 2],
+      startTime: '19:00',
+      durationMinutes: 90,
+      requiredMeetings: 10
+    });
+    expect(preview).toHaveLength(10);
+    expect(preview[0]).toMatchObject({ date: '2026-08-17', startTime: '19:00', endTime: '20:30', label: '1 / 10' });
+    expect(preview[1].date).toBe('2026-08-18');
+    expect(preview[9].label).toBe('10 / 10');
+  });
+
+  it('excludes Extra from X/X and keeps planned vs projected end separate', () => {
+    const teachingClass: ClassMaster = {
+      id: 'c1',
+      displayName: 'Private Nathan Pra Guntai',
+      type: 'Private',
+      level: 'Pra Guntai',
+      senseiId: 's1',
+      studentIds: ['st1'],
+      requiredMeetings: 10,
+      sessionDurationMinutes: 90,
+      startDate: '2026-08-17',
+      plannedEndDate: '2026-09-30',
+      projectedEndDate: '2026-10-14',
+      status: 'active'
+    };
+    const schedules = [
+      classOf({ id: '1', classId: 'c1', date: '2026-08-17', startTime: '19:00', endTime: '20:30', status: 'completed' }),
+      classOf({ id: '2', classId: 'c1', date: '2026-08-18', startTime: '19:00', endTime: '20:30' }),
+      classOf({ id: '3', classId: 'c1', date: '2026-08-24', startTime: '19:00', endTime: '20:30' }),
+      classOf({ id: '4', classId: 'c1', date: '2026-10-14', startTime: '19:00', endTime: '20:30' }),
+      classOf({ id: 'x1', classId: 'c1', date: '2026-10-15', startTime: '19:00', endTime: '20:30', isExtra: true })
+    ];
+    expect(getSessionOrdinal(schedules[4], schedules, teachingClass)?.label).toBe('Extra');
+    expect(getClassProgress(teachingClass, schedules, []).calendarCount).toBe(4);
+    expect(computeProjectedEndDate('c1', schedules)).toBe('2026-10-14');
+    expect(teachingClass.plannedEndDate).toBe('2026-09-30');
+    expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-20')).status).toBe('delayed');
+  });
+});
+
+describe('EOM report', () => {
+  it('builds detail rows and CSV without salary columns', () => {
+    const rows = buildEomSessionRows({
+      month: '2026-08',
+      senseiId: 'all',
+      status: 'all',
+      schedules: [
+        classOf({
+          id: '1',
+          classId: 'c1',
+          date: '2026-08-17',
+          startTime: '19:00',
+          endTime: '20:30',
+          status: 'completed',
+          swapInitiator: 'Sensei',
+          originalSenseiId: 's0',
+          swapReason: 'sakit'
+        })
+      ],
+      sessionLogs: [
+        {
+          id: 'l1',
+          scheduleId: '1',
+          senseiId: 's1',
+          clockInAt: '2026-08-17T12:05:00.000Z',
+          clockOutAt: '2026-08-17T13:30:00.000Z',
+          lateJoin: true,
+          overridden: false
+        }
+      ],
+      sessionReports: [],
+      classMasters: [
+        {
+          id: 'c1',
+          displayName: 'Private Nathan',
+          type: 'Private',
+          level: 'Pra Guntai',
+          senseiId: 's1',
+          studentIds: ['st1'],
+          requiredMeetings: 10,
+          sessionDurationMinutes: 90,
+          status: 'active'
+        }
+      ],
+      sensei: [yuki],
+      students: [
+        {
+          id: 'st1',
+          name: 'Nathan',
+          type: 'Private',
+          currentLevel: 'Pra Guntai',
+          startingLevel: 'Pra Guntai',
+          isActive: true
+        }
+      ]
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].sessionKind).toBe('Regular');
+    expect(rows[0].lateJoin).toBe('Yes');
+    const summary = summarizeEomBySensei(rows);
+    expect(summary[0]?.senseiInitiatedSwaps).toBe(1);
+    const csv = eomRowsToCsv(rows, summary);
+    expect(csv).toContain('SUMMARY PER SENSEI');
+    expect(csv.toLowerCase()).not.toContain('salary');
+    expect(csv.toLowerCase()).not.toContain('gaji');
   });
 });
 
