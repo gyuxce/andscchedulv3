@@ -222,6 +222,24 @@ describe('action center', () => {
     expect(items.some((item) => item.kind === 'schedule_conflict')).toBe(true);
     expect(items.some((item) => item.kind === 'unassigned_sensei')).toBe(false);
   });
+
+  it('does not flood queue with ancient migrated sessions', () => {
+    const items = buildActionItems({
+      sensei: [yuki],
+      schedules: [
+        classOf({ id: 'old', date: '2026-01-22', startTime: '19:00', endTime: '20:30' }),
+        classOf({ id: 'recent', date: '2026-08-13', startTime: '09:00', endTime: '10:30' })
+      ],
+      availability: [],
+      logs: [],
+      reports: [],
+      leavePeriods: [],
+      weekAnchor: '2026-08-14',
+      now: new Date('2026-08-14T18:00:00')
+    });
+    expect(items.some((item) => item.scheduleId === 'old')).toBe(false);
+    expect(items.some((item) => item.scheduleId === 'recent' && item.kind === 'missing_report')).toBe(true);
+  });
 });
 
 describe('makeup class', () => {
