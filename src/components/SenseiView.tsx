@@ -8,6 +8,7 @@ import { useDashboardStore, usePermissions } from '../store/useDashboardStore';
 import type { Sensei, SenseiPrimaryStatus, SenseiTimezone } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { DetailFields } from './ui/DetailFields';
 import { Modal } from './ui/Modal';
 import { WeekNav } from './ui/WeekNav';
 
@@ -56,6 +57,7 @@ export function SenseiView() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginPassword2, setLoginPassword2] = useState('');
   const [creatingLogin, setCreatingLogin] = useState(false);
+  const [detailMode, setDetailMode] = useState<'view' | 'edit'>('view');
   const selected = visible.find((item) => item.id === selectedId);
   const selectedLeave = useMemo(
     () => leavePeriods.find((item) => item.senseiId === selectedId && item.status === 'approved'),
@@ -70,15 +72,17 @@ export function SenseiView() {
   const openCreate = () => {
     setCreating(true);
     setSelectedId(null);
+    setDetailMode('edit');
     setForm(emptyForm());
     setReason('');
     setLoginPassword('');
     setLoginPassword2('');
   };
 
-  const openEdit = (item: Sensei) => {
+  const openDetail = (item: Sensei) => {
     setCreating(false);
     setSelectedId(item.id);
+    setDetailMode('view');
     setReason('');
     setLoginPassword('');
     setLoginPassword2('');
@@ -135,6 +139,7 @@ export function SenseiView() {
 
     setCreating(false);
     setSelectedId(id);
+    setDetailMode('view');
   };
 
   const createLoginOnly = async () => {
@@ -184,7 +189,7 @@ export function SenseiView() {
           const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
           const linked = users.some((user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase());
           return (
-            <button key={item.id} className="ui-card p-4 text-left" onClick={() => openEdit(item)}>
+            <button key={item.id} className="ui-card p-4 text-left" onClick={() => openDetail(item)}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex flex-wrap items-center gap-1">
@@ -239,6 +244,7 @@ export function SenseiView() {
           onClose={() => {
             setCreating(false);
             setSelectedId(null);
+            setDetailMode('view');
           }}
           footer={
             <>
@@ -246,19 +252,67 @@ export function SenseiView() {
                 onClick={() => {
                   setCreating(false);
                   setSelectedId(null);
+                  setDetailMode('view');
                 }}
               >
                 Tutup
               </Button>
-              {canEditOps ? (
-                <Button tone="primary" onClick={() => void saveSensei()} disabled={creatingLogin}>
-                  {creatingLogin ? 'Menyimpan…' : 'Simpan'}
+              {!creating && selected && detailMode === 'view' && canEditOps ? (
+                <Button tone="primary" onClick={() => setDetailMode('edit')}>
+                  Ubah
                 </Button>
+              ) : null}
+              {(creating || detailMode === 'edit') && canEditOps ? (
+                <>
+                  {!creating && selected && detailMode === 'edit' ? (
+                    <Button onClick={() => openDetail(selected)}>Batal ubah</Button>
+                  ) : null}
+                  <Button tone="primary" onClick={() => void saveSensei()} disabled={creatingLogin}>
+                    {creatingLogin ? 'Menyimpan…' : 'Simpan'}
+                  </Button>
+                </>
               ) : null}
             </>
           }
         >
-          {canEditOps ? (
+          {!creating && selected && detailMode === 'view' ? (
+            <>
+              <DetailFields
+                items={[
+                  { label: 'Nama lengkap', value: selected.name },
+                  { label: 'Display name', value: selected.displayName || selected.name },
+                  { label: 'Email / login', value: selected.email || '—' },
+                  { label: 'WhatsApp / kontak', value: selected.phone || '—' },
+                  { label: 'Join date', value: selected.joinDate },
+                  { label: 'Timezone', value: timezoneLabel(selected.timezone) },
+                  { label: 'Primary status', value: selected.primaryStatus },
+                  {
+                    label: 'Akun login',
+                    value: hasLogin ? 'Sudah ada' : 'Belum dibuat'
+                  },
+                  {
+                    label: 'Level mengajar',
+                    value: selected.levels.join(', ') || '—',
+                    full: true
+                  },
+                  {
+                    label: 'Catatan internal',
+                    value: selected.notes || '—',
+                    full: true
+                  },
+                  ...(selectedLeave
+                    ? [
+                        {
+                          label: 'Periode CUTI',
+                          value: `${selectedLeave.startDate} → ${selectedLeave.endDate}`,
+                          full: true as const
+                        }
+                      ]
+                    : [])
+                ]}
+              />
+            </>
+          ) : canEditOps ? (
             <div className="grid gap-3 md:grid-cols-2">
               <label>
                 <span className="ui-label">Nama lengkap</span>
@@ -353,7 +407,7 @@ export function SenseiView() {
             </div>
           )}
 
-          {canEditOps ? (
+          {(creating || detailMode === 'edit') && canEditOps ? (
             <div className="mt-3 space-y-2 rounded-2xl border border-sky-200 bg-sky-50 p-3">
               <p className="ui-label">Akun login dashboard</p>
               {hasLogin ? (
@@ -413,7 +467,7 @@ export function SenseiView() {
             </div>
           ) : null}
 
-          {!creating && selected && canEditOps ? (
+          {!creating && selected && detailMode === 'edit' && canEditOps ? (
             <div className="mt-3 space-y-3">
               <div className="space-y-2 rounded-2xl border border-[#efe4d2] p-3">
                 <p className="ui-label">Periode CUTI</p>

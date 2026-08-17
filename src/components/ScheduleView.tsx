@@ -15,6 +15,7 @@ import { useDashboardStore, usePermissions, useScopedData } from '../store/useDa
 import type { CancellationInitiator, ClassSession, ClassType, SwapInitiator } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { DetailFields } from './ui/DetailFields';
 import { Modal } from './ui/Modal';
 import { StudentPicker } from './ui/StudentPicker';
 import { WeekNav } from './ui/WeekNav';
@@ -73,6 +74,7 @@ export function ScheduleView() {
   const [replacementSecured, setReplacementSecured] = useState(false);
   const [swapTo, setSwapTo] = useState('');
   const [swapInitiator, setSwapInitiator] = useState<SwapInitiator>('Admin');
+  const [detailMode, setDetailMode] = useState<'view' | 'edit'>('view');
 
   const conflicts = useMemo(() => findConflicts(schedules), [schedules]);
   const conflictIds = new Set(conflicts.flatMap((pair) => [pair.a.id, pair.b.id]));
@@ -158,6 +160,7 @@ export function ScheduleView() {
     setEditing(session);
     setCreatingRecurring(false);
     setCreatingSession(false);
+    setDetailMode('view');
     setSessionForm({
       senseiId: session.senseiId,
       studentIds: session.studentIds,
@@ -200,6 +203,7 @@ export function ScheduleView() {
     if (ok) {
       setCreatingSession(false);
       setEditing(null);
+      setDetailMode('view');
     }
   };
 
@@ -544,32 +548,42 @@ export function ScheduleView() {
           onClose={() => {
             setCreatingSession(false);
             setEditing(null);
+            setDetailMode('view');
           }}
           footer={
-            permissions.canEditOfficialSchedule ? (
-              <>
-                <Button
-                  onClick={() => {
-                    setCreatingSession(false);
-                    setEditing(null);
-                  }}
-                >
-                  Tutup
-                </Button>
-                <Button tone="primary" onClick={saveSession}>
-                  Simpan
-                </Button>
-              </>
-            ) : (
+            <>
               <Button
                 onClick={() => {
                   setCreatingSession(false);
                   setEditing(null);
+                  setDetailMode('view');
                 }}
               >
                 Tutup
               </Button>
-            )
+              {editing && detailMode === 'view' && permissions.canEditOfficialSchedule ? (
+                <Button tone="primary" onClick={() => setDetailMode('edit')}>
+                  Ubah
+                </Button>
+              ) : null}
+              {(creatingSession || (editing && detailMode === 'edit')) &&
+              permissions.canEditOfficialSchedule ? (
+                <>
+                  {editing && detailMode === 'edit' ? (
+                    <Button
+                      onClick={() => {
+                        openEdit(editing);
+                      }}
+                    >
+                      Batal ubah
+                    </Button>
+                  ) : null}
+                  <Button tone="primary" onClick={saveSession}>
+                    Simpan
+                  </Button>
+                </>
+              ) : null}
+            </>
           }
         >
           {sessionForm.makeupOfSessionId && creatingSession ? (
@@ -601,208 +615,230 @@ export function ScheduleView() {
               Makeup: {linkedMakeups.map((item) => `${item.date} ${item.startTime}`).join(', ')}
             </p>
           ) : null}
-          <div className="grid gap-3 md:grid-cols-2">
-            <label>
-              <span className="ui-label">Sensei</span>
-              <select
-                className="ui-select"
-                value={sessionForm.senseiId}
-                onChange={(event) => setSessionForm({ ...sessionForm, senseiId: event.target.value })}
-                disabled={!permissions.canEditOfficialSchedule}
-              >
-                {allSensei
-                  .filter((item) => item.primaryStatus === 'ACTIVE')
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              <span className="ui-label">Tipe kelas</span>
-              <select
-                className="ui-select"
-                value={sessionForm.type}
-                onChange={(event) => setSessionForm({ ...sessionForm, type: event.target.value as ClassType })}
-                disabled={!permissions.canEditOfficialSchedule}
-              >
-                {CLASS_TYPES.map((type) => (
-                  <option key={type}>{type}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="ui-label">Level</span>
-              <select
-                className="ui-select"
-                value={sessionForm.level}
-                onChange={(event) => setSessionForm({ ...sessionForm, level: event.target.value })}
-                disabled={!permissions.canEditOfficialSchedule}
-              >
-                {CLASS_LEVELS.map((level) => (
-                  <option key={level}>{level}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="ui-label">Tanggal</span>
-              <input
-                className="ui-input"
-                type="date"
-                value={sessionForm.date}
-                onChange={(event) => setSessionForm({ ...sessionForm, date: event.target.value })}
-                disabled={!permissions.canEditOfficialSchedule}
+
+          {editing && detailMode === 'view' ? (
+            <>
+              <DetailFields
+                items={[
+                  { label: 'Status', value: editing.status },
+                  { label: 'Sensei', value: displayName(allSensei, sessionForm.senseiId) },
+                  { label: 'Tipe kelas', value: sessionForm.type },
+                  { label: 'Level', value: sessionForm.level },
+                  { label: 'Tanggal', value: sessionForm.date },
+                  {
+                    label: 'Waktu',
+                    value: `${sessionForm.startTime} – ${sessionForm.endTime} (${hoursBetween(sessionForm.startTime, sessionForm.endTime)} jam)`
+                  },
+                  {
+                    label: 'Siswa',
+                    value:
+                      sessionForm.studentIds
+                        .map((id) => displayName(studentOptions, id))
+                        .filter(Boolean)
+                        .join(', ') || '—',
+                    full: true
+                  }
+                ]}
               />
-            </label>
-            <label>
-              <span className="ui-label">Mulai</span>
-              <input
-                className="ui-input"
-                type="time"
-                value={sessionForm.startTime}
-                onChange={(event) => {
-                  const startTime = event.target.value;
-                  const duration = hoursBetween(sessionForm.startTime, sessionForm.endTime) * 60 || 90;
-                  setDurationFromStart(startTime, addMinutesToTime(startTime, duration));
-                }}
-                disabled={!permissions.canEditOfficialSchedule}
-              />
-            </label>
-            <label>
-              <span className="ui-label">Selesai</span>
-              <input
-                className="ui-input"
-                type="time"
-                value={sessionForm.endTime}
-                onChange={(event) => setSessionForm({ ...sessionForm, endTime: event.target.value })}
-                disabled={!permissions.canEditOfficialSchedule}
-              />
-            </label>
-          </div>
-          <div>
-            <span className="ui-label">Siswa</span>
-            <StudentPicker
-              students={studentOptions}
-              value={sessionForm.studentIds}
-              disabled={!permissions.canEditOfficialSchedule}
-              onChange={(studentIds) => setSessionForm({ ...sessionForm, studentIds })}
-            />
-          </div>
-          {permissions.canEditOfficialSchedule ? (
-            <label>
-              <span className="ui-label">Alasan perubahan (audit)</span>
-              <input
-                className="ui-input"
-                value={sessionForm.reason}
-                onChange={(event) => setSessionForm({ ...sessionForm, reason: event.target.value })}
-                placeholder="Wajib untuk edit/swap/cancel"
-              />
-            </label>
-          ) : null}
-          <p className="text-xs text-ink-soft">
-            Durasi {hoursBetween(sessionForm.startTime, sessionForm.endTime)} jam. Ketersediaan Sensei hanya referensi
-            kapasitas.
-          </p>
-          {editing && permissions.canEditOfficialSchedule && editing.classId ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
-              <p className="ui-label">Extra meeting</p>
-              <p className="mb-2 text-xs text-ink-soft">
-                Tambah sesi di luar required meetings tanpa mengubah total rencana.
-              </p>
-              <Button tone="primary" onClick={() => openExtra(editing)}>
-                + Add Extra Meeting
-              </Button>
-            </div>
-          ) : null}
-          {editing &&
-          permissions.canEditOfficialSchedule &&
-          editing.status === 'cancelled' &&
-          !alreadyHasMakeup ? (
-            <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3">
-              <p className="ui-label">Replacement / Makeup</p>
-              <p className="mb-2 text-xs text-ink-soft">Buat sesi pengganti tertaut ke kelas batal ini.</p>
-              <Button tone="primary" onClick={() => openMakeup(editing)}>
-                Jadwalkan makeup
-              </Button>
-            </div>
-          ) : null}
-          {editing && permissions.canAssignSensei && editing.status !== 'cancelled' ? (
-            <div className="grid gap-3 rounded-2xl border border-[#efe4d2] p-3 md:grid-cols-2">
-              <div>
-                <p className="ui-label">Tukar Sensei</p>
-                <select className="ui-select" value={swapTo} onChange={(event) => setSwapTo(event.target.value)}>
-                  <option value="">Pilih pengganti</option>
-                  {allSensei
-                    .filter((item) => item.id !== editing.senseiId && item.primaryStatus === 'ACTIVE')
-                    .map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
+              {permissions.canEditOfficialSchedule && editing.classId ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="ui-label">Extra meeting</p>
+                  <p className="mb-2 text-xs text-ink-soft">
+                    Tambah sesi di luar required meetings tanpa mengubah total rencana.
+                  </p>
+                  <Button tone="primary" onClick={() => openExtra(editing)}>
+                    + Add Extra Meeting
+                  </Button>
+                </div>
+              ) : null}
+              {permissions.canEditOfficialSchedule &&
+              editing.status === 'cancelled' &&
+              !alreadyHasMakeup ? (
+                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3">
+                  <p className="ui-label">Replacement / Makeup</p>
+                  <p className="mb-2 text-xs text-ink-soft">Buat sesi pengganti tertaut ke kelas batal ini.</p>
+                  <Button tone="primary" onClick={() => openMakeup(editing)}>
+                    Jadwalkan makeup
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label>
+                  <span className="ui-label">Sensei</span>
+                  <select
+                    className="ui-select"
+                    value={sessionForm.senseiId}
+                    onChange={(event) => setSessionForm({ ...sessionForm, senseiId: event.target.value })}
+                  >
+                    {allSensei
+                      .filter((item) => item.primaryStatus === 'ACTIVE')
+                      .map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="ui-label">Tipe kelas</span>
+                  <select
+                    className="ui-select"
+                    value={sessionForm.type}
+                    onChange={(event) => setSessionForm({ ...sessionForm, type: event.target.value as ClassType })}
+                  >
+                    {CLASS_TYPES.map((type) => (
+                      <option key={type}>{type}</option>
                     ))}
-                </select>
-                <select
-                  className="ui-select mt-2"
-                  value={swapInitiator}
-                  onChange={(event) => setSwapInitiator(event.target.value as SwapInitiator)}
-                >
-                  <option>Admin</option>
-                  <option>Sensei</option>
-                  <option>Student</option>
-                </select>
-                <Button
-                  className="mt-2"
-                  tone="primary"
-                  disabled={!swapTo || !sessionForm.reason}
-                  onClick={() => {
-                    if (swapSensei(editing.id, swapTo, swapInitiator, sessionForm.reason)) {
-                      setEditing(null);
-                    }
-                  }}
-                >
-                  Simpan swap
-                </Button>
+                  </select>
+                </label>
+                <label>
+                  <span className="ui-label">Level</span>
+                  <select
+                    className="ui-select"
+                    value={sessionForm.level}
+                    onChange={(event) => setSessionForm({ ...sessionForm, level: event.target.value })}
+                  >
+                    {CLASS_LEVELS.map((level) => (
+                      <option key={level}>{level}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="ui-label">Tanggal</span>
+                  <input
+                    className="ui-input"
+                    type="date"
+                    value={sessionForm.date}
+                    onChange={(event) => setSessionForm({ ...sessionForm, date: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span className="ui-label">Mulai</span>
+                  <input
+                    className="ui-input"
+                    type="time"
+                    value={sessionForm.startTime}
+                    onChange={(event) => {
+                      const startTime = event.target.value;
+                      const duration = hoursBetween(sessionForm.startTime, sessionForm.endTime) * 60 || 90;
+                      setDurationFromStart(startTime, addMinutesToTime(startTime, duration));
+                    }}
+                  />
+                </label>
+                <label>
+                  <span className="ui-label">Selesai</span>
+                  <input
+                    className="ui-input"
+                    type="time"
+                    value={sessionForm.endTime}
+                    onChange={(event) => setSessionForm({ ...sessionForm, endTime: event.target.value })}
+                  />
+                </label>
               </div>
               <div>
-                <p className="ui-label">Batalkan kelas</p>
+                <span className="ui-label">Siswa</span>
+                <StudentPicker
+                  students={studentOptions}
+                  value={sessionForm.studentIds}
+                  onChange={(studentIds) => setSessionForm({ ...sessionForm, studentIds })}
+                />
+              </div>
+              <label>
+                <span className="ui-label">Alasan perubahan (audit)</span>
                 <input
                   className="ui-input"
-                  value={cancelReason}
-                  onChange={(event) => setCancelReason(event.target.value)}
-                  placeholder="Alasan pembatalan"
+                  value={sessionForm.reason}
+                  onChange={(event) => setSessionForm({ ...sessionForm, reason: event.target.value })}
+                  placeholder="Wajib untuk edit/swap/cancel"
                 />
-                <select
-                  className="ui-select mt-2"
-                  value={initiator}
-                  onChange={(event) => setInitiator(event.target.value as CancellationInitiator)}
-                >
-                  <option>Admin</option>
-                  <option>Sensei</option>
-                  <option>Student</option>
-                  <option>Ops</option>
-                </select>
-                <label className="mt-2 flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={replacementSecured}
-                    onChange={(event) => setReplacementSecured(event.target.checked)}
-                  />
-                  Pengganti berhasil diamankan
-                </label>
-                <Button
-                  className="mt-2"
-                  tone="danger"
-                  disabled={!cancelReason}
-                  onClick={() => {
-                    cancelClass(editing.id, { reason: cancelReason, initiator, replacementSecured });
-                    setEditing(null);
-                  }}
-                >
-                  Batalkan kelas
-                </Button>
-              </div>
-            </div>
-          ) : null}
+              </label>
+              <p className="text-xs text-ink-soft">
+                Durasi {hoursBetween(sessionForm.startTime, sessionForm.endTime)} jam. Ketersediaan Sensei hanya
+                referensi kapasitas.
+              </p>
+              {editing && permissions.canAssignSensei && editing.status !== 'cancelled' ? (
+                <div className="grid gap-3 rounded-2xl border border-[#efe4d2] p-3 md:grid-cols-2">
+                  <div>
+                    <p className="ui-label">Tukar Sensei</p>
+                    <select className="ui-select" value={swapTo} onChange={(event) => setSwapTo(event.target.value)}>
+                      <option value="">Pilih pengganti</option>
+                      {allSensei
+                        .filter((item) => item.id !== editing.senseiId && item.primaryStatus === 'ACTIVE')
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                    </select>
+                    <select
+                      className="ui-select mt-2"
+                      value={swapInitiator}
+                      onChange={(event) => setSwapInitiator(event.target.value as SwapInitiator)}
+                    >
+                      <option>Admin</option>
+                      <option>Sensei</option>
+                      <option>Student</option>
+                    </select>
+                    <Button
+                      className="mt-2"
+                      tone="primary"
+                      disabled={!swapTo || !sessionForm.reason}
+                      onClick={() => {
+                        if (swapSensei(editing.id, swapTo, swapInitiator, sessionForm.reason)) {
+                          setEditing(null);
+                          setDetailMode('view');
+                        }
+                      }}
+                    >
+                      Simpan swap
+                    </Button>
+                  </div>
+                  <div>
+                    <p className="ui-label">Batalkan kelas</p>
+                    <input
+                      className="ui-input"
+                      value={cancelReason}
+                      onChange={(event) => setCancelReason(event.target.value)}
+                      placeholder="Alasan pembatalan"
+                    />
+                    <select
+                      className="ui-select mt-2"
+                      value={initiator}
+                      onChange={(event) => setInitiator(event.target.value as CancellationInitiator)}
+                    >
+                      <option>Admin</option>
+                      <option>Sensei</option>
+                      <option>Student</option>
+                      <option>Ops</option>
+                    </select>
+                    <label className="mt-2 flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={replacementSecured}
+                        onChange={(event) => setReplacementSecured(event.target.checked)}
+                      />
+                      Pengganti berhasil diamankan
+                    </label>
+                    <Button
+                      className="mt-2"
+                      tone="danger"
+                      disabled={!cancelReason}
+                      onClick={() => {
+                        cancelClass(editing.id, { reason: cancelReason, initiator, replacementSecured });
+                        setEditing(null);
+                        setDetailMode('view');
+                      }}
+                    >
+                      Batalkan kelas
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
         </Modal>
       )}
     </div>
