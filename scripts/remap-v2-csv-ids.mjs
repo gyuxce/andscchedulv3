@@ -276,48 +276,88 @@ function fileKey(name) {
   return name.replace(/\.csv$/i, '').toLowerCase();
 }
 
-async function processFile(fileName) {
+function colIndex(headers, name) {
+  return headers.indexOf(name);
+}
+
+function collectIds(headers, dataRows) {
+  const idx = colIndex(headers, 'id');
+  const set = new Set();
+  if (idx < 0) return set;
+  for (const row of dataRows) {
+    const id = blankNull(row[idx]);
+    if (id) set.add(id);
+  }
+  return set;
+}
+
+function scrubFk(headers, dataRows, column, validIds) {
+  const idx = colIndex(headers, column);
+  if (idx < 0 || !validIds) return 0;
+  let cleared = 0;
+  for (const row of dataRows) {
+    const value = blankNull(row[idx]);
+    if (value && !validIds.has(value)) {
+      row[idx] = '';
+      cleared += 1;
+    }
+  }
+  return cleared;
+}
+
+function scrubIdArray(headers, dataRows, column, validIds) {
+  const idx = colIndex(headers, column);
+  if (idx < 0 || !validIds) return 0;
+  let changed = 0;
+  for (const row of dataRows) {
+    const raw = blankNull(row[idx]);
+    if (!raw) {
+      row[idx] = '[]';
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        row[idx] = '[]';
+        changed += 1;
+        continue;
+      }
+      const next = parsed.filter((id) => validIds.has(String(id)));
+      if (next.length !== parsed.length) changed += 1;
+      row[idx] = JSON.stringify(next);
+    } catch {
+      row[idx] = '[]';
+      changed += 1;
+    }
+  }
+  return changed;
+}
+
+async function buildReadyTable(fileName) {
   const key = fileKey(fileName);
   const keepList = KEEP_BY_FILE[key];
   if (key.startsWith('profiles') || keepList === null) {
-    console.log(`skip  ${fileName} (profiles / auth — buat login di dashboard V3)`);
-    return;
+    return { key, fileName, skip: true, reason: 'profiles / auth' };
   }
 
   const raw = await readFile(path.join(inputDir, fileName), 'utf8');
   const rows = parseCsv(raw);
-  if (rows.length < 2) {
-    console.log(`skip  ${fileName} (kosong)`);
-    return;
-  }
+  if (rows.length < 2) return { key, fileName, skip: true, reason: 'kosong' };
 
   const headers = rows[0].map((h) => h.trim());
-  const allowed = keepList ? new Set(keepList) : null;
+  const allowed = new Set(keepList);
   const keepIdx = headers
     .map((header, index) => ({ header, index }))
-    .filter((item) => item.header && (!allowed || allowed.has(item.header)));
+    .filter((item) => item.header && allowed.has(item.header));
+  if (!keepIdx.length) return { key, fileName, skip: true, reason: 'tidak ada kolom cocok' };
 
-  if (!keepIdx.length) {
-    console.log(`skip  ${fileName} (tidak ada kolom yang cocok V3)`);
-    return;
-  }
-
-  const dropped = headers.filter((h) => h && allowed && !allowed.has(h));
+  const dropped = headers.filter((h) => h && !allowed.has(h));
   const outHeaders = keepIdx.map((item) => item.header);
-  const outRows = [outHeaders];
-
-  for (const row of rows.slice(1)) {
-    const next = keepIdx.map(({ header, index }) => normalizeCell(header, row[index] ?? '', key));
-    outRows.push(next);
-  }
-
-  const csv = outRows.map((line) => line.map(escapeCsv).join(',')).join('\n') + '\n';
-  const outName = fileName.replace(/\.csv$/i, '') + '.ready.csv';
-  await writeFile(path.join(outputDir, outName), csv, 'utf8');
-  console.log(
-    `ok    ${fileName} → ${outName} (${outRows.length - 1} rows)` +
-      (dropped.length ? ` | drop: ${dropped.join(', ')}` : '')
+  const dataRows = rows.slice(1).map((row) =>
+    keepIdx.map(({ header, index }) => normalizeCell(header, row[index] ?? '', key))
   );
+
+  return { key, fileName, skip: false, dropped, headers: outHeaders, dataRows };
 }
 
 async function main() {
@@ -329,10 +369,61 @@ async function main() {
   }
   console.log(`Input : ${inputDir}`);
   console.log(`Output: ${outputDir}`);
+
+  const tables = [];
   for (const file of files.sort()) {
-    await processFile(file);
+    tables.push(await buildReadyTable(file));
   }
+
+  const byKey = Object.fromEntries(tables.filter((t) => !t.skip).map((t) => [t.key, t]));
+  const senseiIds = byKey.sensei_rows ? collectIds(byKey.sensei_rows.headers, byKey.sensei_rows.dataRows) : new Set();
+  const studentIds = byKey.students_rows
+    ? collectIds(byKey.students_rows.headers, byKey.students_rows.dataRows)
+    : new Set();
+  const groupIds = byKey.groups_rows ? collectIds(byKey.groups_rows.headers, byKey.groups_rows.dataRows) : new Set();
+  const scheduleIds = byKey.schedules_rows
+    ? collectIds(byKey.schedules_rows.headers, byKey.schedules_rows.dataRows)
+    : new Set();
+
+  if (byKey.groups_rows) {
+    scrubIdArray(byKey.groups_rows.headers, byKey.groups_rows.dataRows, 'student_ids', studentIds);
+  }
+
+  if (byKey.schedules_rows) {
+    const s = byKey.schedules_rows;
+    const c1 = scrubFk(s.headers, s.dataRows, 'sensei_id', senseiIds);
+    const c2 = scrubFk(s.headers, s.dataRows, 'student_id', studentIds);
+    const c3 = scrubFk(s.headers, s.dataRows, 'group_id', groupIds);
+    const c4 = scrubFk(s.headers, s.dataRows, 'makeup_of_session_id', scheduleIds);
+    scrubIdArray(s.headers, s.dataRows, 'student_ids', studentIds);
+    console.log(`scrub schedules FK: sensei=${c1}, student=${c2}, group=${c3}, makeup=${c4}`);
+  }
+
+  if (byKey.lesson_trackers_rows) {
+    const l = byKey.lesson_trackers_rows;
+    const c1 = scrubFk(l.headers, l.dataRows, 'schedule_id', scheduleIds);
+    const c2 = scrubFk(l.headers, l.dataRows, 'student_id', studentIds);
+    const c3 = scrubFk(l.headers, l.dataRows, 'sensei_id', senseiIds);
+    console.log(`scrub lesson_trackers FK: schedule=${c1}, student=${c2}, sensei=${c3}`);
+  }
+
+  for (const table of tables) {
+    if (table.skip) {
+      console.log(`skip  ${table.fileName} (${table.reason})`);
+      continue;
+    }
+    const csv =
+      [table.headers, ...table.dataRows].map((line) => line.map(escapeCsv).join(',')).join('\n') + '\n';
+    const outName = table.fileName.replace(/\.csv$/i, '') + '.ready.csv';
+    await writeFile(path.join(outputDir, outName), csv, 'utf8');
+    console.log(
+      `ok    ${table.fileName} → ${outName} (${table.dataRows.length} rows)` +
+        (table.dropped?.length ? ` | drop: ${table.dropped.join(', ')}` : '')
+    );
+  }
+
   console.log('\nSelesai. Impor urutan: sensei → students → groups → schedules → lesson_trackers → audit_logs');
+  console.log('Penting: groups HARUS diimpor sebelum schedules.');
 }
 
 main().catch((error) => {
