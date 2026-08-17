@@ -9,7 +9,8 @@
     "preview": "vite preview --port=3000 --host=0.0.0.0",
     "lint": "tsc -p tsconfig.app.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "remap:v2-csv": "node scripts/remap-v2-csv-ids.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
