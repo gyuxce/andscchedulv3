@@ -59,13 +59,23 @@ UNION ALL SELECT 'session_logs', count(*) FROM session_logs;
 
 ## Jika Import CSV gagal
 
-Penyebab umum:
+### Error: `invalid input syntax for type uuid: '1777628...'`
+ID V2 **bukan UUID** (sering format `timestamp-uuid`). Kolom `id` di V3 bertipe UUID → impor ditolak.
+
+**Jangan edit CSV di Excel** (ID panjang bisa rusak jadi angka saja).
+
+Di laptop (butuh Node.js), dari folder repo / tempat CSV:
+
+```bash
+node scripts/remap-v2-csv-ids.mjs ./backup-ans-v2 ./backup-ans-v2-ready
+```
+
+Lalu impor file `*.ready.csv` (skip `profiles`).
+
+Penyebab umum lain:
 - Salah project (masih di V2)
 - Urutan FK salah (schedules sebelum sensei)
-- Tipe kolom / tanggal format beda
-- Header CSV tidak cocok nama kolom tabel
-
-Perbaiki: impor ulang tabel yang gagal saja, atau hapus baris uji di V3 lalu impor lagi.
+- Header CSV tidak cocok / kolom ekstra (`created_at` di sensei) — script remap membuang `created_at`
 
 ## Cutover production (belakangan)
 
