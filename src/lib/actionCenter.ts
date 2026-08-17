@@ -1,3 +1,4 @@
+import { addDays } from 'date-fns';
 import type {
   ActionItem,
   AvailabilitySlot,
@@ -12,7 +13,7 @@ import type {
 } from '../types';
 import { WEEKLY_HOUR_TARGET } from '../constants';
 import { getClassHealth } from './classProgress';
-import { toDateKey } from './dates';
+import { toDateKey, weekDays } from './dates';
 import {
   deriveEnrollmentDisplayStatus,
   getEnrollmentProgress,
@@ -22,6 +23,9 @@ import { getOperationalLabels } from './labels';
 import { findConflicts } from './schedule';
 import { getSessionWorkflow } from './session';
 import { getWorkloadMetrics } from './workload';
+
+/** Session-level ops alerts only for recent window (not full history after V2 import). */
+const SESSION_ALERT_LOOKBACK_DAYS = 14;
 
 export function buildActionItems(input: {
   sensei: Sensei[];
@@ -39,12 +43,17 @@ export function buildActionItems(input: {
   const items: ActionItem[] = [];
   const now = input.now ?? new Date();
   const todayKey = toDateKey(now);
+  const lookbackStart = toDateKey(addDays(now, -SESSION_ALERT_LOOKBACK_DAYS));
+  const weekEnd = toDateKey(weekDays(input.weekAnchor)[6]);
   const classMasters = input.classMasters ?? [];
   const enrollments = input.enrollments ?? [];
   const students = input.students ?? [];
 
   for (const session of input.schedules) {
     if (session.status === 'cancelled') continue;
+    // Skip ancient migrated sessions — Action Center is operational, not full archive.
+    if (session.date < lookbackStart || session.date > weekEnd) continue;
+
     const log = input.logs.find((item) => item.scheduleId === session.id);
     const report = input.reports.find((item) => item.scheduleId === session.id);
     const workflow = getSessionWorkflow(session, log, report);
@@ -92,6 +101,7 @@ export function buildActionItems(input: {
   }
 
   for (const pair of findConflicts(input.schedules)) {
+    if (pair.a.date < lookbackStart && pair.b.date < lookbackStart) continue;
     items.push({
       id: `conflict:${pair.a.id}:${pair.b.id}`,
       kind: 'schedule_conflict',

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ATTENDANCE_OPTIONS } from '../constants';
 import { getSessionOrdinal } from '../lib/classProgress';
-import { formatDateTime } from '../lib/dates';
+import { formatDateTime, toDateKey, weekDays } from '../lib/dates';
 import {
   actualDurationMinutes,
   durationVarianceMinutes,
@@ -24,12 +24,24 @@ import type {
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+import { WeekNav } from './ui/WeekNav';
+
+const PAGE_SIZE = 25;
+
+function studentSummary(studentIds: string[], students: Student[]) {
+  if (!studentIds.length) return 'Tanpa siswa';
+  const names = studentIds.map((id) => displayName(students, id));
+  if (names.length <= 2) return names.join(', ');
+  return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+}
 
 export function TeachingView() {
   const permissions = usePermissions();
   const allStudents = useDashboardStore((state) => state.students);
   const allSensei = useDashboardStore((state) => state.sensei);
   const classMasters = useDashboardStore((state) => state.classMasters);
+  const weekAnchor = useDashboardStore((state) => state.weekAnchor);
+  const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const clockIn = useDashboardStore((state) => state.clockIn);
   const clockOut = useDashboardStore((state) => state.clockOut);
   const overrideClock = useDashboardStore((state) => state.overrideClock);
@@ -41,6 +53,14 @@ export function TeachingView() {
   const [overrideReason, setOverrideReason] = useState('');
   const [clockInAt, setClockInAt] = useState('');
   const [clockOutAt, setClockOutAt] = useState('');
+  const [rangeMode, setRangeMode] = useState<'week' | 'upcoming' | 'all'>('week');
+  const [statusFilter, setStatusFilter] = useState<'all' | SessionWorkflowState>('all');
+  const [senseiFilter, setSenseiFilter] = useState('all');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+
+  const weekKeys = useMemo(() => new Set(weekDays(weekAnchor).map((day) => toDateKey(day))), [weekAnchor]);
+  const today = toDateKey(new Date());
 
   const rows = useMemo(
     () =>
@@ -68,6 +88,33 @@ export function TeachingView() {
     [schedules, sessionLogs, sessionReports, classMasters]
   );
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter(({ session, state }) => {
+      if (rangeMode === 'week' && !weekKeys.has(session.date)) return false;
+      if (rangeMode === 'upcoming' && session.date < today) return false;
+      if (statusFilter !== 'all' && state !== statusFilter) return false;
+      if (senseiFilter !== 'all' && session.senseiId !== senseiFilter) return false;
+      if (!q) return true;
+      const hay = [
+        session.level,
+        session.type,
+        displayName(allSensei, session.senseiId),
+        ...session.studentIds.map((id) => displayName(allStudents, id))
+      ]
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [rows, rangeMode, weekKeys, today, statusFilter, senseiFilter, query, allSensei, allStudents]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [rangeMode, statusFilter, senseiFilter, query, weekAnchor]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
   const selectedLog = selected ? sessionLogs.find((item) => item.scheduleId === selected.id) : undefined;
   const selectedReport = selected ? sessionReports.find((item) => item.scheduleId === selected.id) : undefined;
   const selectedState = selected ? getSessionWorkflow(selected, selectedLog, selectedReport) : 'ready';
@@ -75,63 +122,156 @@ export function TeachingView() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-soft">
-        Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Durasi aktual = Clock Out − Clock In.
-      </p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <p className="text-sm text-ink-soft">
+          Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Default menampilkan minggu yang dipilih.
+        </p>
+        <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
+      </div>
+
+      <div className="ui-card grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
+        <label>
+          <span className="ui-label">Rentang</span>
+          <select
+            className="ui-select"
+            value={rangeMode}
+            onChange={(event) => setRangeMode(event.target.value as 'week' | 'upcoming' | 'all')}
+          >
+            <option value="week">Minggu ini (nav)</option>
+            <option value="upcoming">Hari ini & ke depan</option>
+            <option value="all">Semua jadwal</option>
+          </select>
+        </label>
+        <label>
+          <span className="ui-label">Status alur</span>
+          <select
+            className="ui-select"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as 'all' | SessionWorkflowState)}
+          >
+            <option value="all">Semua status</option>
+            <option value="ready">Belum mulai</option>
+            <option value="in_progress">Berlangsung</option>
+            <option value="report_pending">Menunggu laporan</option>
+            <option value="completed">Selesai</option>
+            <option value="cancelled">Dibatalkan</option>
+          </select>
+        </label>
+        <label>
+          <span className="ui-label">Sensei</span>
+          <select className="ui-select" value={senseiFilter} onChange={(event) => setSenseiFilter(event.target.value)}>
+            <option value="all">Semua Sensei</option>
+            {(permissions.canViewAllSchedules ? allSensei : allSensei.filter((item) => item.id === linkedSenseiId)).map(
+              (item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              )
+            )}
+          </select>
+        </label>
+        <label>
+          <span className="ui-label">Cari</span>
+          <input
+            className="ui-input"
+            placeholder="Level / siswa / Sensei"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+      </div>
+
       <div className="ui-card overflow-hidden">
-        <div className="ui-table-wrap">
-        <table className="w-full text-sm">
-          <thead className="bg-paper/80 text-left text-xs uppercase tracking-wide text-ink-soft">
-            <tr>
-              <th className="px-4 py-3">Kelas</th>
-              <th className="px-4 py-3">Sensei</th>
-              <th className="px-4 py-3">Waktu</th>
-              <th className="px-4 py-3">Durasi</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Clock</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ session, log, state, ordinal, scheduled, actual, variance }) => (
-              <tr key={session.id} className="border-t border-[#efe4d2] hover:bg-white/70">
-                <td className="px-4 py-3">
-                  <button className="text-left" onClick={() => {
-                    setSelected(session);
-                    setClockInAt(log?.clockInAt?.slice(0, 16) ?? '');
-                    setClockOutAt(log?.clockOutAt?.slice(0, 16) ?? '');
-                    setOverrideReason('');
-                  }}>
-                    <div className="flex items-center gap-2">
-                      <Badge tone={TYPE_TONE[session.type]}>{session.type}</Badge>
-                      <span className="font-bold">{session.level}</span>
-                    </div>
-                    <div className="text-xs text-ink-soft">
-                      {session.studentIds.map((id) => displayName(allStudents, id)).join(', ') || 'Tanpa siswa'}
-                    </div>
-                    {ordinal ? <div className="text-xs font-semibold text-maple">{ordinal.label}</div> : null}
-                  </button>
-                </td>
-                <td className="px-4 py-3">{displayName(allSensei, session.senseiId)}</td>
-                <td className="px-4 py-3">{session.date} · {session.startTime}–{session.endTime}</td>
-                <td className="px-4 py-3 text-xs">
-                  <div>Jadwal {formatDurationMinutes(scheduled)}</div>
-                  <div>Aktual {formatDurationMinutes(actual)}</div>
-                  {variance != null ? (
-                    <div className={variance < 0 ? 'font-semibold text-rose-700' : 'text-ink-soft'}>
-                      Selisih {formatDurationMinutes(variance)}
-                    </div>
-                  ) : null}
-                </td>
-                <td className="px-4 py-3"><Badge tone={WORKFLOW_TONE[state]}>{workflowLabel(state)}</Badge></td>
-                <td className="px-4 py-3 text-xs">
-                  {log?.clockInAt ? formatDateTime(log.clockInAt) : '—'}
-                  {log?.lateJoin ? <div className="font-bold text-rose-700">Terlambat</div> : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="flex items-center justify-between gap-2 border-b border-[#efe4d2] px-4 py-2 text-xs text-ink-soft">
+          <span>
+            {filtered.length === 0
+              ? '0 sesi'
+              : `Menampilkan ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, filtered.length)} dari ${filtered.length} sesi`}
+          </span>
+          {rangeMode === 'all' ? <span>Tip: pakai filter minggu agar lebih ringan.</span> : null}
         </div>
+        <div className="ui-table-wrap">
+          <table className="w-full text-sm">
+            <thead className="bg-paper/80 text-left text-xs uppercase tracking-wide text-ink-soft">
+              <tr>
+                <th className="px-4 py-3">Kelas</th>
+                <th className="px-4 py-3">Sensei</th>
+                <th className="px-4 py-3">Waktu</th>
+                <th className="px-4 py-3">Durasi</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Clock</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-ink-soft">
+                    Tidak ada sesi pada filter ini.
+                  </td>
+                </tr>
+              ) : (
+                pageRows.map(({ session, log, state, ordinal, scheduled, actual, variance }) => (
+                  <tr key={session.id} className="border-t border-[#efe4d2] hover:bg-white/70">
+                    <td className="px-4 py-3">
+                      <button
+                        className="text-left"
+                        onClick={() => {
+                          setSelected(session);
+                          setClockInAt(log?.clockInAt?.slice(0, 16) ?? '');
+                          setClockOutAt(log?.clockOutAt?.slice(0, 16) ?? '');
+                          setOverrideReason('');
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Badge tone={TYPE_TONE[session.type]}>{session.type}</Badge>
+                          <span className="font-bold">{session.level}</span>
+                        </div>
+                        <div className="text-xs text-ink-soft">{studentSummary(session.studentIds, allStudents)}</div>
+                        {ordinal ? <div className="text-xs font-semibold text-maple">{ordinal.label}</div> : null}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">{displayName(allSensei, session.senseiId)}</td>
+                    <td className="px-4 py-3">
+                      {session.date} · {session.startTime}–{session.endTime}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <div>Jadwal {formatDurationMinutes(scheduled)}</div>
+                      <div>Aktual {formatDurationMinutes(actual)}</div>
+                      {variance != null ? (
+                        <div className={variance < 0 ? 'font-semibold text-rose-700' : 'text-ink-soft'}>
+                          Selisih {formatDurationMinutes(variance)}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={WORKFLOW_TONE[state]}>{workflowLabel(state)}</Badge>
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {log?.clockInAt ? formatDateTime(log.clockInAt) : '—'}
+                      {log?.lateJoin ? <div className="font-bold text-rose-700">Terlambat</div> : null}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {filtered.length > PAGE_SIZE ? (
+          <div className="flex items-center justify-between gap-2 border-t border-[#efe4d2] px-4 py-3">
+            <Button disabled={page <= 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>
+              Sebelumnya
+            </Button>
+            <span className="text-xs text-ink-soft">
+              Halaman {page + 1} / {pageCount}
+            </span>
+            <Button
+              disabled={page >= pageCount - 1}
+              onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}
+            >
+              Berikutnya
+            </Button>
+          </div>
+        ) : null}
       </div>
       {selected ? (
         <SessionDrawer
@@ -150,7 +290,12 @@ export function TeachingView() {
           setOverrideReason={setOverrideReason}
           onOverrideClock={() => {
             if (!clockInAt || !overrideReason) return;
-            overrideClock(selected.id, new Date(clockInAt).toISOString(), clockOutAt ? new Date(clockOutAt).toISOString() : null, overrideReason);
+            overrideClock(
+              selected.id,
+              new Date(clockInAt).toISOString(),
+              clockOutAt ? new Date(clockOutAt).toISOString() : null,
+              overrideReason
+            );
           }}
           report={selectedReport}
           log={selectedLog}
@@ -158,7 +303,10 @@ export function TeachingView() {
           onSubmit={submitSessionReport}
           onOverrideAttendance={overrideAttendance}
           onOverridePerformance={overridePerformance}
-          canInput={Boolean(permissions.canInputAttendance && linkedSenseiId && linkedSenseiId === selected.senseiId) || permissions.canOverrideAcademic}
+          canInput={
+            Boolean(permissions.canInputAttendance && linkedSenseiId && linkedSenseiId === selected.senseiId) ||
+            permissions.canOverrideAcademic
+          }
         />
       ) : null}
     </div>
