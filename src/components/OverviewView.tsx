@@ -1,10 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Video, Users, Gauge } from 'lucide-react';
+import {
+  AlertTriangle,
+  BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Gauge,
+  GraduationCap,
+  Users,
+  Video
+} from 'lucide-react';
 import { buildActionItems } from '../lib/actionCenter';
+import { getClassHealth } from '../lib/classProgress';
+import { toDateKey, weekDays } from '../lib/dates';
 import { displayName } from '../lib/display';
+import { deriveEnrollmentDisplayStatus, isCurrentEnrollmentStatus } from '../lib/enrollment';
+import { getOperationalLabels } from '../lib/labels';
 import { getWorkloadMetrics, formatPercent } from '../lib/workload';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
-import type { ActionItem } from '../types';
+import type { ActionItem, TabId } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { StatCard } from './ui/StatCard';
@@ -46,13 +60,17 @@ export function OverviewView() {
   const weekAnchor = useDashboardStore((state) => state.weekAnchor);
   const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const setTab = useDashboardStore((state) => state.setTab);
-  const { sensei, schedules, availability, sessionLogs, sessionReports, classMasters } = useScopedData();
+  const { sensei, students, schedules, availability, sessionLogs, sessionReports, classMasters } =
+    useScopedData();
   const allSensei = useDashboardStore((state) => state.sensei);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [page, setPage] = useState(0);
 
+  const scopedSensei = permissions.canViewAllSensei ? allSensei : sensei;
+  const scopedStudents = permissions.canViewAllSchedules ? allStudents : students;
+
   const items = buildActionItems({
-    sensei: permissions.canViewAllSensei ? allSensei : sensei,
+    sensei: scopedSensei,
     schedules,
     availability,
     logs: sessionLogs,
@@ -76,31 +94,147 @@ export function OverviewView() {
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
-  const high = items.filter((item) => item.severity === 'high').length;
-  const missingReports = items.filter((item) => item.kind === 'missing_report').length;
-  const conflicts = items.filter((item) => item.kind === 'schedule_conflict').length;
-  const activeSensei = (permissions.canViewAllSensei ? allSensei : sensei).filter((item) => item.primaryStatus === 'ACTIVE');
-  const avgUtil =
-    activeSensei.reduce((sum, item) => {
-      const util = getWorkloadMetrics(item.id, availability, schedules, weekAnchor).utilization;
-      return sum + (util ?? 0);
-    }, 0) / Math.max(activeSensei.length, 1);
+  const today = toDateKey(new Date());
+  const weekKeys = useMemo(() => new Set(weekDays(weekAnchor).map((day) => toDateKey(day))), [weekAnchor]);
+
+  const snapshot = useMemo(() => {
+    const activeSensei = scopedSensei.filter((item) => item.primaryStatus === 'ACTIVE');
+    const unassigned = activeSensei.filter((item) =>
+      getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters).includes('UNASSIGNED')
+    ).length;
+    const activeStudents = scopedStudents.filter((item) => item.isActive).length;
+    const schedulesToday = schedules.filter(
+      (item) => item.date === today && item.status !== 'cancelled'
+    ).length;
+    const schedulesWeek = schedules.filter(
+      (item) => weekKeys.has(item.date) && item.status !== 'cancelled'
+    ).length;
+    const activeClasses = classMasters.filter(
+      (item) => item.status === 'active' || item.status === 'ready'
+    ).length;
+    const endingSoonEnrollments = enrollments.filter((enrollment) => {
+      if (!isCurrentEnrollmentStatus(enrollment.status)) return false;
+      if (!permissions.canViewAllSchedules) {
+        const student = scopedStudents.find((item) => item.id === enrollment.studentId);
+        if (!student) return false;
+      }
+      return (
+        deriveEnrollmentDisplayStatus(enrollment, schedules, sessionReports) === 'ending_soon' ||
+        enrollment.status === 'ending_soon'
+      );
+    }).length;
+    const endingSoonClasses = classMasters.filter(
+      (item) => getClassHealth(item, schedules, sessionReports).status === 'ending_soon'
+    ).length;
+    const endingSoon = endingSoonEnrollments + endingSoonClasses;
+    const missingReports = items.filter((item) => item.kind === 'missing_report').length;
+    const avgUtil =
+      activeSensei.reduce((sum, item) => {
+        const util = getWorkloadMetrics(item.id, availability, schedules, weekAnchor).utilization;
+        return sum + (util ?? 0);
+      }, 0) / Math.max(activeSensei.length, 1);
+
+    return {
+      activeSensei: activeSensei.length,
+      unassigned,
+      activeStudents,
+      schedulesToday,
+      schedulesWeek,
+      activeClasses,
+      endingSoon,
+      missingReports,
+      avgUtil
+    };
+  }, [
+    scopedSensei,
+    scopedStudents,
+    schedules,
+    leavePeriods,
+    classMasters,
+    today,
+    weekKeys,
+    enrollments,
+    permissions.canViewAllSchedules,
+    sessionReports,
+    items,
+    availability,
+    weekAnchor
+  ]);
+
+  const go = (tab: TabId) => setTab(tab);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-ink-soft">
-          Action Center fokuskan alert operasional 14 hari terakhir s/d akhir minggu yang dipilih — bukan seluruh history
-          migrasi.
+          Ringkasan data operasional di atas, antrian tindakan di bawah. Alert sesi memakai lingkup 14 hari terakhir s/d
+          akhir minggu yang dipilih.
         </p>
         <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-        <StatCard label="Perlu tindakan" value={items.length} hint={`${high} prioritas tinggi`} icon={<AlertTriangle size={18} />} />
-        <StatCard label="Laporan belum masuk" value={missingReports} icon={<Clock size={18} />} />
-        <StatCard label="Konflik jadwal" value={conflicts} icon={<AlertTriangle size={18} />} />
-        <StatCard label="Utilisasi rata-rata" value={formatPercent(avgUtil)} hint="Jam terisi ÷ jam tersedia" icon={<Gauge size={18} />} />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Sensei aktif"
+          value={snapshot.activeSensei}
+          hint={snapshot.unassigned ? `${snapshot.unassigned} UNASSIGNED` : 'Status ACTIVE'}
+          icon={<Users size={18} />}
+          onClick={() => go('sensei')}
+        />
+        <StatCard
+          label="Siswa aktif"
+          value={snapshot.activeStudents}
+          hint="Master siswa aktif"
+          icon={<GraduationCap size={18} />}
+          onClick={() => go('students')}
+        />
+        <StatCard
+          label="Jadwal hari ini"
+          value={snapshot.schedulesToday}
+          hint={today}
+          icon={<CalendarDays size={18} />}
+          onClick={() => go('teaching')}
+        />
+        <StatCard
+          label="Jadwal minggu ini"
+          value={snapshot.schedulesWeek}
+          hint="Menurut week nav"
+          icon={<CalendarDays size={18} />}
+          onClick={() => go('schedule')}
+        />
+        <StatCard
+          label="Class Master aktif"
+          value={snapshot.activeClasses}
+          hint="Status ready / active"
+          icon={<BookOpen size={18} />}
+          onClick={() => go('classes')}
+        />
+        <StatCard
+          label="Ending soon"
+          value={snapshot.endingSoon}
+          hint="Enrollment + class"
+          icon={<Clock size={18} />}
+          onClick={() => go('students')}
+        />
+        <StatCard
+          label="Laporan belum masuk"
+          value={snapshot.missingReports}
+          hint="Lingkup alert aktif"
+          icon={<Clock size={18} />}
+          onClick={() => {
+            setKindFilter('missing_report');
+            setPage(0);
+          }}
+        />
+        <StatCard
+          label="Utilisasi rata-rata"
+          value={formatPercent(snapshot.avgUtil)}
+          hint="Jam terisi ÷ tersedia"
+          icon={<Gauge size={18} />}
+          onClick={() => go('availability')}
+        />
       </div>
+
       <div className="ui-card overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-[#efe4d2] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="font-bold">Antrian operasional</div>
