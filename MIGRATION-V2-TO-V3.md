@@ -72,6 +72,27 @@ node scripts/remap-v2-csv-ids.mjs ./backup-ans-v2 ./backup-ans-v2-ready
 
 Lalu impor file `*.ready.csv` (skip `profiles`).
 
+### Error: `lesson_trackers_schedule_id_fkey` / Key (schedule_id)=(...) is not present in table schedules
+
+Artinya: CSV tracker masih menunjuk `schedule_id` yang **tidak ada di DB V3**, meski `count(*)` schedules sudah besar (mis. 799). Remap saja belum cukup — scrub remap hanya cek CSV schedules, bukan isi DB.
+
+**Perbaiki (wajib pakai ID yang sudah benar-benar di V3):**
+
+1. Di Supabase V3 → Table Editor → `schedules` → Export CSV (simpan mis. `v3-export/schedules.csv`).
+2. Scrub tracker terhadap export itu:
+
+```bash
+node scripts/scrub-tracker-against-db.mjs ./backup-ans-v2-ready/lesson_trackers_rows.ready.csv ./v3-export/schedules.csv ./backup-ans-v2-ready/lesson_trackers_for_v3.csv
+```
+
+3. Impor `lesson_trackers_for_v3.csv` ke V3.
+
+Mode darurat (kosongkan semua `schedule_id`, history tetap masuk):
+
+```bash
+node scripts/scrub-tracker-against-db.mjs ./backup-ans-v2-ready/lesson_trackers_rows.ready.csv --clear-schedule ./backup-ans-v2-ready/lesson_trackers_for_v3.csv
+```
+
 Penyebab umum lain:
 - Salah project (masih di V2)
 - Urutan FK salah (schedules sebelum sensei)
