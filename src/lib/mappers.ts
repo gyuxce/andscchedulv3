@@ -225,7 +225,7 @@ export function mapProfile(row: Record<string, unknown>, senseiId?: string): Use
     email: String(row.email || ''),
     role: mapRole(String(row.role)),
     status: (row.status as UserStatus) || 'Pending',
-    senseiId
+    senseiId: senseiId || (row.sensei_id ? String(row.sensei_id) : undefined)
   };
 }
 

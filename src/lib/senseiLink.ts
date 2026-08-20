@@ -13,7 +13,8 @@ export function resolveSenseiId(
 ) {
   if (isUuid(options.senseiId)) {
     const byId = senseiList.find((item) => item.id === options.senseiId);
-    if (byId) return byId.id;
+    // Percaya sensei_id dari profiles meski list kosong (RLS belum kebaca / race hydrate)
+    return byId?.id ?? options.senseiId ?? undefined;
   }
 
   const email = (options.email || '').toLowerCase().trim();

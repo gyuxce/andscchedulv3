@@ -55,10 +55,22 @@ LANGUAGE SQL
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT s.id
-  FROM sensei s
-  WHERE lower(coalesce(s.email, '')) = lower(coalesce(auth.jwt() ->> 'email', ''))
-  LIMIT 1
+  SELECT COALESCE(
+    (
+      SELECT p.sensei_id
+      FROM profiles p
+      WHERE p.id = auth.uid()
+        AND p.status = 'Approved'
+        AND p.sensei_id IS NOT NULL
+      LIMIT 1
+    ),
+    (
+      SELECT s.id
+      FROM sensei s
+      WHERE lower(coalesce(s.email, '')) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      LIMIT 1
+    )
+  )
 $$;
 
 CREATE OR REPLACE FUNCTION public.owns_schedule(p_schedule_id UUID)

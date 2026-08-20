@@ -41,6 +41,10 @@ CREATE TABLE IF NOT EXISTS sensei (
     CHECK (timezone IN ('Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'))
 );
 
+-- Tautan login Auth → master Sensei (setelah tabel sensei ada)
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS sensei_id UUID REFERENCES sensei(id) ON DELETE SET NULL;
+
 CREATE TABLE IF NOT EXISTS students (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -328,6 +332,7 @@ CREATE INDEX IF NOT EXISTS idx_sensei_email ON sensei(email);
 CREATE INDEX IF NOT EXISTS idx_schedules_date ON schedules(date);
 CREATE INDEX IF NOT EXISTS idx_schedules_sensei_date ON schedules(sensei_id, date);
 CREATE INDEX IF NOT EXISTS idx_sensei_time_blocks_sensei_date ON sensei_time_blocks(sensei_id, date);
+CREATE INDEX IF NOT EXISTS idx_profiles_sensei ON profiles(sensei_id);
 CREATE INDEX IF NOT EXISTS idx_lesson_trackers_student_date ON lesson_trackers(student_id, date);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sensei_availability_sensei ON sensei_availability(sensei_id);

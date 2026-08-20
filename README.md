@@ -76,7 +76,10 @@ Jalankan berurutan (jangan loncat):
 4. `schema-enrollments.sql`
 5. **`schema-v31-master-data.sql`**
 6. **`schema-v31-recurring-eom.sql`**
-7. `schema-rls.sql` ulang
+7. **`schema-profiles-sensei-id.sql`** ← tautkan login Sensei ke master (`profiles.sensei_id`)
+8. `schema-rls.sql` ulang
+
+Kalau Sensei tidak bisa isi Ketersediaan (“belum tertaut”): pastikan `sensei.email` = email Auth, atau set `profiles.sensei_id`, lalu login ulang.
 
 Kalau masih ada data seed lama, jalankan **`cleanup-demo-data.sql`**, lalu hapus user demo di Authentication → Users.
 

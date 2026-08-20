@@ -32,6 +32,7 @@ import {
   senseiToRow,
   studentToRow
 } from '../lib/mappers';
+import { resolveSenseiId } from '../lib/senseiLink';
 import { getSupabase } from '../lib/supabase';
 import type { AvailabilitySlot, ClassSession, SessionLog, SessionReport, TeachingQaScore } from '../types';
 
@@ -137,10 +138,14 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
 
   const users: UserAccount[] = ((profilesRes.data || []) as Record<string, unknown>[]).map((row) => {
     const email = String(row.email || '').toLowerCase();
-    const linked = sensei.find((item) => item.email.toLowerCase() === email);
+    const linked = resolveSenseiId(sensei, {
+      senseiId: row.sensei_id ? String(row.sensei_id) : null,
+      email
+    });
+    const linkedSensei = sensei.find((item) => item.id === linked);
     return {
-      ...mapProfile(row, linked?.id),
-      name: linked?.name || String(row.email || '').split('@')[0]
+      ...mapProfile(row, linked),
+      name: linkedSensei?.name || String(row.email || '').split('@')[0]
     };
   });
 

@@ -8,6 +8,8 @@ export type CreateAuthLoginInput = {
   status?: UserStatus;
   /** Display name stored only in local UI / audit; Auth uses email. */
   name?: string;
+  /** Master Sensei id — disimpan ke profiles.sensei_id agar RBAC/ketersediaan tertaut. */
+  senseiId?: string | null;
 };
 
 export type CreateAuthLoginResult =
@@ -83,18 +85,26 @@ export async function createAuthLogin(input: CreateAuthLoginInput): Promise<Crea
   }
 
   const status = input.status ?? 'Approved';
-  const profilePayload = {
+  const profilePayload: Record<string, unknown> = {
     id: userId,
     email,
     role: input.role,
     status
   };
+  if (input.senseiId) {
+    profilePayload.sensei_id = input.senseiId;
+  }
 
   const existing = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
   if (existing.data) {
     const updated = await supabase
       .from('profiles')
-      .update({ email, role: input.role, status })
+      .update({
+        email,
+        role: input.role,
+        status,
+        ...(input.senseiId ? { sensei_id: input.senseiId } : {})
+      })
       .eq('id', userId);
     if (updated.error) return { ok: false, error: updated.error.message };
   } else {
@@ -103,7 +113,12 @@ export async function createAuthLogin(input: CreateAuthLoginInput): Promise<Crea
       // Race: ensureProfile may have inserted Pending already
       const updated = await supabase
         .from('profiles')
-        .update({ email, role: input.role, status })
+        .update({
+          email,
+          role: input.role,
+          status,
+          ...(input.senseiId ? { sensei_id: input.senseiId } : {})
+        })
         .eq('id', userId);
       if (updated.error) return { ok: false, error: inserted.error.message };
     }
