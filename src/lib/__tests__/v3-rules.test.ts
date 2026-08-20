@@ -18,6 +18,7 @@ import {
   scheduledDurationMinutes
 } from '../duration';
 import { ensureClassEnrollments, progressEnrollmentJourney, deriveEnrollmentDisplayStatus, getEnrollmentProgress } from '../enrollment';
+import { resolveSenseiId } from '../senseiLink';
 import type { ClassMaster, ClassSession, Sensei } from '../../types';
 
 const yuki: Sensei = {
@@ -522,5 +523,32 @@ describe('enrollment journey', () => {
     });
     expect(changed).toHaveLength(2);
     expect(enrollments.every((item) => item.status === 'active' && item.level === 'N5')).toBe(true);
+  });
+});
+
+describe('resolveSenseiId', () => {
+  const list: Sensei[] = [
+    {
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'Zara',
+      email: 'zarasvatipradnya@gmail.com',
+      phone: '',
+      levels: [],
+      primaryStatus: 'ACTIVE',
+      joinDate: '2026-01-01',
+      timezone: 'Asia/Jakarta'
+    }
+  ];
+
+  it('matches by email case-insensitively', () => {
+    expect(
+      resolveSenseiId(list, { email: 'Zarasvatipradnya@gmail.com' })
+    ).toBe(list[0].id);
+  });
+
+  it('trusts profiles.sensei_id even when list empty', () => {
+    expect(
+      resolveSenseiId([], { senseiId: list[0].id, email: 'other@test.com' })
+    ).toBe(list[0].id);
   });
 });

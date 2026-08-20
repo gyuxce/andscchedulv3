@@ -73,8 +73,9 @@ export function AvailabilityView() {
 
       {!permissions.canViewAllSensei && !isUuid(ownSenseiId) ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-          Akun Sensei belum tertaut ke master data. Samakan email Auth (`{currentUser?.email}`) dengan
-          kolom <b>email</b> di tabel <b>sensei</b>, lalu login ulang.
+          Akun Sensei belum tertaut ke master data. Email login: <b>{currentUser?.email}</b>.
+          Samakan dengan kolom <b>email</b> di tabel <b>sensei</b>, atau minta Admin set{' '}
+          <b>profiles.sensei_id</b>, lalu login ulang.
         </div>
       ) : null}
 

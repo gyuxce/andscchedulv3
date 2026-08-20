@@ -295,15 +295,18 @@ export const useDashboardStore = create<DashboardStore>()(
         const profile = await ensureProfile(data.user.id, data.user.email || email);
         await get().hydrateFromSupabase();
         const linkedSenseiId = resolveSenseiId(get().sensei, {
+          senseiId: profile?.sensei_id ? String(profile.sensei_id) : null,
           email: data.user.email || email
         });
         const linkedSensei = get().sensei.find((item) => item.id === linkedSenseiId);
         const account: UserAccount = {
-          ...mapProfile(profile, linkedSenseiId),
+          ...mapProfile(profile || {}, linkedSenseiId),
           name: linkedSensei?.name || (data.user.email || email).split('@')[0]
         };
         if (account.role === 'Sensei' && !linkedSenseiId) {
-          toast.error('Akun Sensei belum tertaut. Samakan email Auth dengan email di tabel sensei.');
+          toast.error(
+            'Akun Sensei belum tertaut. Samakan email Auth dengan email di tabel sensei, atau set profiles.sensei_id.'
+          );
         }
         if (account.status !== 'Approved') {
           await supabase.auth.signOut();
@@ -360,11 +363,12 @@ export const useDashboardStore = create<DashboardStore>()(
         try {
           const profile = await ensureProfile(data.session.user.id, data.session.user.email || '');
           const linkedSenseiId = resolveSenseiId(get().sensei, {
+            senseiId: profile?.sensei_id ? String(profile.sensei_id) : null,
             email: data.session.user.email || ''
           });
           const linkedSensei = get().sensei.find((item) => item.id === linkedSenseiId);
           const account: UserAccount = {
-            ...mapProfile(profile, linkedSenseiId),
+            ...mapProfile(profile || {}, linkedSenseiId),
             name: linkedSensei?.name || (data.session.user.email || '').split('@')[0]
           };
           set({
@@ -372,7 +376,9 @@ export const useDashboardStore = create<DashboardStore>()(
             isBootstrapping: false
           });
           if (account.status === 'Approved' && account.role === 'Sensei' && !linkedSenseiId) {
-            toast.error('Akun Sensei belum tertaut. Samakan email Auth dengan email di tabel sensei.');
+            toast.error(
+              'Akun Sensei belum tertaut. Samakan email Auth dengan email di tabel sensei, atau set profiles.sensei_id.'
+            );
           }
         } catch (error) {
           console.error(error);
@@ -1470,7 +1476,8 @@ export const useDashboardStore = create<DashboardStore>()(
           password: input.password,
           role: input.role,
           status: input.status ?? 'Approved',
-          name: input.name
+          name: input.name,
+          senseiId: input.senseiId
         });
         if (!result.ok) {
           toast.error(result.error);
