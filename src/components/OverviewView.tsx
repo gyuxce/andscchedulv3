@@ -236,7 +236,7 @@ export function OverviewView() {
       </div>
 
       <div className="ui-card overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-[#efe4d2] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-line px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="font-bold">Antrian operasional</div>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -258,7 +258,7 @@ export function OverviewView() {
             </span>
           </div>
         </div>
-        <div className="divide-y divide-[#efe4d2]">
+        <div className="divide-y divide-line">
           {filtered.length === 0 ? (
             <div className="flex items-center gap-2 p-6 text-sm text-pine">
               <CheckCircle2 size={18} /> Tidak ada pengecualian pada lingkup ini.
@@ -311,7 +311,7 @@ export function OverviewView() {
           )}
         </div>
         {filtered.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-between gap-2 border-t border-[#efe4d2] px-5 py-3">
+          <div className="flex items-center justify-between gap-2 border-t border-line px-5 py-3">
             <Button disabled={page <= 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>
               Sebelumnya
             </Button>

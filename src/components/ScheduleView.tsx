@@ -247,7 +247,7 @@ export function ScheduleView() {
       </div>
       <p className="text-xs text-ink-soft lg:hidden">Geser ke samping untuk melihat jadwal mingguan.</p>
       <div className="ui-card overflow-auto">
-        <div className="grid min-w-[720px] grid-cols-8 border-b border-[#efe4d2] bg-paper/70 text-xs font-bold uppercase tracking-wide text-ink-soft sm:min-w-[980px]">
+        <div className="grid min-w-[720px] grid-cols-8 border-b border-line bg-paper/70 text-xs font-bold uppercase tracking-wide text-ink-soft sm:min-w-[980px]">
           <div className="px-3 py-3">Jam</div>
           {days.map((day) => (
             <div key={day.toISOString()} className="px-3 py-3">
@@ -258,7 +258,7 @@ export function ScheduleView() {
         {hours.map((hour, index) => {
           const next = hours[index + 1] ?? '21:00';
           return (
-            <div key={hour} className="grid min-w-[720px] grid-cols-8 border-b border-[#efe4d2] sm:min-w-[980px]">
+            <div key={hour} className="grid min-w-[720px] grid-cols-8 border-b border-line sm:min-w-[980px]">
               <div className="px-3 py-3 text-xs font-semibold text-ink-soft">{hour}</div>
               {days.map((day) => {
                 const date = toDateKey(day);
@@ -266,21 +266,21 @@ export function ScheduleView() {
                   (session) => session.date === date && session.startTime >= hour && session.startTime < next
                 );
                 return (
-                  <div key={date + hour} className="min-h-24 space-y-2 border-l border-[#efe4d2] p-2">
+                  <div key={date + hour} className="min-h-24 space-y-2 border-l border-line p-2">
                     {items.map((session) => (
                       <button
                         key={session.id}
                         onClick={() => openEdit(session)}
-                        className={`w-full rounded-xl border p-2 text-left ${
+                        className={`w-full rounded-lg border p-2 text-left transition hover:border-maple/40 ${
                           session.status === 'cancelled'
-                            ? 'border-rose-200 bg-rose-50 opacity-70'
+                            ? 'border-rose-200 bg-rose-50 opacity-70 dark:border-rose-500/30 dark:bg-rose-500/10'
                             : conflictIds.has(session.id)
-                              ? 'border-rose-400 bg-rose-50'
+                              ? 'border-rose-400 bg-rose-50 dark:border-rose-400/50 dark:bg-rose-500/15'
                               : session.isExtra
-                                ? 'border-amber-300 bg-amber-50'
+                                ? 'border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10'
                                 : isMakeupSession(session)
-                                  ? 'border-sky-300 bg-sky-50'
-                                  : 'border-[#e2d6c4] bg-white'
+                                  ? 'border-sky-300 bg-sky-50 dark:border-sky-500/30 dark:bg-sky-500/10'
+                                  : 'border-line bg-surface'
                         }`}
                       >
                         <div className="flex flex-wrap items-center gap-1">
@@ -481,7 +481,7 @@ export function ScheduleView() {
               {preview.length === 0 ? (
                 <p className="text-sm text-ink-soft">Isi start date, hari, dan jumlah pertemuan untuk melihat preview.</p>
               ) : (
-                <div className="max-h-56 overflow-auto rounded-xl border border-[#efe4d2]">
+                <div className="max-h-56 overflow-auto rounded-xl border border-line">
                   <table className="w-full text-left text-sm">
                     <thead className="sticky top-0 bg-paper text-xs uppercase text-ink-soft">
                       <tr>
@@ -492,7 +492,7 @@ export function ScheduleView() {
                     </thead>
                     <tbody>
                       {preview.map((row) => (
-                        <tr key={row.label} className="border-t border-[#efe4d2]">
+                        <tr key={row.label} className="border-t border-line">
                           <td className="px-3 py-1.5 font-semibold">{row.label}</td>
                           <td className="px-3 py-1.5">{formatPreviewDate(row.date)}</td>
                           <td className="px-3 py-1.5">
@@ -505,7 +505,7 @@ export function ScheduleView() {
                 </div>
               )}
               {previewConflictList.length > 0 ? (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
                   <p className="font-semibold">
                     {previewConflictList.length} konflik dengan jadwal resmi Sensei yang sama.
                   </p>
@@ -587,22 +587,22 @@ export function ScheduleView() {
           }
         >
           {sessionForm.makeupOfSessionId && creatingSession ? (
-            <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900">
+            <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-500/10 dark:text-sky-100">
               Makeup tertaut ke sesi asli. Progress/absensi memakai sesi makeup, bukan sesi batal. Required meetings tidak naik.
             </p>
           ) : null}
           {sessionForm.isExtra && creatingSession ? (
-            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100">
               Extra meeting di luar rencana. Tidak dihitung ke required X/X kecuali Admin mengubah total secara eksplisit.
             </p>
           ) : null}
           {editing && isMakeupSession(editing) ? (
-            <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900">
+            <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-500/10 dark:text-sky-100">
               {makeupLabel(editing, schedules)}
             </p>
           ) : null}
           {editing?.isExtra ? (
-            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950">Sesi Extra — di luar required meetings.</p>
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100">Sesi Extra — di luar required meetings.</p>
           ) : null}
           {editingClass ? (
             <p className="text-xs text-ink-soft">
@@ -641,7 +641,7 @@ export function ScheduleView() {
                 ]}
               />
               {permissions.canEditOfficialSchedule && editing.classId ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
                   <p className="ui-label">Extra meeting</p>
                   <p className="mb-2 text-xs text-ink-soft">
                     Tambah sesi di luar required meetings tanpa mengubah total rencana.
@@ -654,7 +654,7 @@ export function ScheduleView() {
               {permissions.canEditOfficialSchedule &&
               editing.status === 'cancelled' &&
               !alreadyHasMakeup ? (
-                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3">
+                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-500/30 dark:bg-sky-500/10">
                   <p className="ui-label">Replacement / Makeup</p>
                   <p className="mb-2 text-xs text-ink-soft">Buat sesi pengganti tertaut ke kelas batal ini.</p>
                   <Button tone="primary" onClick={() => openMakeup(editing)}>
@@ -760,7 +760,7 @@ export function ScheduleView() {
                 referensi kapasitas.
               </p>
               {editing && permissions.canAssignSensei && editing.status !== 'cancelled' ? (
-                <div className="grid gap-3 rounded-2xl border border-[#efe4d2] p-3 md:grid-cols-2">
+                <div className="grid gap-3 rounded-2xl border border-line p-3 md:grid-cols-2">
                   <div>
                     <p className="ui-label">Tukar Sensei</p>
                     <select className="ui-select" value={swapTo} onChange={(event) => setSwapTo(event.target.value)}>

@@ -189,7 +189,7 @@ export function SenseiView() {
           const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
           const linked = users.some((user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase());
           return (
-            <button key={item.id} className="ui-card p-4 text-left" onClick={() => openDetail(item)}>
+            <button key={item.id} className="ui-card p-4 text-left transition hover:border-maple/35 hover:bg-elevated/40" onClick={() => openDetail(item)}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex flex-wrap items-center gap-1">
@@ -408,7 +408,7 @@ export function SenseiView() {
           )}
 
           {(creating || detailMode === 'edit') && canEditOps ? (
-            <div className="mt-3 space-y-2 rounded-2xl border border-sky-200 bg-sky-50 p-3">
+            <div className="mt-3 space-y-2 rounded-2xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-500/30 dark:bg-sky-500/10">
               <p className="ui-label">Akun login dashboard</p>
               {hasLogin ? (
                 <p className="text-sm text-ink-soft">
@@ -469,7 +469,7 @@ export function SenseiView() {
 
           {!creating && selected && detailMode === 'edit' && canEditOps ? (
             <div className="mt-3 space-y-3">
-              <div className="space-y-2 rounded-2xl border border-[#efe4d2] p-3">
+              <div className="space-y-2 rounded-2xl border border-line p-3">
                 <p className="ui-label">Periode CUTI</p>
                 {selectedLeave ? (
                   <p className="text-xs text-ink-soft">
@@ -505,7 +505,7 @@ export function SenseiView() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-2 rounded-2xl border border-[#efe4d2] p-3">
+              <div className="space-y-2 rounded-2xl border border-line p-3">
                 <p className="ui-label">Override status utama (dengan alasan)</p>
                 <input className="ui-input" placeholder="Alasan" value={reason} onChange={(e) => setReason(e.target.value)} />
                 <div className="flex flex-wrap gap-2">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTheme } from '../lib/theme';
 import { useDashboardStore, usePermissions } from '../store/useDashboardStore';
 import { Button } from './ui/Button';
 
@@ -6,6 +7,7 @@ export function SettingsView() {
   const permissions = usePermissions();
   const settings = useDashboardStore((state) => state.settings);
   const updateSettings = useDashboardStore((state) => state.updateSettings);
+  const { theme, setTheme } = useTheme();
   const [grace, setGrace] = useState(String(settings.lateGraceMinutes));
 
   useEffect(() => {
@@ -19,14 +21,29 @@ export function SettingsView() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h2 className="text-xl font-extrabold text-ink">Pengaturan operasional</h2>
+        <h2 className="text-xl font-semibold text-ink">Pengaturan operasional</h2>
         <p className="mt-1 text-sm text-ink-soft">
           Grace late-join dihitung dari jam mulai kelas di timezone Sensei pengajar (WIB / WITA / WIT),
           bukan dari zona browser atau paksa WIB.
         </p>
       </div>
 
-      <section className="space-y-3 rounded-2xl border border-[#efe4d2] bg-paper p-4">
+      <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
+        <div>
+          <p className="ui-label">Tampilan</p>
+          <p className="mt-1 text-xs text-ink-soft">Tema disimpan di perangkat ini. Tidak mengubah data operasional.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button tone={theme === 'light' ? 'primary' : 'secondary'} onClick={() => setTheme('light')}>
+            Terang
+          </Button>
+          <Button tone={theme === 'dark' ? 'primary' : 'secondary'} onClick={() => setTheme('dark')}>
+            Gelap
+          </Button>
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
         <div>
           <p className="ui-label">Grace late-join (menit)</p>
           <p className="mt-1 text-xs text-ink-soft">

@@ -167,7 +167,7 @@ export function ReportsView() {
                   </tr>
                 ) : (
                   rows.map((row, index) => (
-                    <tr key={`${row.senseiId}-${row.date}-${row.startTime}-${index}`} className="border-t border-[#efe4d2]">
+                    <tr key={`${row.senseiId}-${row.date}-${row.startTime}-${index}`} className="border-t border-line">
                       <td className="px-3 py-2 font-semibold">{row.senseiName}</td>
                       <td className="px-3 py-2">{row.className}</td>
                       <td className="px-3 py-2">
@@ -203,7 +203,7 @@ export function ReportsView() {
           </div>
 
           <div className="ui-card overflow-auto">
-            <p className="border-b border-[#efe4d2] px-4 py-3 text-sm font-bold">Summary per Sensei</p>
+            <p className="border-b border-line px-4 py-3 text-sm font-bold">Summary per Sensei</p>
             <table className="min-w-[720px] w-full text-left text-sm">
               <thead className="bg-paper text-xs uppercase text-ink-soft">
                 <tr>
@@ -218,7 +218,7 @@ export function ReportsView() {
               </thead>
               <tbody>
                 {summaries.map((item) => (
-                  <tr key={item.senseiId} className="border-t border-[#efe4d2]">
+                  <tr key={item.senseiId} className="border-t border-line">
                     <td className="px-3 py-2 font-semibold">{item.senseiName}</td>
                     <td className="px-3 py-2">{item.completedSessions}</td>
                     <td className="px-3 py-2">{item.scheduledHours.toFixed(2)}</td>

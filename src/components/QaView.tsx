@@ -43,7 +43,7 @@ export function QaView() {
             </thead>
             <tbody>
               {qaScores.map((item) => (
-                <tr key={item.id} className="border-t border-[#efe4d2]">
+                <tr key={item.id} className="border-t border-line">
                   <td className="py-2">{displayName(allSensei, item.senseiId)}</td>
                   <td>{item.month}</td>
                   <td className="font-bold">{item.score}</td>
@@ -73,7 +73,7 @@ export function QaView() {
           <h3 className="font-extrabold">Referensi rekaman</h3>
           <div className="mt-3 space-y-2">
             {recordings.map(({ report, session }) => (
-              <div key={report.id} className="rounded-2xl border border-[#efe4d2] p-3">
+              <div key={report.id} className="rounded-2xl border border-line p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-bold">{session?.level} · {session?.date}</div>
                   <Badge tone={report.recordingStatus === 'Available' ? 'success' : report.recordingStatus === 'Missing' ? 'danger' : 'muted'}>

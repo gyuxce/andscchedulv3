@@ -73,7 +73,7 @@ export function UsersView() {
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-t border-[#efe4d2]">
+                <tr key={user.id} className="border-t border-line">
                   <td className="px-4 py-3">
                     <div className="font-bold">{user.name}</div>
                     <div className="text-xs text-ink-soft">{user.email}</div>

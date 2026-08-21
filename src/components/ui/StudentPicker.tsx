@@ -34,7 +34,7 @@ export function StudentPicker({
         disabled={disabled}
         onChange={(event) => setQuery(event.target.value)}
       />
-      <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-[#efe4d2] p-2">
+      <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-line p-2">
         {filtered.length === 0 ? (
           <p className="px-1 py-2 text-xs text-ink-soft">Tidak ada siswa cocok.</p>
         ) : (
