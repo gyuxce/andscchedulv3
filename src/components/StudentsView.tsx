@@ -192,7 +192,7 @@ export function StudentsView() {
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="ui-card max-h-64 overflow-hidden lg:max-h-none">
-          <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Siswa operasional</div>
+          <div className="border-b border-line px-4 py-3 font-bold">Siswa operasional</div>
           <div className="max-h-52 overflow-y-auto lg:max-h-[calc(100dvh-12rem)]">
             {students.map((student) => (
               <button
@@ -202,8 +202,8 @@ export function StudentsView() {
                   setNextLevel('');
                   setNotes('');
                 }}
-                className={`block w-full border-b border-[#efe4d2] px-4 py-3 text-left ${
-                  selectedId === student.id ? 'bg-orange-50' : 'bg-white'
+                className={`block w-full border-b border-line px-4 py-3 text-left ${
+                  selectedId === student.id ? 'bg-maple/10' : 'bg-surface'
                 }`}
               >
                 <div className="font-bold">{student.name}</div>
@@ -320,8 +320,8 @@ export function StudentsView() {
 
             {learningHistory.length > 0 ? (
               <div className="ui-card overflow-hidden">
-                <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Learning History</div>
-                <ul className="divide-y divide-[#efe4d2] text-sm">
+                <div className="border-b border-line px-4 py-3 font-bold">Learning History</div>
+                <ul className="divide-y divide-line text-sm">
                   {learningHistory.map((item) => (
                     <li key={item.id} className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -411,7 +411,7 @@ export function StudentsView() {
             ) : null}
 
             <div className="ui-card overflow-hidden">
-              <div className="border-b border-[#efe4d2] px-4 py-3 font-bold">Riwayat sesi</div>
+              <div className="border-b border-line px-4 py-3 font-bold">Riwayat sesi</div>
               <div className="ui-table-wrap">
                 <table className="w-full text-sm">
                   <thead className="bg-paper/70 text-left text-xs uppercase text-ink-soft">
@@ -424,7 +424,7 @@ export function StudentsView() {
                   </thead>
                   <tbody>
                     {history.map(({ report, record, session }) => (
-                      <tr key={report.id} className="border-t border-[#efe4d2]">
+                      <tr key={report.id} className="border-t border-line">
                         <td className="px-4 py-2">
                           <div>{session.date}</div>
                           {isMakeupSession(session) ? (

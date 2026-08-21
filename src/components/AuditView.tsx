@@ -209,7 +209,7 @@ export function AuditView() {
               </tr>
             ) : (
               logs.map((log) => (
-                <tr key={log.id} className="border-t border-[#efe4d2] align-top">
+                <tr key={log.id} className="border-t border-line align-top">
                   <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(log.createdAt)}</td>
                   <td className="px-4 py-3">{log.actorName}</td>
                   <td className="px-4 py-3">

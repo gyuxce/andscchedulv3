@@ -3,6 +3,8 @@ import { Toaster } from 'sonner';
 import { LoginView } from './components/LoginView';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
+import { CommandPalette } from './components/layout/CommandPalette';
+import { ThemeProvider } from './components/layout/ThemeProvider';
 import { OverviewView } from './components/OverviewView';
 import { ScheduleView } from './components/ScheduleView';
 import { ClassesView } from './components/ClassesView';
@@ -18,13 +20,16 @@ import { SettingsView } from './components/SettingsView';
 import { ReportsView } from './components/ReportsView';
 import { NAV_BY_ROLE } from './constants';
 import { useDashboardStore } from './store/useDashboardStore';
+import { useTheme } from './lib/theme';
 
-export default function App() {
+function AppShell() {
   const currentUser = useDashboardStore((state) => state.currentUser);
   const activeTab = useDashboardStore((state) => state.activeTab);
   const isBootstrapping = useDashboardStore((state) => state.isBootstrapping);
   const bootstrapAuth = useDashboardStore((state) => state.bootstrapAuth);
+  const { theme } = useTheme();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     void bootstrapAuth();
@@ -34,9 +39,20 @@ export default function App() {
     setMobileNavOpen(false);
   }, [activeTab, currentUser?.id]);
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   if (isBootstrapping) {
     return (
-      <div className="flex min-h-dvh items-center justify-center px-4 text-sm font-semibold text-ink-soft">
+      <div className="flex min-h-dvh items-center justify-center px-4 text-sm font-medium text-ink-soft">
         Memuat dashboard…
       </div>
     );
@@ -46,7 +62,7 @@ export default function App() {
     return (
       <>
         <LoginView />
-        <Toaster richColors position="top-center" />
+        <Toaster richColors position="top-center" theme={theme} />
       </>
     );
   }
@@ -55,11 +71,11 @@ export default function App() {
   const tab = allowed.includes(activeTab) ? activeTab : allowed[0];
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh bg-canvas">
       <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <TopBar onOpenMenu={() => setMobileNavOpen(true)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5 lg:p-6">
+        <TopBar onOpenMenu={() => setMobileNavOpen(true)} onOpenSearch={() => setPaletteOpen(true)} />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5">
           {tab === 'overview' && <OverviewView />}
           {tab === 'classes' && <ClassesView />}
           {tab === 'schedule' && <ScheduleView />}
@@ -75,7 +91,16 @@ export default function App() {
           {tab === 'settings' && <SettingsView />}
         </main>
       </div>
-      <Toaster richColors position="top-center" />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <Toaster richColors position="top-center" theme={theme} />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppShell />
+    </ThemeProvider>
   );
 }

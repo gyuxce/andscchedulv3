@@ -13,24 +13,28 @@ export function WeekNav({
   const start = weekStart(weekAnchor);
   return (
     <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Button
+          className="h-8 w-8 px-0"
           onClick={() => onChange(format(addDays(start, -7), 'yyyy-MM-dd'))}
           aria-label="Minggu sebelumnya"
         >
           <ChevronLeft size={16} />
         </Button>
-        <div className="min-w-0 flex-1 text-center text-xs font-bold text-ink sm:min-w-40 sm:text-sm">
+        <div className="min-w-0 flex-1 px-2 text-center text-xs font-semibold text-ink sm:min-w-40 sm:text-sm">
           {weekRangeLabel(weekAnchor)}
         </div>
         <Button
+          className="h-8 w-8 px-0"
           onClick={() => onChange(format(addDays(start, 7), 'yyyy-MM-dd'))}
           aria-label="Minggu berikutnya"
         >
           <ChevronRight size={16} />
         </Button>
       </div>
-      <Button onClick={() => onChange(format(new Date(), 'yyyy-MM-dd'))}>Minggu ini</Button>
+      <Button className="h-8" onClick={() => onChange(format(new Date(), 'yyyy-MM-dd'))}>
+        Minggu ini
+      </Button>
     </div>
   );
 }

@@ -72,7 +72,7 @@ export function AvailabilityView() {
       </div>
 
       {!permissions.canViewAllSensei && !isUuid(ownSenseiId) ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           Akun Sensei belum tertaut ke master data. Email login: <b>{currentUser?.email}</b>.
           Samakan dengan kolom <b>email</b> di tabel <b>sensei</b>, atau minta Admin set{' '}
           <b>profiles.sensei_id</b>, lalu login ulang.
@@ -105,7 +105,7 @@ export function AvailabilityView() {
                     slots.map((slot) => (
                       <div
                         key={slot.id}
-                        className="flex items-center justify-between rounded-xl border border-[#efe4d2] bg-white px-3 py-2"
+                        className="flex items-center justify-between rounded-lg border border-line bg-surface px-3 py-2"
                       >
                         <div>
                           <div className="text-sm font-bold">

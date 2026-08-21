@@ -132,7 +132,7 @@ export function ClassesView() {
           const progress = getClassProgress(item, schedules, sessionReports);
           const health = getClassHealth(item, schedules, sessionReports);
           return (
-            <button key={item.id} className="ui-card p-4 text-left" onClick={() => openDetail(item)}>
+            <button key={item.id} className="ui-card p-4 text-left transition hover:border-maple/35 hover:bg-elevated/40" onClick={() => openDetail(item)}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="text-lg font-extrabold text-ink">{item.displayName}</h3>
@@ -334,7 +334,7 @@ export function ClassesView() {
               </label>
 
               {editing ? (
-                <div className="space-y-3 rounded-2xl border border-sky-200 bg-sky-50 p-3">
+                <div className="space-y-3 rounded-2xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-500/30 dark:bg-sky-500/10">
                   <p className="font-bold text-ink">Generate jadwal berulang</p>
                   <p className="text-xs text-ink-soft">
                     Membuat {form.requiredMeetings} sesi kalender dari start date + hari dipilih. Cancel/makeup tidak mengubah target required meetings.
@@ -346,7 +346,7 @@ export function ClassesView() {
                         <button
                           key={day.value}
                           type="button"
-                          className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${active ? 'bg-maple text-white' : 'bg-white text-ink border border-[#e2d6c4]'}`}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${active ? 'bg-maple text-white' : 'bg-surface text-ink border border-line'}`}
                           onClick={() =>
                             setWeekdays((current) =>
                               current.includes(day.value) ? current.filter((v) => v !== day.value) : [...current, day.value]

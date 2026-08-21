@@ -120,6 +120,23 @@ export function TeachingView() {
   const selectedState = selected ? getSessionWorkflow(selected, selectedLog, selectedReport) : 'ready';
   const canClock = Boolean(selected && permissions.canClockOwn && linkedSenseiId && linkedSenseiId === selected.senseiId);
 
+  const nowRows = useMemo(
+    () =>
+      rows.filter(
+        ({ session, state }) =>
+          session.date === today && (state === 'ready' || state === 'in_progress' || state === 'report_pending')
+      ),
+    [rows, today]
+  );
+
+  const openSession = (session: ClassSession) => {
+    const log = sessionLogs.find((item) => item.scheduleId === session.id);
+    setSelected(session);
+    setClockInAt(log?.clockInAt?.slice(0, 16) ?? '');
+    setClockOutAt(log?.clockOutAt?.slice(0, 16) ?? '');
+    setOverrideReason('');
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -128,6 +145,43 @@ export function TeachingView() {
         </p>
         <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
       </div>
+
+      {nowRows.length > 0 ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          {nowRows.slice(0, 4).map(({ session, log, state }) => {
+            const own = Boolean(linkedSenseiId && linkedSenseiId === session.senseiId);
+            const canOperate = Boolean(permissions.canClockOwn && own);
+            return (
+              <div key={session.id} className="ui-card flex flex-col gap-3 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-semibold text-ink-soft">Hari ini · {session.startTime}–{session.endTime}</p>
+                    <h3 className="mt-0.5 text-base font-semibold text-ink">{session.level}</h3>
+                    <p className="text-xs text-ink-soft">{studentSummary(session.studentIds, allStudents)}</p>
+                  </div>
+                  <Badge tone={WORKFLOW_TONE[state]}>{workflowLabel(state)}</Badge>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {canOperate && state === 'ready' ? (
+                    <Button tone="primary" onClick={() => clockIn(session.id)}>
+                      Clock in
+                    </Button>
+                  ) : null}
+                  {canOperate && state === 'in_progress' ? (
+                    <Button tone="primary" onClick={() => clockOut(session.id)}>
+                      Clock out
+                    </Button>
+                  ) : null}
+                  <Button onClick={() => openSession(session)}>Detail</Button>
+                </div>
+                {log?.clockInAt ? (
+                  <p className="text-[11px] text-ink-soft">Clock in {formatDateTime(log.clockInAt)}</p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="ui-card grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
         <label>
@@ -182,7 +236,7 @@ export function TeachingView() {
       </div>
 
       <div className="ui-card overflow-hidden">
-        <div className="flex items-center justify-between gap-2 border-b border-[#efe4d2] px-4 py-2 text-xs text-ink-soft">
+        <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-2 text-xs text-ink-soft">
           <span>
             {filtered.length === 0
               ? '0 sesi'
@@ -211,16 +265,11 @@ export function TeachingView() {
                 </tr>
               ) : (
                 pageRows.map(({ session, log, state, ordinal, scheduled, actual, variance }) => (
-                  <tr key={session.id} className="border-t border-[#efe4d2] hover:bg-white/70">
+                  <tr key={session.id} className="border-t border-line hover:bg-elevated">
                     <td className="px-4 py-3">
                       <button
                         className="text-left"
-                        onClick={() => {
-                          setSelected(session);
-                          setClockInAt(log?.clockInAt?.slice(0, 16) ?? '');
-                          setClockOutAt(log?.clockOutAt?.slice(0, 16) ?? '');
-                          setOverrideReason('');
-                        }}
+                        onClick={() => openSession(session)}
                       >
                         <div className="flex items-center gap-2">
                           <Badge tone={TYPE_TONE[session.type]}>{session.type}</Badge>
@@ -257,7 +306,7 @@ export function TeachingView() {
           </table>
         </div>
         {filtered.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-between gap-2 border-t border-[#efe4d2] px-4 py-3">
+          <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3">
             <Button disabled={page <= 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>
               Sebelumnya
             </Button>
@@ -385,7 +434,7 @@ function SessionDrawer(props: {
         {props.log?.lateJoin ? <Badge tone="danger">Late join</Badge> : null}
         {props.log?.overridden ? <Badge tone="gold">Clock override</Badge> : null}
       </div>
-      <div className="grid gap-2 rounded-2xl border border-[#efe4d2] p-3 text-sm md:grid-cols-3">
+      <div className="grid gap-2 rounded-2xl border border-line p-3 text-sm md:grid-cols-3">
         <div>
           <p className="ui-label">Durasi jadwal</p>
           <p className="font-semibold">{formatDurationMinutes(scheduled)}</p>
@@ -407,7 +456,7 @@ function SessionDrawer(props: {
         {props.canOperate && props.state === 'in_progress' ? <Button tone="primary" onClick={props.onClockOut}>Clock out</Button> : null}
       </div>
       {props.canOverride ? (
-        <div className="grid gap-2 rounded-2xl border border-[#efe4d2] p-3 md:grid-cols-3">
+        <div className="grid gap-2 rounded-2xl border border-line p-3 md:grid-cols-3">
           <input className="ui-input" type="datetime-local" value={props.clockInAt} onChange={(event) => props.setClockInAt(event.target.value)} />
           <input className="ui-input" type="datetime-local" value={props.clockOutAt} onChange={(event) => props.setClockOutAt(event.target.value)} />
           <input className="ui-input" placeholder="Alasan override" value={props.overrideReason} onChange={(event) => props.setOverrideReason(event.target.value)} />
@@ -417,7 +466,7 @@ function SessionDrawer(props: {
 
       <h4 className="font-bold">Laporan sesi</h4>
       {records.map((record, index) => (
-        <div key={record.studentId} className="grid gap-2 rounded-2xl border border-[#efe4d2] p-3 md:grid-cols-4">
+        <div key={record.studentId} className="grid gap-2 rounded-2xl border border-line p-3 md:grid-cols-4">
           <div className="font-semibold">{displayName(props.students, record.studentId)}</div>
           <select
             className="ui-select"
@@ -506,7 +555,7 @@ function SessionDrawer(props: {
         </Button>
       ) : null}
       {props.canOverride && props.report ? (
-        <div className="rounded-2xl border border-[#efe4d2] p-3">
+        <div className="rounded-2xl border border-line p-3">
           <p className="ui-label">Koreksi akademik (audit)</p>
           <input className="ui-input" placeholder="Alasan koreksi" value={academicReason} onChange={(event) => setAcademicReason(event.target.value)} />
           <div className="mt-2 flex flex-wrap gap-2">
