@@ -19,7 +19,7 @@ export function LoginView() {
       </div>
       <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
         <div className="relative bg-[var(--sidebar)] p-6 text-[var(--sidebar-text)] sm:p-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(196,92,38,0.32),transparent_42%),radial-gradient(circle_at_80%_80%,rgba(201,162,39,0.16),transparent_35%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(94,106,210,0.34),transparent_42%),radial-gradient(circle_at_80%_80%,rgba(124,133,224,0.18),transparent_35%)]" />
           <div className="relative flex h-full flex-col justify-between gap-6">
             <div>
               <p className="text-xs tracking-[0.3em] text-white/55">秋の空 × ILUSA</p>

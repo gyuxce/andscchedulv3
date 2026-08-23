@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 const tones = {
   maple:
-    'bg-orange-50 text-maple border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/25',
+    'bg-indigo-50 text-maple border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/25',
   pine: 'bg-emerald-50 text-pine border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25',
   sky: 'bg-sky-50 text-sky border-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/25',
   gold: 'bg-amber-50 text-[#8a6d12] border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/25',
