@@ -21,6 +21,7 @@ import { useDashboardStore, usePermissions, useScopedData } from '../store/useDa
 import type { ActionItem, TabId } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { PageIntro } from './ui/PageIntro';
 import { StatCard } from './ui/StatCard';
 import { WeekNav } from './ui/WeekNav';
 
@@ -164,16 +165,17 @@ export function OverviewView() {
   const go = (tab: TabId) => setTab(tab);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-ink-soft">
-          Ringkasan data operasional di atas, antrian tindakan di bawah. Alert sesi memakai lingkup 14 hari terakhir s/d
-          akhir minggu yang dipilih.
-        </p>
-        <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
-      </div>
+    <div className="space-y-8">
+      <PageIntro
+        kicker="Overview"
+        title="Ringkasan operasional"
+        actions={<WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />}
+      >
+        Data di atas, antrian tindakan di bawah. Alert sesi memakai lingkup 14 hari terakhir sampai akhir minggu yang
+        dipilih.
+      </PageIntro>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Sensei aktif"
           value={snapshot.activeSensei}
@@ -269,7 +271,7 @@ export function OverviewView() {
               return (
                 <div key={item.id} className="flex items-start justify-between gap-4 px-5 py-3">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="mt-0.5 rounded-xl bg-paper p-2 text-maple">
+                    <div className="mt-0.5 rounded-2xl bg-surface p-2 text-maple">
                       <Icon size={16} />
                     </div>
                     <div className="min-w-0">

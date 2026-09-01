@@ -5,6 +5,7 @@ import { useDashboardStore, usePermissions, useScopedData } from '../store/useDa
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 
 export function QaView() {
   const permissions = usePermissions();
@@ -25,10 +26,11 @@ export function QaView() {
     .filter((item) => item.session);
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-ink-soft">
-        Teaching Performance diinput manual oleh Kyouiku (0–100). Rekaman disimpan sebagai referensi URL. Skor komposit disiplin belum digabung di V3.
-      </p>
+    <div className="space-y-6">
+      <PageIntro kicker="Mutu" title="QA & rekaman">
+        Teaching Performance diinput manual oleh Kyouiku (0–100). Rekaman disimpan sebagai referensi URL. Skor komposit
+        disiplin belum digabung di V3.
+      </PageIntro>
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="ui-card p-4">
           <h3 className="font-extrabold">Skor Teaching Performance</h3>

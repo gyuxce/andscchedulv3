@@ -13,40 +13,49 @@ export function LoginView() {
   const [loading, setLoading] = useState(false);
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center p-3 sm:p-4">
-      <div className="absolute right-4 top-4">
+    <div className="relative flex min-h-dvh items-center justify-center p-4 sm:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[image:var(--hero-gradient)]" />
+      <div className="absolute right-4 top-4 z-10">
         <ThemeToggle />
       </div>
-      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="relative bg-[var(--sidebar)] p-6 text-[var(--sidebar-text)] sm:p-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(94,106,210,0.34),transparent_42%),radial-gradient(circle_at_80%_80%,rgba(124,133,224,0.18),transparent_35%)]" />
-          <div className="relative flex h-full flex-col justify-between gap-6">
+      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-line bg-surface shadow-[var(--shadow-lift)] lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="relative bg-[var(--ink-strong)] p-8 text-white sm:p-12">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(124,77,255,0.42),transparent_42%),radial-gradient(circle_at_86%_82%,rgba(155,135,255,0.22),transparent_36%)]" />
+          <div className="relative flex h-full flex-col justify-between gap-8">
             <div>
-              <p className="text-xs tracking-[0.3em] text-white/55">秋の空 × ILUSA</p>
-              <h1 className="mt-4 text-3xl font-semibold leading-tight sm:mt-6 sm:text-4xl">ANS Dashboard</h1>
-              <p className="mt-3 max-w-sm text-sm leading-6 text-white/70 sm:mt-4">
-                Operasional kelas, Sensei, dan QA untuk Aki No Sora × ILUSA.
+              <span className="ui-chip">
+                <span className="pl-2">Baru</span>
+                <span className="ui-chip-label">V3</span>
+              </span>
+              <p className="mt-6 text-xs tracking-[0.3em] text-white/55">秋の空 × ILUSA</p>
+              <h1 className="mt-4 max-w-sm text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
+                ANS Dashboard
+              </h1>
+              <p className="mt-4 max-w-sm text-sm leading-7 text-white/70">
+                Operasional kelas, Sensei, dan QA untuk Aki No Sora × ILUSA — ringkas, terang, dan siap dipakai setiap hari.
               </p>
             </div>
             <p className="hidden text-xs text-white/45 lg:block">Masuk dengan akun resmi yang sudah diaktifkan.</p>
           </div>
         </div>
-        <div className="p-5 sm:p-8">
+        <div className="bg-surface p-6 sm:p-10">
           {!configured ? (
             <>
-              <p className="text-xs font-semibold tracking-wide text-maple">Konfigurasi diperlukan</p>
-              <h2 className="mt-2 text-xl font-semibold text-ink sm:text-2xl">Layanan belum terhubung</h2>
-              <p className="mt-2 text-sm text-ink-soft">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-maple">Konfigurasi diperlukan</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-ink sm:text-3xl">Layanan belum terhubung</h2>
+              <p className="mt-3 text-sm leading-6 text-ink-soft">
                 Hubungi admin operasional untuk memastikan environment aplikasi sudah dikonfigurasi.
               </p>
             </>
           ) : (
             <>
-              <p className="text-xs font-semibold tracking-wide text-maple">Masuk</p>
-              <h2 className="mt-2 text-xl font-semibold text-ink sm:text-2xl">Masuk dengan email</h2>
-              <p className="mt-2 text-sm text-ink-soft">Gunakan email dan password akun yang sudah disetujui admin.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-maple">Masuk</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-ink sm:text-3xl">Masuk dengan email</h2>
+              <p className="mt-3 text-sm leading-6 text-ink-soft">
+                Gunakan email dan password akun yang sudah disetujui admin.
+              </p>
               <form
-                className="mt-6 space-y-3"
+                className="mt-8 space-y-4"
                 onSubmit={async (event) => {
                   event.preventDefault();
                   setLoading(true);
@@ -76,7 +85,7 @@ export function LoginView() {
                     onChange={(event) => setPassword(event.target.value)}
                   />
                 </label>
-                <Button tone="primary" className="w-full" disabled={loading}>
+                <Button tone="primary" className="mt-2 h-11 w-full" disabled={loading}>
                   {loading ? <Loader2 className="animate-spin" size={16} /> : null}
                   Masuk
                 </Button>

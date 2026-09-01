@@ -75,7 +75,8 @@ function AppShell() {
       <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         <TopBar onOpenMenu={() => setMobileNavOpen(true)} onOpenSearch={() => setPaletteOpen(true)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[image:var(--hero-gradient)] p-4 sm:p-8">
+          <div className="mx-auto w-full max-w-7xl">
           {tab === 'overview' && <OverviewView />}
           {tab === 'classes' && <ClassesView />}
           {tab === 'schedule' && <ScheduleView />}
@@ -89,6 +90,7 @@ function AppShell() {
           {tab === 'audit' && <AuditView />}
           {tab === 'users' && <UsersView />}
           {tab === 'settings' && <SettingsView />}
+          </div>
         </main>
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

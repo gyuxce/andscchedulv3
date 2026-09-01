@@ -5,6 +5,7 @@ import type { AppRole, UserStatus } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 
 export function UsersView() {
   const users = useDashboardStore((state) => state.users);
@@ -51,15 +52,18 @@ export function UsersView() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-ink-soft">
-          Super Admin bisa membuat akun login (email + password) langsung dari sini. Portal siswa ditunda ke V4.
-        </p>
-        <Button tone="primary" className="w-full sm:w-auto" onClick={() => setOpen(true)}>
-          Tambah pengguna
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Sistem"
+        title="Akun login"
+        actions={
+          <Button tone="primary" className="w-full sm:w-auto" onClick={() => setOpen(true)}>
+            Buat akun
+          </Button>
+        }
+      >
+        Super Admin bisa membuat akun login (email + password) langsung dari sini. Portal siswa ditunda ke V4.
+      </PageIntro>
       <div className="ui-card overflow-hidden">
         <div className="ui-table-wrap">
           <table className="w-full text-sm">

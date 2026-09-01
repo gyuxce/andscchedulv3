@@ -96,38 +96,38 @@ export function Sidebar({
 
   const NavBody = ({ compact }: { compact: boolean }) => (
     <>
-      <div className={`border-b border-white/10 ${compact ? 'px-2 py-3' : 'px-4 py-4'}`}>
+      <div className={`border-b border-line ${compact ? 'px-2 py-4' : 'px-5 py-5'}`}>
         <div className="flex items-start justify-between gap-2">
           <div className={compact ? 'w-full text-center' : ''}>
-            <p className="text-[10px] tracking-[0.28em] text-[var(--sidebar-muted)]">秋の空</p>
+            <p className="text-[10px] tracking-[0.28em] text-ink-soft">秋の空</p>
             {compact ? (
-              <h1 className="mt-1 text-sm font-semibold">ANS</h1>
+              <h1 className="mt-1 text-sm font-bold tracking-tight">ANS</h1>
             ) : (
               <>
-                <h1 className="mt-1 text-base font-semibold">ANS Dashboard</h1>
-                <p className="mt-0.5 text-xs text-[var(--sidebar-muted)]">Operasional & akademik</p>
+                <h1 className="mt-1 text-lg font-bold tracking-tight">ANS Dashboard</h1>
+                <p className="mt-0.5 text-xs text-ink-soft">Operasional & akademik</p>
               </>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-white/70 hover:bg-white/10 lg:hidden"
+            className="rounded-full p-2 text-ink-soft hover:bg-elevated lg:hidden"
             aria-label="Tutup menu"
           >
             <X size={18} />
           </button>
         </div>
       </div>
-      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 py-3">
+      <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {groups.map((group) => (
           <div key={group.label}>
             {compact ? null : (
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--sidebar-muted)]">
+              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-soft">
                 {group.label}
               </p>
             )}
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {group.ids.map((tab) => {
                 const Icon = ICONS[tab];
                 const active = activeTab === tab;
@@ -140,12 +140,12 @@ export function Sidebar({
                       setTab(tab);
                       onClose();
                     }}
-                    className={`flex h-9 w-full items-center rounded-lg text-sm font-medium transition ${
-                      compact ? 'justify-center px-0' : 'gap-2.5 px-2.5'
+                    className={`flex h-10 w-full items-center rounded-full text-sm font-medium transition ${
+                      compact ? 'justify-center px-0' : 'gap-2.5 px-3'
                     } ${
                       active
-                        ? 'bg-white/12 text-white'
-                        : 'text-white/65 hover:bg-white/8 hover:text-white'
+                        ? 'bg-maple text-white shadow-[0_8px_18px_rgba(124,77,255,0.28)]'
+                        : 'text-ink-soft hover:bg-elevated hover:text-ink'
                     }`}
                   >
                     <Icon size={16} />
@@ -157,11 +157,11 @@ export function Sidebar({
           </div>
         ))}
       </nav>
-      <div className={`mt-auto space-y-2 border-t border-white/10 ${compact ? 'p-2' : 'p-3'}`}>
+      <div className={`mt-auto space-y-3 border-t border-line ${compact ? 'p-2' : 'p-4'}`}>
         {compact ? null : (
-          <div>
+          <div className="rounded-[22px] bg-[var(--solid)] px-4 py-3 text-[var(--on-solid)]">
             <div className="truncate text-sm font-semibold">{currentUser.name}</div>
-            <div className="text-xs text-[var(--sidebar-muted)]">{currentUser.role}</div>
+            <div className="text-xs opacity-60">{currentUser.role}</div>
           </div>
         )}
         <button
@@ -171,8 +171,8 @@ export function Sidebar({
             void logout();
             onClose();
           }}
-          className={`flex h-9 w-full items-center rounded-lg text-xs text-white/70 hover:bg-white/8 ${
-            compact ? 'justify-center' : 'gap-2 px-2'
+          className={`flex h-10 w-full items-center rounded-full bg-[var(--solid)] text-xs font-semibold text-[var(--on-solid)] hover:opacity-90 ${
+            compact ? 'justify-center' : 'gap-2 px-4'
           }`}
         >
           <LogOut size={14} />
@@ -180,7 +180,7 @@ export function Sidebar({
         </button>
         <button
           type="button"
-          className="hidden h-8 w-full items-center justify-center rounded-lg text-white/50 hover:bg-white/8 hover:text-white lg:flex"
+          className="hidden h-8 w-full items-center justify-center rounded-full text-ink-soft hover:bg-elevated hover:text-ink lg:flex"
           onClick={() => setCollapsed((value) => !value)}
           aria-label={compact ? 'Perlebar sidebar' : 'Ciutkan sidebar'}
         >
@@ -193,8 +193,8 @@ export function Sidebar({
   return (
     <>
       <aside
-        className={`sticky top-0 hidden h-dvh min-h-dvh shrink-0 flex-col self-stretch bg-[var(--sidebar)] text-[var(--sidebar-text)] lg:flex ${
-          collapsed ? 'w-[64px]' : 'w-[232px]'
+        className={`sticky top-0 hidden h-dvh min-h-dvh shrink-0 flex-col self-stretch border-r border-line bg-[var(--sidebar)] text-[var(--sidebar-text)] lg:flex ${
+          collapsed ? 'w-[72px]' : 'w-[248px]'
         }`}
       >
         <NavBody compact={collapsed} />
@@ -211,7 +211,7 @@ export function Sidebar({
           aria-label="Tutup overlay menu"
         />
         <aside
-          className={`absolute inset-y-0 left-0 flex w-[min(86vw,280px)] max-w-full flex-col bg-[var(--sidebar)] text-[var(--sidebar-text)] shadow-2xl transition-transform duration-200 ease-out ${
+          className={`absolute inset-y-0 left-0 flex w-[min(86vw,300px)] max-w-full flex-col bg-[var(--sidebar)] text-[var(--sidebar-text)] shadow-2xl transition-transform duration-200 ease-out ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >

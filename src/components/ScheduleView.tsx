@@ -17,6 +17,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { DetailFields } from './ui/DetailFields';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 import { StudentPicker } from './ui/StudentPicker';
 import { WeekNav } from './ui/WeekNav';
 
@@ -226,25 +227,26 @@ export function ScheduleView() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <p className="text-sm text-ink-soft">
-            Kelas resmi = 1 Class Master + N sesi berulang. Makeup tertaut ke sesi batal; Extra meeting terpisah dari rencana.
-          </p>
-          {conflicts.length > 0 ? (
-            <p className="mt-1 text-sm font-semibold text-rose-700">{conflicts.length} konflik perlu diselesaikan.</p>
-          ) : null}
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
-          <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
-          {permissions.canEditOfficialSchedule ? (
-            <Button tone="primary" className="w-full sm:w-auto" onClick={openRecurring}>
-              Kelas resmi baru
-            </Button>
-          ) : null}
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Jadwal"
+        title="Kalender kelas"
+        actions={
+          <>
+            <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
+            {permissions.canEditOfficialSchedule ? (
+              <Button tone="primary" className="w-full sm:w-auto" onClick={openRecurring}>
+                Kelas resmi baru
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        Kelas resmi = 1 Class Master + N sesi berulang. Makeup tertaut ke sesi batal; Extra meeting terpisah dari rencana.
+        {conflicts.length > 0 ? (
+          <p className="mt-1 font-semibold text-rose-700">{conflicts.length} konflik perlu diselesaikan.</p>
+        ) : null}
+      </PageIntro>
       <p className="text-xs text-ink-soft lg:hidden">Geser ke samping untuk melihat jadwal mingguan.</p>
       <div className="ui-card overflow-auto">
         <div className="grid min-w-[720px] grid-cols-8 border-b border-line bg-paper/70 text-xs font-bold uppercase tracking-wide text-ink-soft sm:min-w-[980px]">

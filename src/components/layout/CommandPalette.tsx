@@ -134,7 +134,7 @@ export function CommandPalette({
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
       <button type="button" className="absolute inset-0 bg-[var(--overlay)] backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-xl overflow-hidden rounded-xl border border-line bg-surface shadow-2xl">
+      <div className="relative z-10 w-full max-w-xl overflow-hidden rounded-[28px] border border-line bg-surface shadow-[var(--shadow-lift)]">
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search size={16} className="text-ink-soft" />
           <input
@@ -156,7 +156,7 @@ export function CommandPalette({
                 <li key={hit.id}>
                   <button
                     type="button"
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${
                       index === active ? 'bg-elevated' : 'hover:bg-elevated/70'
                     }`}
                     onMouseEnter={() => setActive(index)}

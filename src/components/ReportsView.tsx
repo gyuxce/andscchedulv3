@@ -8,6 +8,7 @@ import {
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import type { ClassStatus } from '../types';
 import { Button } from './ui/Button';
+import { PageIntro } from './ui/PageIntro';
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
@@ -75,26 +76,27 @@ export function ReportsView() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm text-ink-soft">
-            Rekap mengajar bulanan untuk verifikasi EOM. Tanpa perhitungan gaji/honor.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button tone={showRecap ? 'primary' : undefined} onClick={() => setShowRecap(true)}>
-            View Recap
-          </Button>
-          {permissions.canExportEomReport ? (
-            <Button tone="primary" onClick={onDownload} disabled={rows.length === 0}>
-              Download Excel
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Mutu"
+        title="Laporan EOM"
+        actions={
+          <>
+            <Button tone={showRecap ? 'primary' : undefined} onClick={() => setShowRecap(true)}>
+              View Recap
             </Button>
-          ) : (
-            <p className="self-center text-xs text-ink-soft">Export Excel hanya untuk Super Admin / Ops.</p>
-          )}
-        </div>
-      </div>
+            {permissions.canExportEomReport ? (
+              <Button tone="primary" onClick={onDownload} disabled={rows.length === 0}>
+                Download Excel
+              </Button>
+            ) : (
+              <p className="self-center text-xs text-ink-soft">Export Excel hanya untuk Super Admin / Ops.</p>
+            )}
+          </>
+        }
+      >
+        Rekap mengajar bulanan untuk verifikasi EOM. Tanpa perhitungan gaji/honor.
+      </PageIntro>
 
       <div className="ui-card grid gap-3 p-4 md:grid-cols-3">
         <label>

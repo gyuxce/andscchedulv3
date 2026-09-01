@@ -9,6 +9,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { DetailFields } from './ui/DetailFields';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 
 const emptyForm = {
   displayName: '',
@@ -114,25 +115,28 @@ export function ClassesView() {
   const canEdit = permissions.canEditOfficialSchedule;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-ink-soft">
-          Class Master adalah wadah kelas (level, siswa, required meetings, resources). Generate jadwal berulang
-          membuat sesi kalender; progress memakai Session X of X.
-        </p>
-        {canEdit ? (
-          <Button tone="primary" className="w-full sm:w-auto" onClick={openCreate}>
-            Tambah Class Master
-          </Button>
-        ) : null}
-      </div>
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Kelas"
+        title="Class Master"
+        actions={
+          canEdit ? (
+            <Button tone="primary" className="w-full sm:w-auto" onClick={openCreate}>
+              Tambah Class Master
+            </Button>
+          ) : null
+        }
+      >
+        Class Master adalah wadah kelas (level, siswa, required meetings, resources). Generate jadwal berulang
+        membuat sesi kalender; progress memakai Session X of X.
+      </PageIntro>
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {classMasters.map((item) => {
           const progress = getClassProgress(item, schedules, sessionReports);
           const health = getClassHealth(item, schedules, sessionReports);
           return (
-            <button key={item.id} className="ui-card p-4 text-left transition hover:border-maple/35 hover:bg-elevated/40" onClick={() => openDetail(item)}>
+            <button key={item.id} className="ui-card p-5 text-left transition duration-150 hover:-translate-y-0.5 hover:border-maple/35 hover:shadow-[var(--shadow-lift)]" onClick={() => openDetail(item)}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="text-lg font-extrabold text-ink">{item.displayName}</h3>
@@ -346,7 +350,7 @@ export function ClassesView() {
                         <button
                           key={day.value}
                           type="button"
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${active ? 'bg-maple text-white' : 'bg-surface text-ink border border-line'}`}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${active ? 'bg-maple text-white' : 'bg-surface text-ink border border-line'}`}
                           onClick={() =>
                             setWeekdays((current) =>
                               current.includes(day.value) ? current.filter((v) => v !== day.value) : [...current, day.value]

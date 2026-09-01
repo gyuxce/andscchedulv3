@@ -2,6 +2,7 @@ import { formatDateTime } from '../lib/dates';
 import { displayName } from '../lib/display';
 import { useDashboardStore } from '../store/useDashboardStore';
 import { Badge } from './ui/Badge';
+import { PageIntro } from './ui/PageIntro';
 
 const ACTION_LABELS: Record<string, string> = {
   create_class: 'Membuat kelas resmi',
@@ -183,11 +184,11 @@ export function AuditView() {
   const lookups = { sensei, students };
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-ink-soft">
+    <div className="space-y-6">
+      <PageIntro kicker="Sistem" title="Audit log">
         Koreksi sensitif wajib punya jejak: nilai lama, nilai baru, pelaku, waktu, dan alasan. Soft-delete/archive
         dipakai, bukan hapus permanen.
-      </p>
+      </PageIntro>
       <div className="ui-card overflow-hidden">
         <div className="ui-table-wrap">
         <table className="w-full text-sm">

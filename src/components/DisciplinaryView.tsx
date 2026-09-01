@@ -1,6 +1,7 @@
 import { getDisciplinaryMetrics, monthKey } from '../lib/disciplinary';
 import { useDashboardStore, usePermissions } from '../store/useDashboardStore';
 import { Badge } from './ui/Badge';
+import { PageIntro } from './ui/PageIntro';
 import { StatCard } from './ui/StatCard';
 
 export function DisciplinaryView() {
@@ -13,10 +14,11 @@ export function DisciplinaryView() {
   const visible = permissions.canViewAllSensei ? sensei.filter((item) => item.primaryStatus === 'ACTIVE') : sensei.filter((item) => item.id === currentUser?.senseiId);
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-ink-soft">
-        Metrik disiplin ditampilkan terpisah, belum digabung ke skor QA. Swap yang diminta siswa/admin tidak dihitung ke Sensei. Pembatalan tanpa pengganti hanya dihitung jika initiator Sensei.
-      </p>
+    <div className="space-y-6">
+      <PageIntro kicker="Mutu" title="Disiplin">
+        Metrik disiplin ditampilkan terpisah, belum digabung ke skor QA. Swap yang diminta siswa/admin tidak dihitung ke
+        Sensei. Pembatalan tanpa pengganti hanya dihitung jika initiator Sensei.
+      </PageIntro>
       <div className="grid gap-3">
         {visible.map((item) => {
           const metrics = getDisciplinaryMetrics(item.id, month, schedules, logs);
