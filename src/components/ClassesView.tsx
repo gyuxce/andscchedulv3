@@ -117,7 +117,7 @@ export function ClassesView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Kelas"
+        kicker="Class Master"
         title="Class Master"
         actions={
           canEdit ? (

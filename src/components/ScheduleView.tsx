@@ -229,7 +229,7 @@ export function ScheduleView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Jadwal"
+        kicker="Jadwal Resmi"
         title="Kalender kelas"
         actions={
           <>

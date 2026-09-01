@@ -172,7 +172,7 @@ export function SenseiView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Orang"
+        kicker="Sensei"
         title="Master Sensei"
         actions={
           <>

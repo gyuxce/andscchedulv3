@@ -54,7 +54,7 @@ export function UsersView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Sistem"
+        kicker="Pengguna"
         title="Akun login"
         actions={
           <Button tone="primary" className="w-full sm:w-auto" onClick={() => setOpen(true)}>

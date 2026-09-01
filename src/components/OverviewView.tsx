@@ -167,7 +167,7 @@ export function OverviewView() {
   return (
     <div className="space-y-8">
       <PageIntro
-        kicker="Overview"
+        kicker="Action Center"
         title="Ringkasan operasional"
         actions={<WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />}
       >

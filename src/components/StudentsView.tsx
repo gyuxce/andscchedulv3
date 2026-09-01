@@ -181,7 +181,7 @@ export function StudentsView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Orang"
+        kicker="Akademik Siswa"
         title="Siswa"
         actions={
           canManage ? (

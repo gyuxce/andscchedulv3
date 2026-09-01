@@ -27,7 +27,7 @@ export function QaView() {
 
   return (
     <div className="space-y-6">
-      <PageIntro kicker="Mutu" title="QA & rekaman">
+      <PageIntro kicker="QA & Rekaman" title="QA & rekaman">
         Teaching Performance diinput manual oleh Kyouiku (0–100). Rekaman disimpan sebagai referensi URL. Skor komposit
         disiplin belum digabung di V3.
       </PageIntro>

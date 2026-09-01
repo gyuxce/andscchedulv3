@@ -21,7 +21,7 @@ export function SettingsView() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <PageIntro kicker="Sistem" title="Pengaturan operasional">
+      <PageIntro kicker="Pengaturan" title="Pengaturan operasional">
         Grace late-join dihitung dari jam mulai kelas di timezone Sensei pengajar (WIB / WITA / WIT), bukan dari zona
         browser atau paksa WIB.
       </PageIntro>

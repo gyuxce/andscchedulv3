@@ -141,7 +141,7 @@ export function TeachingView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Teaching"
+        kicker="Sesi Mengajar"
         title="Sesi hari ini"
         actions={<WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />}
       >

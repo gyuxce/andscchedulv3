@@ -59,7 +59,7 @@ export function AvailabilityView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Kapasitas"
+        kicker="Ketersediaan"
         title="Ketersediaan Sensei"
         actions={
           <>

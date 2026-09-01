@@ -78,7 +78,7 @@ export function ReportsView() {
   return (
     <div className="space-y-6">
       <PageIntro
-        kicker="Mutu"
+        kicker="Laporan EOM"
         title="Laporan EOM"
         actions={
           <>

@@ -185,7 +185,7 @@ export function AuditView() {
 
   return (
     <div className="space-y-6">
-      <PageIntro kicker="Sistem" title="Audit log">
+      <PageIntro kicker="Audit Log" title="Audit log">
         Koreksi sensitif wajib punya jejak: nilai lama, nilai baru, pelaku, waktu, dan alasan. Soft-delete/archive
         dipakai, bukan hapus permanen.
       </PageIntro>

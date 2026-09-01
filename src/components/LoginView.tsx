@@ -19,13 +19,13 @@ export function LoginView() {
         <ThemeToggle />
       </div>
       <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-line bg-surface shadow-[var(--shadow-lift)] lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="relative bg-[var(--ink-strong)] p-8 text-white sm:p-12">
+        <div className="relative bg-[#0d0d12] p-8 text-white sm:p-12">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(124,77,255,0.42),transparent_42%),radial-gradient(circle_at_86%_82%,rgba(155,135,255,0.22),transparent_36%)]" />
           <div className="relative flex h-full flex-col justify-between gap-8">
             <div>
-              <span className="ui-chip">
-                <span className="pl-2">Baru</span>
-                <span className="ui-chip-label">V3</span>
+              <span className="inline-flex h-6 items-center gap-1 rounded-full bg-white/10 py-0.5 pl-2.5 pr-0.5 text-[11px] font-semibold text-white">
+                Baru
+                <span className="inline-flex h-5 items-center rounded-full bg-white px-2 text-[#0d0d12]">V3</span>
               </span>
               <p className="mt-6 text-xs tracking-[0.3em] text-white/55">秋の空 × ILUSA</p>
               <h1 className="mt-4 max-w-sm text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
