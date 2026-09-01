@@ -1,19 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  BookOpen,
-  CalendarDays,
   CheckCircle2,
   Clock,
   Gauge,
-  GraduationCap,
   Users,
   Video
 } from 'lucide-react';
 import { buildActionItems } from '../lib/actionCenter';
 import { getClassHealth } from '../lib/classProgress';
 import { toDateKey, weekDays } from '../lib/dates';
-import { displayName } from '../lib/display';
+import { displayName, TYPE_RAIL } from '../lib/display';
+import { getSessionWorkflow, workflowLabel } from '../lib/session';
 import { deriveEnrollmentDisplayStatus, isCurrentEnrollmentStatus } from '../lib/enrollment';
 import { getOperationalLabels } from '../lib/labels';
 import { getWorkloadMetrics, formatPercent } from '../lib/workload';
@@ -22,7 +20,6 @@ import type { ActionItem, TabId } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { PageIntro } from './ui/PageIntro';
-import { StatCard } from './ui/StatCard';
 import { WeekNav } from './ui/WeekNav';
 
 const PAGE_SIZE = 20;
@@ -61,7 +58,8 @@ export function OverviewView() {
   const weekAnchor = useDashboardStore((state) => state.weekAnchor);
   const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const setTab = useDashboardStore((state) => state.setTab);
-  const { sensei, students, schedules, availability, sessionLogs, sessionReports, classMasters } =
+  const clockIn = useDashboardStore((state) => state.clockIn);
+  const { sensei, students, schedules, availability, sessionLogs, sessionReports, classMasters, linkedSenseiId } =
     useScopedData();
   const allSensei = useDashboardStore((state) => state.sensei);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
@@ -164,6 +162,23 @@ export function OverviewView() {
 
   const go = (tab: TabId) => setTab(tab);
 
+  const todayBoard = useMemo(
+    () =>
+      schedules
+        .filter((session) => session.date === today && session.status !== 'cancelled')
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+        .map((session) => {
+          const log = sessionLogs.find((item) => item.scheduleId === session.id);
+          const report = sessionReports.find((item) => item.scheduleId === session.id);
+          return {
+            session,
+            log,
+            state: getSessionWorkflow(session, log, report)
+          };
+        }),
+    [schedules, sessionLogs, sessionReports, today]
+  );
+
   return (
     <div className="space-y-8">
       <PageIntro
@@ -175,69 +190,96 @@ export function OverviewView() {
         dipilih.
       </PageIntro>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Sensei aktif"
-          value={snapshot.activeSensei}
-          hint={snapshot.unassigned ? `${snapshot.unassigned} UNASSIGNED` : 'Status ACTIVE'}
-          icon={<Users size={18} />}
-          onClick={() => go('sensei')}
-        />
-        <StatCard
-          label="Siswa aktif"
-          value={snapshot.activeStudents}
-          hint="Master siswa aktif"
-          icon={<GraduationCap size={18} />}
-          onClick={() => go('students')}
-        />
-        <StatCard
-          label="Jadwal hari ini"
-          value={snapshot.schedulesToday}
-          hint={today}
-          icon={<CalendarDays size={18} />}
-          onClick={() => go('teaching')}
-        />
-        <StatCard
-          label="Jadwal minggu ini"
-          value={snapshot.schedulesWeek}
-          hint="Menurut week nav"
-          icon={<CalendarDays size={18} />}
-          onClick={() => go('schedule')}
-        />
-        <StatCard
-          label="Class Master aktif"
-          value={snapshot.activeClasses}
-          hint="Status ready / active"
-          icon={<BookOpen size={18} />}
-          onClick={() => go('classes')}
-        />
-        <StatCard
-          label="Ending soon"
-          value={snapshot.endingSoon}
-          hint="Enrollment + class"
-          icon={<Clock size={18} />}
-          onClick={() => go('students')}
-        />
-        <StatCard
-          label="Laporan belum masuk"
-          value={snapshot.missingReports}
-          hint="Lingkup alert aktif"
-          icon={<Clock size={18} />}
-          onClick={() => {
-            setKindFilter('missing_report');
-            setPage(0);
-          }}
-        />
-        <StatCard
-          label="Utilisasi rata-rata"
-          value={formatPercent(snapshot.avgUtil)}
-          hint="Jam terisi ÷ tersedia"
-          icon={<Gauge size={18} />}
-          onClick={() => go('availability')}
-        />
-      </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)]">
+        <div className="ui-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-line px-5 py-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-maple">Hari ini</p>
+              <h4 className="text-lg font-bold text-ink">{snapshot.schedulesToday} sesi</h4>
+            </div>
+            <Button className="h-8" onClick={() => go('teaching')}>
+              Buka teaching
+            </Button>
+          </div>
+          <div className="divide-y divide-line">
+            {todayBoard.length === 0 ? (
+              <p className="px-5 py-8 text-sm text-ink-soft">Tidak ada sesi resmi hari ini.</p>
+            ) : (
+              todayBoard.slice(0, 6).map(({ session, state }) => {
+                const own = Boolean(linkedSenseiId && linkedSenseiId === session.senseiId);
+                return (
+                  <div key={session.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className={`h-10 w-1.5 shrink-0 rounded-full ${TYPE_RAIL[session.type]}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-bold text-ink">{session.level}</div>
+                      <div className="truncate text-xs text-ink-soft">
+                        {session.startTime}–{session.endTime} · {displayName(allSensei, session.senseiId)}
+                      </div>
+                    </div>
+                    <Badge tone={state === 'in_progress' ? 'sky' : state === 'report_pending' ? 'gold' : 'muted'}>
+                      {workflowLabel(state)}
+                    </Badge>
+                    {own && permissions.canClockOwn && state === 'ready' ? (
+                      <Button tone="primary" className="h-8" onClick={() => clockIn(session.id)}>
+                        Clock in
+                      </Button>
+                    ) : (
+                      <button className="text-xs font-bold text-maple" onClick={() => go('teaching')}>
+                        Buka
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
 
-      <div className="ui-card overflow-hidden">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              {
+                label: 'Sensei',
+                value: snapshot.activeSensei,
+                hint: snapshot.unassigned ? `${snapshot.unassigned} UNASSIGNED` : 'Aktif',
+                tab: 'sensei' as TabId,
+                alert: snapshot.unassigned > 0
+              },
+              { label: 'Siswa', value: snapshot.activeStudents, hint: 'Aktif', tab: 'students' as TabId },
+              { label: 'Minggu ini', value: snapshot.schedulesWeek, hint: 'Sesi', tab: 'schedule' as TabId },
+              { label: 'Class Master', value: snapshot.activeClasses, hint: 'Ready/active', tab: 'classes' as TabId },
+              { label: 'Ending soon', value: snapshot.endingSoon, hint: 'Perlu follow-up', tab: 'students' as TabId, alert: snapshot.endingSoon > 0 },
+              {
+                label: 'Laporan hilang',
+                value: snapshot.missingReports,
+                hint: 'Antrian',
+                onClick: () => {
+                  setKindFilter('missing_report');
+                  setPage(0);
+                },
+                alert: snapshot.missingReports > 0
+              },
+              { label: 'Utilisasi', value: formatPercent(snapshot.avgUtil), hint: 'Rata-rata', tab: 'availability' as TabId },
+              { label: 'Hari ini', value: snapshot.schedulesToday, hint: today, tab: 'teaching' as TabId }
+            ].map((metric) => (
+              <button
+                key={metric.label}
+                type="button"
+                onClick={() => ('onClick' in metric && metric.onClick ? metric.onClick() : go(metric.tab!))}
+                className={`rounded-2xl border border-line bg-surface px-3 py-3 text-left transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] ${
+                  metric.alert ? 'border-rose-200' : ''
+                }`}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">{metric.label}</p>
+                <p className="mt-1 text-xl font-bold tracking-tight text-ink">{metric.value}</p>
+                <p className={`text-[11px] ${metric.alert ? 'font-semibold text-rose-700' : 'text-ink-soft'}`}>
+                  {metric.hint}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          <div className="ui-card overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-line px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="font-bold">Antrian operasional</div>
           <div className="flex flex-wrap items-center gap-2">
@@ -271,6 +313,11 @@ export function OverviewView() {
               return (
                 <div key={item.id} className="flex items-start justify-between gap-4 px-5 py-3">
                   <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className={`mt-1 h-10 w-1.5 shrink-0 rounded-full ${
+                        item.severity === 'high' ? 'bg-rose-500' : item.severity === 'medium' ? 'bg-amber-400' : 'bg-line'
+                      }`}
+                    />
                     <div className="mt-0.5 rounded-2xl bg-surface p-2 text-maple">
                       <Icon size={16} />
                     </div>
@@ -328,6 +375,8 @@ export function OverviewView() {
             </Button>
           </div>
         ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );

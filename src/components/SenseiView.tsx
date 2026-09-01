@@ -8,7 +8,10 @@ import { useDashboardStore, usePermissions } from '../store/useDashboardStore';
 import type { Sensei, SenseiPrimaryStatus, SenseiTimezone } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Avatar } from './ui/Avatar';
 import { DetailFields } from './ui/DetailFields';
+import { FilterChips } from './ui/FilterChips';
+import { Meter } from './ui/Meter';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
 import { WeekNav } from './ui/WeekNav';
@@ -59,6 +62,7 @@ export function SenseiView() {
   const [loginPassword2, setLoginPassword2] = useState('');
   const [creatingLogin, setCreatingLogin] = useState(false);
   const [detailMode, setDetailMode] = useState<'view' | 'edit'>('view');
+  const [filter, setFilter] = useState<'all' | 'unassigned' | 'new' | 'below_target'>('all');
   const selected = visible.find((item) => item.id === selectedId);
   const selectedLeave = useMemo(
     () => leavePeriods.find((item) => item.senseiId === selectedId && item.status === 'approved'),
@@ -169,6 +173,28 @@ export function SenseiView() {
     setLoginPassword2('');
   };
 
+  const roster = useMemo(() => {
+    const rows = visible.map((item) => {
+      const labels = getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters);
+      const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
+      const linked = users.some((user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase());
+      return { item, labels, workload, linked };
+    });
+    const filtered = rows.filter(({ item, labels, workload }) => {
+      if (filter === 'unassigned') return labels.includes('UNASSIGNED');
+      if (filter === 'new') return labels.includes('NEW');
+      if (filter === 'below_target')
+        return item.primaryStatus === 'ACTIVE' && workload.assignedHours < workload.targetHours;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      const aScore = a.labels.includes('UNASSIGNED') ? 0 : a.labels.includes('NEW') ? 1 : 2;
+      const bScore = b.labels.includes('UNASSIGNED') ? 0 : b.labels.includes('NEW') ? 1 : 2;
+      if (aScore !== bScore) return aScore - bScore;
+      return senseiDisplayName(a.item).localeCompare(senseiDisplayName(b.item));
+    });
+  }, [visible, schedules, leavePeriods, classMasters, availability, weekAnchor, users, filter]);
+
   return (
     <div className="space-y-6">
       <PageIntro
@@ -187,58 +213,78 @@ export function SenseiView() {
       >
         Master data Sensei. Label NEW / UNASSIGNED / CUTI dihitung otomatis. INACTIVE tetap tersimpan di history.
       </PageIntro>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {visible.map((item) => {
-          const labels = getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters);
-          const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
-          const linked = users.some((user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase());
-          return (
-            <button key={item.id} className="ui-card p-5 text-left transition duration-150 hover:-translate-y-0.5 hover:border-maple/35 hover:shadow-[var(--shadow-lift)]" onClick={() => openDetail(item)}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex flex-wrap items-center gap-1">
-                    <h3 className="text-lg font-extrabold text-ink">{senseiDisplayName(item)}</h3>
+      <FilterChips
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { id: 'all', label: 'Semua', count: visible.length },
+          {
+            id: 'unassigned',
+            label: 'UNASSIGNED',
+            count: visible.filter((item) =>
+              getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters).includes('UNASSIGNED')
+            ).length
+          },
+          {
+            id: 'new',
+            label: 'NEW',
+            count: visible.filter((item) =>
+              getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters).includes('NEW')
+            ).length
+          },
+          { id: 'below_target', label: 'Di bawah 16 jam' }
+        ]}
+      />
+      <div className="ui-card divide-y divide-line overflow-hidden">
+        {roster.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-ink-soft">Tidak ada Sensei pada filter ini.</p>
+        ) : (
+          roster.map(({ item, labels, workload, linked }) => {
+            const unassigned = labels.includes('UNASSIGNED');
+            const ratio = workload.targetHours > 0 ? workload.assignedHours / workload.targetHours : 0;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-elevated ${
+                  unassigned ? 'border-l-4 border-l-rose-400 bg-rose-50/40 dark:bg-rose-500/5' : ''
+                }`}
+                onClick={() => openDetail(item)}
+              >
+                <Avatar name={senseiDisplayName(item)} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="truncate font-bold text-ink">{senseiDisplayName(item)}</span>
                     <Badge tone={timezoneAbbreviation(item.timezone) === 'WIB' ? 'muted' : 'sky'}>
                       {timezoneAbbreviation(item.timezone)}
                     </Badge>
                     {linked ? <Badge tone="success">Login OK</Badge> : <Badge tone="gold">Belum login</Badge>}
+                    <Badge tone={item.primaryStatus === 'ACTIVE' ? 'success' : 'danger'}>{item.primaryStatus}</Badge>
+                    {labels.map((label) => (
+                      <Badge key={label} tone={LABEL_TONE[label]}>
+                        {label}
+                      </Badge>
+                    ))}
                   </div>
-                  <p className="text-xs text-ink-soft">{item.email || '—'}</p>
+                  <p className="truncate text-xs text-ink-soft">{item.email || '—'}</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Meter
+                      value={ratio}
+                      tone={unassigned ? 'danger' : ratio < 0.5 ? 'gold' : 'maple'}
+                      className="max-w-xs"
+                    />
+                    <span className="shrink-0 text-xs font-semibold text-ink">
+                      {formatHours(workload.assignedHours)} / {formatHours(workload.targetHours)}
+                    </span>
+                    <span className="hidden text-xs text-ink-soft sm:inline">
+                      sisa {formatHours(workload.remainingHours)} · {formatPercent(workload.utilization)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-wrap justify-end gap-1">
-                  <Badge tone={item.primaryStatus === 'ACTIVE' ? 'success' : 'danger'}>{item.primaryStatus}</Badge>
-                  {labels.map((label) => (
-                    <Badge key={label} tone={LABEL_TONE[label]}>
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-ink-soft sm:grid-cols-4">
-                <div>
-                  Target
-                  <br />
-                  <b>{formatHours(workload.targetHours)}</b>
-                </div>
-                <div>
-                  Terisi
-                  <br />
-                  <b>{formatHours(workload.assignedHours)}</b>
-                </div>
-                <div>
-                  Sisa kapasitas
-                  <br />
-                  <b>{formatHours(workload.remainingHours)}</b>
-                </div>
-                <div>
-                  Utilisasi
-                  <br />
-                  <b>{formatPercent(workload.utilization)}</b>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })
+        )}
       </div>
 
       {creating || selected ? (

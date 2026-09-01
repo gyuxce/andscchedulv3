@@ -8,6 +8,7 @@ import type { ClassMaster, ClassMasterStatus, ClassType } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { DetailFields } from './ui/DetailFields';
+import { Meter } from './ui/Meter';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
 
@@ -151,16 +152,30 @@ export function ClassesView() {
                 </div>
               </div>
               <p className="mt-2 text-sm font-semibold">{item.level}</p>
-              <p className="mt-1 text-sm text-ink-soft">
-                Sesi {progress.completed}/{progress.required}
-                {progress.calendarCount ? ` · kalender ${progress.calendarCount}` : ''}
-              </p>
-              <p className="mt-1 text-xs text-ink-soft">
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-ink">
+                    Sesi {progress.completed}/{progress.required}
+                  </span>
+                  <span className="text-ink-soft">{health.status.replace('_', ' ')}</span>
+                </div>
+                <Meter
+                  className="mt-1.5"
+                  value={progress.completed}
+                  max={Math.max(progress.required, 1)}
+                  tone={
+                    health.status === 'overdue' || health.status === 'delayed'
+                      ? 'danger'
+                      : health.status === 'ending_soon'
+                        ? 'gold'
+                        : 'maple'
+                  }
+                />
+              </div>
+              <p className="mt-2 text-xs text-ink-soft">
                 Original end {item.plannedEndDate || '—'} · Projected {item.projectedEndDate || '—'}
               </p>
-              <p className="mt-1 text-xs text-ink-soft">
-                Health: {health.status.replace('_', ' ')} — {health.detail}
-              </p>
+              <p className="mt-1 text-xs text-ink-soft">{health.detail}</p>
             </button>
           );
         })}

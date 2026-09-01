@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { format } from 'date-fns';
 import { CLASS_LEVELS, CLASS_TYPES, DAYS_OF_WEEK } from '../constants';
 import { hoursBetween, toDateKey, weekDays } from '../lib/dates';
-import { displayName, TYPE_TONE } from '../lib/display';
+import { displayName } from '../lib/display';
 import { findMakeupsOf, hasActiveOrCompletedMakeup, isMakeupSession, makeupLabel } from '../lib/makeup';
 import { addMinutesToTime } from '../lib/recurring';
 import { findConflicts } from '../lib/schedule';
@@ -13,12 +12,12 @@ import {
 } from '../lib/schedulePreview';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import type { CancellationInitiator, ClassSession, ClassType, SwapInitiator } from '../types';
-import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { DetailFields } from './ui/DetailFields';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
 import { StudentPicker } from './ui/StudentPicker';
+import { WeekCalendar } from './ui/WeekCalendar';
 import { WeekNav } from './ui/WeekNav';
 
 const emptySessionForm = {
@@ -64,7 +63,6 @@ export function ScheduleView() {
   const swapSensei = useDashboardStore((state) => state.swapSensei);
   const { schedules, sensei, students } = useScopedData();
   const days = weekDays(weekAnchor);
-  const hours = ['07:00', '09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
   const [editing, setEditing] = useState<ClassSession | null>(null);
   const [creatingRecurring, setCreatingRecurring] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
@@ -244,66 +242,32 @@ export function ScheduleView() {
       >
         Kelas resmi = 1 Class Master + N sesi berulang. Makeup tertaut ke sesi batal; Extra meeting terpisah dari rencana.
         {conflicts.length > 0 ? (
-          <p className="mt-1 font-semibold text-rose-700">{conflicts.length} konflik perlu diselesaikan.</p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
+            <span>
+              <b>{conflicts.length} konflik</b>
+              {conflicts[0]
+                ? ` · ${displayName(allSensei, conflicts[0].a.senseiId)} ${conflicts[0].a.date} ${conflicts[0].a.startTime}`
+                : ''}
+            </span>
+            <Button
+              className="h-8"
+              onClick={() => {
+                if (conflicts[0]) openEdit(conflicts[0].a);
+              }}
+            >
+              Selesaikan
+            </Button>
+          </div>
         ) : null}
       </PageIntro>
       <p className="text-xs text-ink-soft lg:hidden">Geser ke samping untuk melihat jadwal mingguan.</p>
-      <div className="ui-card overflow-auto">
-        <div className="grid min-w-[720px] grid-cols-8 border-b border-line bg-paper/70 text-xs font-bold uppercase tracking-wide text-ink-soft sm:min-w-[980px]">
-          <div className="px-3 py-3">Jam</div>
-          {days.map((day) => (
-            <div key={day.toISOString()} className="px-3 py-3">
-              {format(day, 'EEE d')}
-            </div>
-          ))}
-        </div>
-        {hours.map((hour, index) => {
-          const next = hours[index + 1] ?? '21:00';
-          return (
-            <div key={hour} className="grid min-w-[720px] grid-cols-8 border-b border-line sm:min-w-[980px]">
-              <div className="px-3 py-3 text-xs font-semibold text-ink-soft">{hour}</div>
-              {days.map((day) => {
-                const date = toDateKey(day);
-                const items = schedules.filter(
-                  (session) => session.date === date && session.startTime >= hour && session.startTime < next
-                );
-                return (
-                  <div key={date + hour} className="min-h-24 space-y-2 border-l border-line p-2">
-                    {items.map((session) => (
-                      <button
-                        key={session.id}
-                        onClick={() => openEdit(session)}
-                        className={`w-full rounded-lg border p-2 text-left transition hover:border-maple/40 ${
-                          session.status === 'cancelled'
-                            ? 'border-rose-200 bg-rose-50 opacity-70 dark:border-rose-500/30 dark:bg-rose-500/10'
-                            : conflictIds.has(session.id)
-                              ? 'border-rose-400 bg-rose-50 dark:border-rose-400/50 dark:bg-rose-500/15'
-                              : session.isExtra
-                                ? 'border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10'
-                                : isMakeupSession(session)
-                                  ? 'border-sky-300 bg-sky-50 dark:border-sky-500/30 dark:bg-sky-500/10'
-                                  : 'border-line bg-surface'
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Badge tone={TYPE_TONE[session.type]}>{session.type}</Badge>
-                          {session.isExtra ? <Badge tone="gold">Extra</Badge> : null}
-                          {isMakeupSession(session) ? <Badge tone="sky">Makeup</Badge> : null}
-                          {conflictIds.has(session.id) ? <Badge tone="danger">Konflik</Badge> : null}
-                        </div>
-                        <div className="mt-1 text-xs font-bold text-ink">{session.level}</div>
-                        <div className="text-[11px] text-ink-soft">
-                          {session.startTime}–{session.endTime} · {displayName(allSensei, session.senseiId)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
+      <WeekCalendar
+        days={days}
+        sessions={schedules.filter((session) => days.some((day) => toDateKey(day) === session.date))}
+        sensei={allSensei}
+        conflictIds={conflictIds}
+        onSelect={openEdit}
+      />
 
       {creatingRecurring && (
         <Modal

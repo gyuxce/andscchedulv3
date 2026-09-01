@@ -26,10 +26,13 @@ export function weekRangeLabel(anchor: Date | string) {
   return `${format(days[0], 'd MMM', { locale: localeId })} – ${format(days[6], 'd MMM yyyy', { locale: localeId })}`;
 }
 
+export function timeToMinutes(time: string) {
+  const [hour, minute] = time.split(':').map(Number);
+  return hour * 60 + (minute || 0);
+}
+
 export function minutesBetween(startTime: string, endTime: string) {
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  const [endHour, endMinute] = endTime.split(':').map(Number);
-  return endHour * 60 + endMinute - (startHour * 60 + startMinute);
+  return timeToMinutes(endTime) - timeToMinutes(startTime);
 }
 
 export function hoursBetween(startTime: string, endTime: string) {

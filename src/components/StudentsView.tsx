@@ -25,9 +25,11 @@ import type {
 } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Avatar } from './ui/Avatar';
+import { Meter } from './ui/Meter';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
-import { StatCard } from './ui/StatCard';
+import { ProgressRing } from './ui/ProgressRing';
 
 const emptyStudent = (): Omit<Student, 'id'> => ({
   name: '',
@@ -79,6 +81,7 @@ export function StudentsView() {
   const [enrollmentModal, setEnrollmentModal] = useState(false);
   const [enrollmentForm, setEnrollmentForm] = useState(emptyEnrollment(''));
   const [editingEnrollmentId, setEditingEnrollmentId] = useState<string | null>(null);
+  const [studentQuery, setStudentQuery] = useState('');
 
   const history = useMemo(() => {
     if (!selected) return [];
@@ -196,9 +199,23 @@ export function StudentsView() {
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="ui-card max-h-64 overflow-hidden lg:max-h-none">
-          <div className="border-b border-line px-4 py-3 font-bold">Siswa operasional</div>
+          <div className="border-b border-line px-4 py-3">
+            <div className="font-bold">Siswa operasional</div>
+            <input
+              className="ui-input mt-2 h-9"
+              placeholder="Cari nama"
+              value={studentQuery}
+              onChange={(event) => setStudentQuery(event.target.value)}
+            />
+          </div>
           <div className="max-h-52 overflow-y-auto lg:max-h-[calc(100dvh-12rem)]">
-            {students.map((student) => (
+            {students
+              .filter((student) => {
+                const q = studentQuery.trim().toLowerCase();
+                if (!q) return true;
+                return `${student.name} ${student.currentLevel} ${student.type}`.toLowerCase().includes(q);
+              })
+              .map((student) => (
               <button
                 key={student.id}
                 onClick={() => {
@@ -206,13 +223,16 @@ export function StudentsView() {
                   setNextLevel('');
                   setNotes('');
                 }}
-                className={`block w-full border-b border-line px-4 py-3 text-left ${
-                  selectedId === student.id ? 'bg-maple/10' : 'bg-surface'
+                className={`flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left ${
+                  selectedId === student.id ? 'border-l-4 border-l-maple bg-[var(--accent-soft)]' : 'bg-surface'
                 }`}
               >
-                <div className="font-bold">{student.name}</div>
-                <div className="text-xs text-ink-soft">
-                  {student.currentLevel || 'Belum ada enrollment'} · {student.type}
+                <Avatar name={student.name} size="sm" />
+                <div className="min-w-0">
+                  <div className="truncate font-bold">{student.name}</div>
+                  <div className="truncate text-xs text-ink-soft">
+                    {student.currentLevel || 'Belum ada enrollment'} · {student.type}
+                  </div>
                 </div>
               </button>
             ))}
@@ -222,18 +242,20 @@ export function StudentsView() {
         {selected ? (
           <div className="space-y-4">
             <div className="ui-card p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-extrabold sm:text-2xl">{selected.name}</h3>
-                  <p className="text-sm text-ink-soft">
-                    ID {selected.id.slice(0, 8)}…
-                    {selected.phone ? ` · WA ${selected.phone}` : ''}
-                    {selected.email ? ` · ${selected.email}` : ''}
-                  </p>
-                  <p className="mt-1 text-sm text-ink-soft">
-                    Starting level: {selected.startingLevel || '—'} · Sensei profil{' '}
-                    {displayName(allSensei, selected.senseiId)}
-                  </p>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-4">
+                  <Avatar name={selected.name} size="lg" />
+                  <div>
+                    <h3 className="text-xl font-extrabold sm:text-2xl">{selected.name}</h3>
+                    <p className="text-sm text-ink-soft">
+                      {selected.phone ? `WA ${selected.phone}` : 'Tanpa WA'}
+                      {selected.email ? ` · ${selected.email}` : ''}
+                    </p>
+                    <p className="mt-1 text-sm text-ink-soft">
+                      Starting level: {selected.startingLevel || '—'} · Sensei profil{' '}
+                      {displayName(allSensei, selected.senseiId)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {currentDisplayStatus === 'ending_soon' ? <Badge tone="gold">Ending Soon</Badge> : null}
@@ -247,22 +269,46 @@ export function StudentsView() {
               {selected.academicNotes ? (
                 <p className="mt-3 text-sm text-ink-soft">Catatan: {selected.academicNotes}</p>
               ) : null}
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-              <StatCard label="Sesi tercatat" value={history.length} hint="Tanpa double-count makeup" />
-              <StatCard
-                label="Hadir / terlambat"
-                value={attendanceRate === null ? '—' : `${Math.round(attendanceRate * 100)}%`}
-              />
-              <StatCard
-                label="Progress enrollment"
-                value={
-                  currentProgress && currentProgress.required > 0
-                    ? `${currentProgress.completed}/${currentProgress.required}`
-                    : currentProgress?.completed ?? '—'
-                }
-              />
+              <div className="mt-5 flex flex-col gap-5 md:flex-row md:items-center">
+                <ProgressRing
+                  value={currentProgress?.completed ?? 0}
+                  max={currentProgress?.required || 10}
+                  hint="sesi"
+                />
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold uppercase tracking-wide text-ink-soft">Hadir / terlambat</span>
+                      <span className="font-bold text-ink">
+                        {attendanceRate === null ? '—' : `${Math.round(attendanceRate * 100)}%`}
+                      </span>
+                    </div>
+                    <Meter className="mt-1.5" value={attendanceRate ?? 0} tone="pine" />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Learning journey</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {[...learningHistory].reverse().map((item) => (
+                        <span
+                          key={item.id}
+                          className="rounded-full border border-line bg-elevated px-3 py-1 text-xs text-ink-soft"
+                        >
+                          {item.level}
+                        </span>
+                      ))}
+                      {currentEnrollment ? (
+                        <span className="rounded-full bg-maple px-3 py-1 text-xs font-semibold text-white">
+                          {currentEnrollment.level}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-ink-soft">Belum ada enrollment aktif</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-ink-soft">{history.length} sesi tercatat (tanpa double-count makeup)</p>
+                </div>
+              </div>
             </div>
 
             <div className="ui-card p-4">
@@ -303,10 +349,13 @@ export function StudentsView() {
                     </p>
                   ) : null}
                   {currentProgress && currentProgress.required > 0 ? (
-                    <p className="text-xs font-semibold text-ink">
-                      Sesi {currentProgress.completed} / {currentProgress.required}
-                      {currentDisplayStatus === 'ending_soon' ? ' · Ending Soon' : ''}
-                    </p>
+                    <div className="max-w-sm">
+                      <p className="text-xs font-semibold text-ink">
+                        Sesi {currentProgress.completed} / {currentProgress.required}
+                        {currentDisplayStatus === 'ending_soon' ? ' · Ending Soon' : ''}
+                      </p>
+                      <Meter className="mt-1.5" value={currentProgress.completed} max={currentProgress.required} />
+                    </div>
                   ) : null}
                   {currentEnrollment.enrollmentRemark || currentEnrollment.notes ? (
                     <p className="text-xs text-ink-soft">
