@@ -2,6 +2,43 @@ import type { AvailabilitySlot, ClassSession, WorkloadMetrics } from '../types';
 import { WEEKLY_HOUR_TARGET } from '../constants';
 import { hoursBetween, toDateKey, weekdayOf, weekDays } from './dates';
 
+export function slotsOnDate(slots: AvailabilitySlot[], senseiId: string, dateKey: string) {
+  const weekday = weekdayOf(dateKey);
+  return slots.filter((slot) => {
+    if (!slot.isActive || slot.senseiId !== senseiId) return false;
+    if (slot.pattern === 'specific_date') return slot.date === dateKey;
+    return slot.pattern === 'weekly' && slot.weekday === weekday;
+  });
+}
+
+export function sessionsOnDate(schedules: ClassSession[], senseiId: string, dateKey: string) {
+  return schedules.filter(
+    (session) => session.senseiId === senseiId && session.date === dateKey && session.status !== 'cancelled'
+  );
+}
+
+export function getDayCapacity(
+  senseiId: string,
+  dateKey: string,
+  slots: AvailabilitySlot[],
+  schedules: ClassSession[]
+) {
+  const daySlots = slotsOnDate(slots, senseiId, dateKey);
+  const daySessions = sessionsOnDate(schedules, senseiId, dateKey);
+  const availableHours = daySlots.reduce((sum, slot) => sum + hoursBetween(slot.startTime, slot.endTime), 0);
+  const assignedHours = daySessions.reduce(
+    (sum, session) => sum + hoursBetween(session.startTime, session.endTime),
+    0
+  );
+  return {
+    slots: daySlots,
+    sessions: daySessions,
+    availableHours,
+    assignedHours,
+    remainingHours: availableHours - assignedHours
+  };
+}
+
 export function availabilityHoursForWeek(
   slots: AvailabilitySlot[],
   senseiId: string,
@@ -68,6 +105,11 @@ export function getWorkloadMetrics(
 export function formatHours(value: number) {
   const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? `${rounded} jam` : `${rounded.toFixed(1)} jam`;
+}
+
+export function formatHoursShort(value: number) {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}j` : `${rounded.toFixed(1)}j`;
 }
 
 export function formatPercent(value: number | null) {

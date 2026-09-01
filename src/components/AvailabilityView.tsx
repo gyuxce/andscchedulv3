@@ -3,12 +3,11 @@ import { toast } from 'sonner';
 import { DAYS_OF_WEEK } from '../constants';
 import { displayName } from '../lib/display';
 import { isUuid } from '../lib/senseiLink';
-import { getWorkloadMetrics, formatHours } from '../lib/workload';
+import { weekDays } from '../lib/dates';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import type { AvailabilityPattern } from '../types';
-import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import { Meter } from './ui/Meter';
+import { CapacityHeatmap, CapacityLegend } from './ui/CapacityHeatmap';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
 import { WeekNav } from './ui/WeekNav';
@@ -55,6 +54,27 @@ export function AvailabilityView() {
   };
 
   const visibleSensei = permissions.canViewAllSensei ? allSensei : sensei;
+  const days = weekDays(weekAnchor);
+
+  const openForDay = (senseiId: string, dateKey: string, weekday: number) => {
+    if (!canEdit(senseiId)) return;
+    if (!permissions.canOverrideAvailability && !isUuid(ownSenseiId)) {
+      toast.error(
+        'Akun Sensei belum tertaut. Di tabel sensei, samakan kolom email dengan email login Auth.'
+      );
+      return;
+    }
+    setForm({
+      senseiId,
+      pattern: 'weekly',
+      weekday,
+      date: dateKey,
+      startTime: '09:00',
+      endTime: '12:00',
+      remarks: ''
+    });
+    setOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -75,6 +95,14 @@ export function AvailabilityView() {
         Ketersediaan adalah slot yang dibuka Sensei, bukan kelas resmi. Admin memakai ini sebagai informasi kapasitas sebelum assign.
       </PageIntro>
 
+      <div className="flex flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100 sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          Peta minggu ini: ungu muda = jam tersedia, ungu tua = sudah terisi jadwal resmi. Ini <b>bukan</b> kalender
+          kelas.
+        </p>
+        <CapacityLegend />
+      </div>
+
       {!permissions.canViewAllSensei && !isUuid(ownSenseiId) ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
           Akun Sensei belum tertaut ke master data. Email login: <b>{currentUser?.email}</b>.
@@ -83,61 +111,19 @@ export function AvailabilityView() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div>
         {visibleSensei.length === 0 ? (
           <div className="ui-card p-4 text-sm text-ink-soft">Tidak ada Sensei pada lingkup akun ini.</div>
         ) : (
-          visibleSensei.map((item) => {
-            const slots = availability.filter((slot) => slot.senseiId === item.id && slot.isActive);
-            const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
-            return (
-              <div key={item.id} className="ui-card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-extrabold text-ink">{item.name}</h3>
-                    <p className="text-xs text-ink-soft">
-                      {formatHours(workload.assignedHours)} terisi dari {formatHours(workload.availableHours)} tersedia
-                    </p>
-                    <Meter
-                      className="mt-2 max-w-xs"
-                      value={workload.availableHours > 0 ? workload.assignedHours : 0}
-                      max={Math.max(workload.availableHours, 1)}
-                      tone={workload.remainingHours < 0 ? 'danger' : 'maple'}
-                    />
-                    <p className="mt-1 text-xs text-ink-soft">Sisa {formatHours(workload.remainingHours)}</p>
-                  </div>
-                  <Badge tone="sky">Bukan jadwal resmi</Badge>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {slots.length === 0 ? (
-                    <p className="text-sm text-ink-soft">Belum ada slot aktif.</p>
-                  ) : (
-                    slots.map((slot) => (
-                      <div
-                        key={slot.id}
-                        className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5"
-                      >
-                        <span className="text-xs font-semibold">
-                          {slot.pattern === 'weekly'
-                            ? DAYS_OF_WEEK.find((day) => day.value === slot.weekday)?.label
-                            : slot.date}{' '}
-                          {slot.startTime}–{slot.endTime}
-                        </span>
-                        {canEdit(item.id) ? (
-                          <button
-                            className="text-[11px] font-bold text-rose-700"
-                            onClick={() => removeAvailability(slot.id)}
-                          >
-                            Nonaktifkan
-                          </button>
-                        ) : null}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })
+          <CapacityHeatmap
+            sensei={visibleSensei}
+            days={days}
+            availability={availability}
+            schedules={schedules}
+            canEdit={canEdit}
+            onAddDay={openForDay}
+            onDisableSlot={removeAvailability}
+          />
         )}
       </div>
 

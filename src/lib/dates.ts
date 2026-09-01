@@ -39,6 +39,16 @@ export function hoursBetween(startTime: string, endTime: string) {
   return minutesBetween(startTime, endTime) / 60;
 }
 
+/** `09:00` → `09`, `09:30` → `09:30` */
+export function compactTime(time: string) {
+  const [hour = '00', minute = '00'] = time.split(':');
+  return minute === '00' ? hour : `${hour}:${minute}`;
+}
+
+export function compactTimeRange(startTime: string, endTime: string) {
+  return `${compactTime(startTime)}–${compactTime(endTime)}`;
+}
+
 export function timesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string) {
   return aStart < bEnd && bStart < aEnd;
 }

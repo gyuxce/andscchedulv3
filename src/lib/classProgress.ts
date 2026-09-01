@@ -1,4 +1,5 @@
 import type { ClassMaster, ClassSession, SessionReport } from '../types';
+import { toDateKey } from './dates';
 
 /** Non-cancelled academic calendar sessions (excludes Extra meetings). */
 export function classCalendarSessions(classId: string, schedules: ClassSession[]) {
@@ -14,6 +15,43 @@ export function isSessionCompleted(session: ClassSession, reports: SessionReport
   if (session.status === 'cancelled') return false;
   if (session.status === 'completed') return true;
   return reports.some((report) => report.scheduleId === session.id);
+}
+
+export type SessionStripState = 'completed' | 'due' | 'next' | 'scheduled' | 'empty';
+
+export interface SessionStripCell {
+  index: number;
+  state: SessionStripState;
+  date?: string;
+  sessionId?: string;
+}
+
+/** One cell per required meeting: done, overdue, next, scheduled, or not generated. */
+export function getSessionStrip(
+  teachingClass: ClassMaster,
+  schedules: ClassSession[],
+  reports: SessionReport[],
+  today = toDateKey(new Date())
+): SessionStripCell[] {
+  const progress = getClassProgress(teachingClass, schedules, reports);
+  let nextMarked = false;
+  return Array.from({ length: Math.max(progress.required, 0) }, (_, index) => {
+    const session = progress.calendar[index];
+    if (!session) {
+      return { index: index + 1, state: 'empty' as const };
+    }
+    if (isSessionCompleted(session, reports)) {
+      return { index: index + 1, state: 'completed' as const, date: session.date, sessionId: session.id };
+    }
+    if (session.date < today) {
+      return { index: index + 1, state: 'due' as const, date: session.date, sessionId: session.id };
+    }
+    if (!nextMarked) {
+      nextMarked = true;
+      return { index: index + 1, state: 'next' as const, date: session.date, sessionId: session.id };
+    }
+    return { index: index + 1, state: 'scheduled' as const, date: session.date, sessionId: session.id };
+  });
 }
 
 export function getClassProgress(

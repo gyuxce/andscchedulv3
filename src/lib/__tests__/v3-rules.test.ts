@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { getPermissions } from '../rbac';
 import { getOperationalLabels } from '../labels';
-import { getWorkloadMetrics } from '../workload';
+import { getWorkloadMetrics, getDayCapacity, formatHoursShort } from '../workload';
 import { findConflicts } from '../schedule';
 import { getDisciplinaryMetrics } from '../disciplinary';
 import { getSessionWorkflow, isLateJoin } from '../session';
 import { filterAcademicReportRows, hasActiveOrCompletedMakeup } from '../makeup';
 import { generateRecurringDates } from '../recurring';
-import { getClassHealth, getClassProgress, getSessionOrdinal, computeProjectedEndDate } from '../classProgress';
+import { getClassHealth, getClassProgress, getSessionOrdinal, getSessionStrip, computeProjectedEndDate } from '../classProgress';
 import { buildRecurringPreview } from '../schedulePreview';
 import { buildEomSessionRows, eomRowsToCsv, summarizeEomBySensei } from '../eomReport';
 import { buildActionItems } from '../actionCenter';
@@ -107,6 +107,32 @@ describe('workload', () => {
     expect(metrics.remainingHours).toBe(10);
     expect(metrics.utilization).toBeCloseTo(2 / 12);
     expect(metrics.targetGap).toBe(14);
+  });
+
+  it('builds day capacity from weekly slots and official sessions', () => {
+    const slots = [
+      {
+        id: 'a1',
+        senseiId: 's1',
+        pattern: 'weekly' as const,
+        weekday: 5,
+        startTime: '08:00',
+        endTime: '12:00',
+        isActive: true
+      }
+    ];
+    const cap = getDayCapacity(
+      's1',
+      '2026-08-14',
+      slots,
+      [classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '11:00' })]
+    );
+    expect(cap.availableHours).toBe(4);
+    expect(cap.assignedHours).toBe(2);
+    expect(cap.remainingHours).toBe(2);
+    expect(cap.slots).toHaveLength(1);
+    expect(getDayCapacity('s1', '2026-08-13', slots, []).availableHours).toBe(0);
+    expect(formatHoursShort(9)).toBe('9j');
   });
 });
 
@@ -328,6 +354,8 @@ describe('recurring + session X of X + class health', () => {
     expect(getClassProgress(teachingClass, schedules, []).completed).toBe(1);
     expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-14')).status).toBe('overdue');
     expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-09')).status).toBe('ending_soon');
+    const strip = getSessionStrip(teachingClass, schedules, [], '2026-08-06');
+    expect(strip.map((cell) => cell.state)).toEqual(['completed', 'due', 'next', 'empty']);
   });
 
   it('builds Mon+Tue recurring preview for 10 meetings at 19:00–20:30', () => {
