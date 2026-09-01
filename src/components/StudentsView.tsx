@@ -26,6 +26,7 @@ import type {
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 import { StatCard } from './ui/StatCard';
 
 const emptyStudent = (): Omit<Student, 'id'> => ({
@@ -178,17 +179,20 @@ export function StudentsView() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-ink-soft">
-          Profil siswa adalah master permanen. Level/kelas disimpan di Enrollment / Learning Journey (history tidak di-overwrite).
-        </p>
-        {canManage ? (
-          <Button tone="primary" className="w-full sm:w-auto" onClick={openCreateStudent}>
-            + Tambah Siswa
-          </Button>
-        ) : null}
-      </div>
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Akademik Siswa"
+        title="Siswa"
+        actions={
+          canManage ? (
+            <Button tone="primary" className="w-full sm:w-auto" onClick={openCreateStudent}>
+              + Tambah Siswa
+            </Button>
+          ) : null
+        }
+      >
+        Profil siswa adalah master permanen. Level/kelas disimpan di Enrollment / Learning Journey (history tidak di-overwrite).
+      </PageIntro>
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="ui-card max-h-64 overflow-hidden lg:max-h-none">

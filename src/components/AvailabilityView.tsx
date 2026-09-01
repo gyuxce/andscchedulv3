@@ -10,6 +10,7 @@ import type { AvailabilityPattern } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 import { WeekNav } from './ui/WeekNav';
 
 export function AvailabilityView() {
@@ -56,20 +57,23 @@ export function AvailabilityView() {
   const visibleSensei = permissions.canViewAllSensei ? allSensei : sensei;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-ink-soft">
-          Ketersediaan adalah slot yang dibuka Sensei, bukan kelas resmi. Admin memakai ini sebagai informasi kapasitas sebelum assign.
-        </p>
-        <div className="flex items-center gap-2">
-          <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
-          {(permissions.canMarkOwnAvailability || permissions.canOverrideAvailability) && (
-            <Button tone="primary" onClick={openModal}>
-              Tambah ketersediaan
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Ketersediaan"
+        title="Ketersediaan Sensei"
+        actions={
+          <>
+            <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
+            {(permissions.canMarkOwnAvailability || permissions.canOverrideAvailability) && (
+              <Button tone="primary" onClick={openModal}>
+                Tambah ketersediaan
+              </Button>
+            )}
+          </>
+        }
+      >
+        Ketersediaan adalah slot yang dibuka Sensei, bukan kelas resmi. Admin memakai ini sebagai informasi kapasitas sebelum assign.
+      </PageIntro>
 
       {!permissions.canViewAllSensei && !isUuid(ownSenseiId) ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">

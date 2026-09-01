@@ -10,6 +10,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { DetailFields } from './ui/DetailFields';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 import { WeekNav } from './ui/WeekNav';
 
 const LABEL_TONE = {
@@ -169,27 +170,30 @@ export function SenseiView() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <p className="max-w-2xl text-sm text-ink-soft">
-          Master data Sensei. Label NEW / UNASSIGNED / CUTI dihitung otomatis. INACTIVE tetap tersimpan di history.
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
-          {canEditOps ? (
-            <Button tone="primary" className="w-full sm:w-auto" onClick={openCreate}>
-              + Tambah Sensei
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      <div className="grid gap-3 lg:grid-cols-2">
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Sensei"
+        title="Master Sensei"
+        actions={
+          <>
+            <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
+            {canEditOps ? (
+              <Button tone="primary" className="w-full sm:w-auto" onClick={openCreate}>
+                + Tambah Sensei
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        Master data Sensei. Label NEW / UNASSIGNED / CUTI dihitung otomatis. INACTIVE tetap tersimpan di history.
+      </PageIntro>
+      <div className="grid gap-4 lg:grid-cols-2">
         {visible.map((item) => {
           const labels = getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters);
           const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
           const linked = users.some((user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase());
           return (
-            <button key={item.id} className="ui-card p-4 text-left transition hover:border-maple/35 hover:bg-elevated/40" onClick={() => openDetail(item)}>
+            <button key={item.id} className="ui-card p-5 text-left transition duration-150 hover:-translate-y-0.5 hover:border-maple/35 hover:shadow-[var(--shadow-lift)]" onClick={() => openDetail(item)}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex flex-wrap items-center gap-1">

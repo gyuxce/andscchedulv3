@@ -23,7 +23,7 @@ export function Modal({
         onClick={onClose}
       />
       <div
-        className={`relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-xl border border-line bg-surface shadow-2xl sm:my-auto sm:max-h-[85vh] sm:rounded-xl ${
+        className={`relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] border border-line bg-surface shadow-[var(--shadow-lift)] sm:my-auto sm:max-h-[85vh] sm:rounded-[28px] ${
           wide ? 'sm:max-w-3xl' : 'sm:max-w-xl'
         }`}
       >

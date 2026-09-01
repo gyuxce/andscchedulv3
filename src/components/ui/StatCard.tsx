@@ -16,11 +16,13 @@ export function StatCard({
   const body = (
     <div className="flex items-start justify-between gap-3">
       <div>
-        <p className="text-[11px] font-semibold tracking-wide text-ink-soft">{label}</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">{value}</p>
-        {hint ? <p className="mt-1 text-xs text-ink-soft">{hint}</p> : null}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-soft">{label}</p>
+        <p className="mt-2 text-[28px] font-bold leading-none tracking-tight text-ink">{value}</p>
+        {hint ? <p className="mt-2 text-xs text-ink-soft">{hint}</p> : null}
       </div>
-      {icon ? <div className="rounded-lg bg-elevated p-2 text-maple">{icon}</div> : null}
+      {icon ? (
+        <div className="rounded-2xl bg-surface p-2.5 text-maple shadow-sm">{icon}</div>
+      ) : null}
     </div>
   );
 
@@ -29,12 +31,12 @@ export function StatCard({
       <button
         type="button"
         onClick={onClick}
-        className="ui-card w-full p-4 text-left transition hover:border-maple/40 hover:bg-elevated/60"
+        className="ui-card w-full p-5 text-left transition duration-150 hover:-translate-y-0.5 hover:border-maple/35 hover:shadow-[var(--shadow-lift)]"
       >
         {body}
       </button>
     );
   }
 
-  return <div className="ui-card p-4">{body}</div>;
+  return <div className="ui-card p-5">{body}</div>;
 }

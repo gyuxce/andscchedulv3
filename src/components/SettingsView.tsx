@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '../lib/theme';
 import { useDashboardStore, usePermissions } from '../store/useDashboardStore';
 import { Button } from './ui/Button';
+import { PageIntro } from './ui/PageIntro';
 
 export function SettingsView() {
   const permissions = usePermissions();
@@ -20,15 +21,12 @@ export function SettingsView() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-ink">Pengaturan operasional</h2>
-        <p className="mt-1 text-sm text-ink-soft">
-          Grace late-join dihitung dari jam mulai kelas di timezone Sensei pengajar (WIB / WITA / WIT),
-          bukan dari zona browser atau paksa WIB.
-        </p>
-      </div>
+      <PageIntro kicker="Pengaturan" title="Pengaturan operasional">
+        Grace late-join dihitung dari jam mulai kelas di timezone Sensei pengajar (WIB / WITA / WIT), bukan dari zona
+        browser atau paksa WIB.
+      </PageIntro>
 
-      <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
+      <section className="ui-card space-y-3 p-5">
         <div>
           <p className="ui-label">Tampilan</p>
           <p className="mt-1 text-xs text-ink-soft">Tema disimpan di perangkat ini. Tidak mengubah data operasional.</p>
@@ -43,7 +41,7 @@ export function SettingsView() {
         </div>
       </section>
 
-      <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
+      <section className="ui-card space-y-3 p-5">
         <div>
           <p className="ui-label">Grace late-join (menit)</p>
           <p className="mt-1 text-xs text-ink-soft">

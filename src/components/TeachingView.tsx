@@ -24,6 +24,7 @@ import type {
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+import { PageIntro } from './ui/PageIntro';
 import { WeekNav } from './ui/WeekNav';
 
 const PAGE_SIZE = 25;
@@ -138,13 +139,14 @@ export function TeachingView() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <p className="text-sm text-ink-soft">
-          Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Default menampilkan minggu yang dipilih.
-        </p>
-        <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
-      </div>
+    <div className="space-y-6">
+      <PageIntro
+        kicker="Sesi Mengajar"
+        title="Sesi hari ini"
+        actions={<WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />}
+      >
+        Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Default menampilkan minggu yang dipilih.
+      </PageIntro>
 
       {nowRows.length > 0 ? (
         <div className="grid gap-3 md:grid-cols-2">
@@ -152,7 +154,7 @@ export function TeachingView() {
             const own = Boolean(linkedSenseiId && linkedSenseiId === session.senseiId);
             const canOperate = Boolean(permissions.canClockOwn && own);
             return (
-              <div key={session.id} className="ui-card flex flex-col gap-3 p-4">
+              <div key={session.id} className="ui-card flex flex-col gap-3 p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-[11px] font-semibold text-ink-soft">Hari ini · {session.startTime}–{session.endTime}</p>
