@@ -1,16 +1,45 @@
 import { useMemo, useState } from 'react';
 import { CLASS_LEVELS, CLASS_MASTER_STATUSES, CLASS_TYPES, DAYS_OF_WEEK } from '../constants';
-import { getClassHealth, getClassProgress } from '../lib/classProgress';
-import { displayName, TYPE_TONE } from '../lib/display';
+import { getClassHealth, getClassProgress, getSessionStrip, type ClassHealthStatus } from '../lib/classProgress';
+import { formatDay } from '../lib/dates';
+import { displayName, TYPE_RAIL, TYPE_TONE } from '../lib/display';
 import { generateRecurringDates } from '../lib/recurring';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import type { ClassMaster, ClassMasterStatus, ClassType } from '../types';
+import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { DetailFields } from './ui/DetailFields';
-import { Meter } from './ui/Meter';
+import { FilterChips } from './ui/FilterChips';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
+import { SessionStrip, SessionStripLegend } from './ui/SessionStrip';
+
+type ClassFilter = 'all' | 'attention' | 'on_track' | 'idle' | 'done';
+
+const HEALTH_TONE: Record<ClassHealthStatus, 'success' | 'gold' | 'danger' | 'muted'> = {
+  on_track: 'success',
+  ending_soon: 'gold',
+  delayed: 'gold',
+  overdue: 'danger',
+  completed: 'success',
+  inactive: 'muted'
+};
+
+const HEALTH_LABEL: Record<ClassHealthStatus, string> = {
+  on_track: 'On track',
+  ending_soon: 'Ending soon',
+  delayed: 'Delayed',
+  overdue: 'Overdue',
+  completed: 'Selesai',
+  inactive: 'Nonaktif'
+};
+
+const ATTENTION = new Set<ClassHealthStatus>(['overdue', 'delayed', 'ending_soon']);
+
+function dateLabel(value?: string | null) {
+  return value ? formatDay(value, 'd MMM') : '—';
+}
 
 const emptyForm = {
   displayName: '',
@@ -46,6 +75,7 @@ export function ClassesView() {
   const [form, setForm] = useState(emptyForm);
   const [weekdays, setWeekdays] = useState<number[]>([1, 5]);
   const [genStartTime, setGenStartTime] = useState('19:00');
+  const [filter, setFilter] = useState<ClassFilter>('all');
 
   const openCreate = () => {
     setForm({
@@ -115,6 +145,38 @@ export function ClassesView() {
 
   const canEdit = permissions.canEditOfficialSchedule;
 
+  const rows = useMemo(
+    () =>
+      classMasters.map((item) => ({
+        item,
+        progress: getClassProgress(item, schedules, sessionReports),
+        health: getClassHealth(item, schedules, sessionReports),
+        strip: getSessionStrip(item, schedules, sessionReports)
+      })),
+    [classMasters, schedules, sessionReports]
+  );
+
+  const fleet = useMemo(() => {
+    return {
+      total: rows.length,
+      onTrack: rows.filter((row) => row.health.status === 'on_track').length,
+      attention: rows.filter((row) => ATTENTION.has(row.health.status)).length,
+      ungenerated: rows.filter((row) => row.progress.calendarCount === 0).length
+    };
+  }, [rows]);
+
+  const visible = useMemo(
+    () =>
+      rows.filter(({ health }) => {
+        if (filter === 'all') return true;
+        if (filter === 'attention') return ATTENTION.has(health.status);
+        if (filter === 'on_track') return health.status === 'on_track';
+        if (filter === 'idle') return health.status === 'inactive';
+        return health.status === 'completed';
+      }),
+    [rows, filter]
+  );
+
   return (
     <div className="space-y-6">
       <PageIntro
@@ -132,55 +194,129 @@ export function ClassesView() {
         membuat sesi kalender; progress memakai Session X of X.
       </PageIntro>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {classMasters.map((item) => {
-          const progress = getClassProgress(item, schedules, sessionReports);
-          const health = getClassHealth(item, schedules, sessionReports);
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { label: 'Kelas', value: fleet.total },
+          { label: 'On track', value: fleet.onTrack },
+          { label: 'Perlu perhatian', value: fleet.attention },
+          { label: 'Belum generate', value: fleet.ungenerated }
+        ].map((stat) => (
+          <div key={stat.label} className="ui-card px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{stat.label}</p>
+            <p className="mt-1 text-2xl font-bold text-ink">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <FilterChips
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { id: 'all', label: 'Semua', count: rows.length },
+            { id: 'attention', label: 'Perhatian', count: fleet.attention },
+            { id: 'on_track', label: 'On track', count: fleet.onTrack },
+            { id: 'idle', label: 'Draft / nonaktif' },
+            { id: 'done', label: 'Selesai' }
+          ]}
+        />
+        <SessionStripLegend />
+      </div>
+
+      <div className="space-y-3">
+        {visible.map(({ item, progress, health, strip }) => {
+          const senseiName = displayName(allSensei, item.senseiId);
+          const students = item.studentIds.map((id) => displayName(allStudents, id));
           return (
-            <button key={item.id} className="ui-card p-5 text-left transition duration-150 hover:-translate-y-0.5 hover:border-maple/35 hover:shadow-[var(--shadow-lift)]" onClick={() => openDetail(item)}>
-              <div className="flex items-start justify-between gap-2">
+            <button
+              key={item.id}
+              className="ui-card w-full overflow-hidden p-0 text-left transition duration-150 hover:-translate-y-0.5 hover:border-maple/35 hover:shadow-[var(--shadow-lift)]"
+              onClick={() => openDetail(item)}
+            >
+              <div className="grid gap-4 p-4 lg:grid-cols-[minmax(220px,0.85fr)_minmax(0,1.4fr)_minmax(200px,0.75fr)] lg:items-center">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className={`mt-1 h-12 w-1.5 shrink-0 rounded-full ${TYPE_RAIL[item.type]}`} />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <h3 className="text-base font-extrabold text-ink">{item.displayName}</h3>
+                      <Badge tone={TYPE_TONE[item.type]}>{item.type}</Badge>
+                      <Badge>{item.status}</Badge>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-ink">{item.level}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Avatar name={senseiName} size="sm" />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-ink">{senseiName}</p>
+                        <p className="text-[11px] text-ink-soft">
+                          {item.code ? `${item.code} · ` : ''}
+                          {item.studentIds.length} siswa
+                        </p>
+                      </div>
+                      <div className="ml-1 flex">
+                        {students.slice(0, 3).map((name, index) => (
+                          <span key={`${item.id}-${name}-${index}`} className={index === 0 ? '' : '-ml-2'}>
+                            <Avatar name={name} size="sm" className="ring-2 ring-white dark:ring-[var(--surface)]" />
+                          </span>
+                        ))}
+                        {students.length > 3 ? (
+                          <span className="-ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-elevated text-[10px] font-bold text-ink-soft ring-2 ring-white dark:ring-[var(--surface)]">
+                            +{students.length - 3}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
-                  <h3 className="text-lg font-extrabold text-ink">{item.displayName}</h3>
-                  <p className="text-xs text-ink-soft">
-                    {item.code ? `${item.code} · ` : ''}
-                    {displayName(allSensei, item.senseiId)} · {item.studentIds.length} siswa
-                  </p>
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <p className="text-xs font-semibold text-ink">
+                      Jalur sesi · {progress.completed}/{progress.required}
+                      {progress.calendarCount === 0 ? ' · belum generate' : ''}
+                    </p>
+                    {strip.some((cell) => cell.state === 'next') ? (
+                      <p className="text-[11px] text-maple">
+                        Berikutnya{' '}
+                        {dateLabel(strip.find((cell) => cell.state === 'next')?.date)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <SessionStrip cells={strip} />
                 </div>
-                <div className="flex flex-wrap justify-end gap-1">
-                  <Badge tone={TYPE_TONE[item.type]}>{item.type}</Badge>
-                  <Badge>{item.status}</Badge>
+
+                <div className="lg:border-l lg:border-line lg:pl-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-2xl font-bold tabular-nums text-ink">
+                      {progress.completed}
+                      <span className="text-base font-semibold text-ink-soft">/{progress.required}</span>
+                    </p>
+                    <Badge tone={HEALTH_TONE[health.status]}>{HEALTH_LABEL[health.status]}</Badge>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+                    <div>
+                      <p className="text-ink-soft">Mulai</p>
+                      <p className="font-bold text-ink">{dateLabel(item.startDate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-ink-soft">Rencana</p>
+                      <p className="font-bold text-ink">{dateLabel(item.plannedEndDate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-ink-soft">Proyeksi</p>
+                      <p className="font-bold text-ink">{dateLabel(item.projectedEndDate)}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-ink-soft">{health.detail}</p>
                 </div>
               </div>
-              <p className="mt-2 text-sm font-semibold">{item.level}</p>
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-ink">
-                    Sesi {progress.completed}/{progress.required}
-                  </span>
-                  <span className="text-ink-soft">{health.status.replace('_', ' ')}</span>
-                </div>
-                <Meter
-                  className="mt-1.5"
-                  value={progress.completed}
-                  max={Math.max(progress.required, 1)}
-                  tone={
-                    health.status === 'overdue' || health.status === 'delayed'
-                      ? 'danger'
-                      : health.status === 'ending_soon'
-                        ? 'gold'
-                        : 'maple'
-                  }
-                />
-              </div>
-              <p className="mt-2 text-xs text-ink-soft">
-                Original end {item.plannedEndDate || '—'} · Projected {item.projectedEndDate || '—'}
-              </p>
-              <p className="mt-1 text-xs text-ink-soft">{health.detail}</p>
             </button>
           );
         })}
         {classMasters.length === 0 ? (
           <p className="text-sm text-ink-soft">Belum ada Class Master. Super Admin bisa menambah lalu generate jadwal.</p>
+        ) : null}
+        {classMasters.length > 0 && visible.length === 0 ? (
+          <p className="text-sm text-ink-soft">Tidak ada kelas pada filter ini.</p>
         ) : null}
       </div>
 
