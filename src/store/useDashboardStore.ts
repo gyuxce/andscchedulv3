@@ -10,6 +10,7 @@ import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { mapProfile } from '../lib/mappers';
 import { hasActiveOrCompletedMakeup } from '../lib/makeup';
 import { createAuthLogin } from '../lib/createAuthLogin';
+import { classCompositionError } from '../lib/classComposition';
 import { computeProjectedEndDate } from '../lib/classProgress';
 import { addMinutesToTime, generateRecurringDates, suggestPlannedEndDate } from '../lib/recurring';
 import { previewConflicts, buildRecurringPreview } from '../lib/schedulePreview';
@@ -29,6 +30,7 @@ import {
   upsertEnrollmentRemote,
   upsertSessionReportRemote,
   upsertStudentRemote,
+  updateProfileRemote,
   writeAudit
 } from '../services/supabaseData';
 import { ensureClassEnrollments, progressEnrollmentJourney } from '../lib/enrollment';
@@ -210,6 +212,10 @@ interface DashboardStore extends DashboardSnapshot {
     senseiId?: string;
   }) => Promise<boolean>;
   upsertUser: (user: Omit<UserAccount, 'id'> & { id?: string }) => void;
+  updateUser: (
+    userId: string,
+    patch: { role?: AppRole; status?: UserStatus; senseiId?: string | null }
+  ) => Promise<boolean>;
 }
 
 function actor(state: DashboardStore) {
@@ -446,6 +452,11 @@ export const useDashboardStore = create<DashboardStore>()(
       },
       createClass: (input, reason) => {
         const state = get();
+        const compositionError = classCompositionError(input.type, input.studentIds);
+        if (compositionError) {
+          toast.error(compositionError);
+          return false;
+        }
         if (input.makeupOfSessionId) {
           const original = state.schedules.find((item) => item.id === input.makeupOfSessionId);
           if (!original) {
@@ -536,6 +547,11 @@ export const useDashboardStore = create<DashboardStore>()(
         }
         if (!input.senseiId || input.studentIds.length === 0) {
           toast.error('Sensei dan minimal 1 siswa wajib');
+          return false;
+        }
+        const recurringCompositionError = classCompositionError(input.type, input.studentIds);
+        if (recurringCompositionError) {
+          toast.error(recurringCompositionError);
           return false;
         }
         if (input.weekdays.length === 0) {
@@ -655,6 +671,11 @@ export const useDashboardStore = create<DashboardStore>()(
           updatedAt: new Date().toISOString(),
           updatedBy: state.currentUser?.name
         };
+        const editCompositionError = classCompositionError(next.type, next.studentIds);
+        if (editCompositionError) {
+          toast.error(editCompositionError);
+          return false;
+        }
         if (wouldConflict(state.schedules, next)) {
           toast.error('Perubahan menyebabkan konflik jadwal');
           return false;
@@ -1251,7 +1272,7 @@ export const useDashboardStore = create<DashboardStore>()(
           pushAudit(state, {
             action: 'update_app_settings',
             entity: 'app_settings',
-            recordId: 'late_grace_minutes',
+            recordId: 'app_settings',
             oldValue: previous,
             newValue: next
           });
@@ -1337,8 +1358,9 @@ export const useDashboardStore = create<DashboardStore>()(
           toast.error('Sensei dan minimal 1 siswa wajib');
           return null;
         }
-        if (input.type === 'Semi-Private' && (input.studentIds.length < 2 || input.studentIds.length > 4)) {
-          toast.error('Semi-Private sebaiknya 2–4 siswa');
+        const compositionError = classCompositionError(input.type, input.studentIds);
+        if (compositionError) {
+          toast.error(compositionError);
           return null;
         }
         const id = input.id ?? createId();
@@ -1515,6 +1537,70 @@ export const useDashboardStore = create<DashboardStore>()(
           };
         });
         toast.success(`Akun login ${account.email} siap (Approved). Sensei bisa masuk sekarang.`);
+        return true;
+      },
+      updateUser: async (userId, patch) => {
+        const state = get();
+        if (state.currentUser?.role !== 'Super Admin') {
+          toast.error('Hanya Super Admin yang bisa mengubah akun');
+          return false;
+        }
+        const existing = state.users.find((item) => item.id === userId);
+        const remotePatch: { role?: string; status?: string; sensei_id?: string | null } = {};
+        if (patch.role) remotePatch.role = patch.role;
+        if (patch.status) remotePatch.status = patch.status;
+        if (patch.senseiId !== undefined) remotePatch.sensei_id = patch.senseiId || null;
+        try {
+          await updateProfileRemote(userId, remotePatch);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Gagal menyimpan akun');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'update_user',
+            entity: 'profiles',
+            recordId: userId,
+            oldValue: existing
+              ? { role: existing.role, status: existing.status, senseiId: existing.senseiId ?? null }
+              : undefined,
+            newValue: {
+              role: patch.role ?? existing?.role,
+              status: patch.status ?? existing?.status,
+              senseiId: patch.senseiId ?? existing?.senseiId ?? null
+            },
+            reason: 'Ubah role/status/tautan Sensei dari dashboard'
+          });
+          const linkedSensei =
+            patch.senseiId !== undefined
+              ? current.sensei.find((item) => item.id === patch.senseiId)
+              : undefined;
+          return {
+            users: current.users.map((item) =>
+              item.id === userId
+                ? {
+                    ...item,
+                    role: patch.role ?? item.role,
+                    status: patch.status ?? item.status,
+                    senseiId: patch.senseiId !== undefined ? patch.senseiId || undefined : item.senseiId,
+                    name: linkedSensei?.name || item.name
+                  }
+                : item
+            ),
+            currentUser:
+              current.currentUser?.id === userId
+                ? {
+                    ...current.currentUser,
+                    role: patch.role ?? current.currentUser.role,
+                    status: patch.status ?? current.currentUser.status,
+                    senseiId:
+                      patch.senseiId !== undefined ? patch.senseiId || undefined : current.currentUser.senseiId
+                  }
+                : current.currentUser,
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Akun diperbarui');
         return true;
       }
     }),

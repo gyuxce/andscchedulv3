@@ -16,10 +16,10 @@ export function FilterChips<T extends string>({
             key={option.id}
             type="button"
             onClick={() => onChange(option.id)}
-            className={`inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold transition ${
+            className={`inline-flex h-8 items-center rounded-lg border px-3 text-xs font-semibold transition-colors ${
               active
-                ? 'bg-maple text-white shadow-[0_8px_18px_rgba(124,77,255,0.22)]'
-                : 'border border-line bg-surface text-ink-soft hover:bg-elevated hover:text-ink'
+                ? 'border-accent bg-accent text-on-accent'
+                : 'border-line bg-surface text-ink-soft hover:bg-surface-2 hover:text-ink'
             }`}
           >
             {option.label}

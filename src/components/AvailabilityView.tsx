@@ -95,16 +95,16 @@ export function AvailabilityView() {
         Ketersediaan adalah slot yang dibuka Sensei, bukan kelas resmi. Admin memakai ini sebagai informasi kapasitas sebelum assign.
       </PageIntro>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-info/25 bg-info-soft px-4 py-3 text-sm text-ink sm:flex-row sm:items-center sm:justify-between">
         <p>
-          Peta minggu ini: ungu muda = jam tersedia, ungu tua = sudah terisi jadwal resmi. Ini <b>bukan</b> kalender
-          kelas.
+          Peta minggu ini: latar tipis = jam tersedia, batang biru = sudah terisi jadwal resmi. Ini <b>bukan</b>{' '}
+          kalender kelas.
         </p>
         <CapacityLegend />
       </div>
 
       {!permissions.canViewAllSensei && !isUuid(ownSenseiId) ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+        <div className="rounded-xl border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-ink">
           Akun Sensei belum tertaut ke master data. Email login: <b>{currentUser?.email}</b>.
           Samakan dengan kolom <b>email</b> di tabel <b>sensei</b>, atau minta Admin set{' '}
           <b>profiles.sensei_id</b>, lalu login ulang.

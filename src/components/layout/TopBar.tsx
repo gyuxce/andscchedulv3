@@ -33,7 +33,7 @@ export function TopBar({
         <button
           type="button"
           onClick={onOpenSearch}
-          className="hidden h-9 items-center gap-2 rounded-full border border-line bg-surface px-3 text-xs text-ink-soft hover:bg-elevated sm:inline-flex"
+          className="hidden h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-xs text-ink-soft hover:bg-elevated sm:inline-flex"
         >
           <Search size={14} />
           <span>Cari</span>

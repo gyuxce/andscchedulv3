@@ -82,6 +82,7 @@ export function StudentsView() {
   const [enrollmentForm, setEnrollmentForm] = useState(emptyEnrollment(''));
   const [editingEnrollmentId, setEditingEnrollmentId] = useState<string | null>(null);
   const [studentQuery, setStudentQuery] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
 
   const history = useMemo(() => {
     if (!selected) return [];
@@ -197,45 +198,68 @@ export function StudentsView() {
         Profil siswa adalah master permanen. Level/kelas disimpan di Enrollment / Learning Journey (history tidak di-overwrite).
       </PageIntro>
 
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <div className="ui-card max-h-64 overflow-hidden lg:max-h-none">
+      <div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
+        <div className="ui-card overflow-hidden lg:sticky lg:top-4">
           <div className="border-b border-line px-4 py-3">
-            <div className="font-bold">Siswa operasional</div>
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="font-semibold">Siswa operasional</div>
+              <span className="text-[11px] text-ink-soft">
+                {students.filter((s) => s.isActive).length} aktif · {students.length} total
+              </span>
+            </div>
             <input
               className="ui-input mt-2 h-9"
               placeholder="Cari nama"
               value={studentQuery}
               onChange={(event) => setStudentQuery(event.target.value)}
             />
+            <label className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-soft">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(event) => setShowInactive(event.target.checked)}
+              />
+              Tampilkan siswa nonaktif
+            </label>
           </div>
-          <div className="max-h-52 overflow-y-auto lg:max-h-[calc(100dvh-12rem)]">
+          <div className="max-h-[60vh] overflow-y-auto lg:max-h-[calc(100vh-13rem)]">
             {students
               .filter((student) => {
+                if (!showInactive && !student.isActive && student.id !== selectedId) return false;
                 const q = studentQuery.trim().toLowerCase();
                 if (!q) return true;
                 return `${student.name} ${student.currentLevel} ${student.type}`.toLowerCase().includes(q);
               })
+              .slice()
+              .sort((a, b) => Number(b.isActive) - Number(a.isActive))
               .map((student) => (
-              <button
-                key={student.id}
-                onClick={() => {
-                  setSelectedId(student.id);
-                  setNextLevel('');
-                  setNotes('');
-                }}
-                className={`flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left ${
-                  selectedId === student.id ? 'border-l-4 border-l-maple bg-[var(--accent-soft)]' : 'bg-surface'
-                }`}
-              >
-                <Avatar name={student.name} size="sm" />
-                <div className="min-w-0">
-                  <div className="truncate font-bold">{student.name}</div>
-                  <div className="truncate text-xs text-ink-soft">
-                    {student.currentLevel || 'Belum ada enrollment'} · {student.type}
+                <button
+                  key={student.id}
+                  onClick={() => {
+                    setSelectedId(student.id);
+                    setNextLevel('');
+                    setNotes('');
+                  }}
+                  className={`flex w-full items-center gap-3 border-b border-l-2 border-line px-3 py-2.5 text-left transition-colors last:border-b-0 ${
+                    selectedId === student.id
+                      ? 'border-l-accent bg-accent-soft'
+                      : 'border-l-transparent bg-surface hover:bg-surface-2'
+                  } ${!student.isActive ? 'opacity-55' : ''}`}
+                >
+                  <Avatar name={student.name} size="sm" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-semibold">{student.name}</span>
+                      {!student.isActive ? (
+                        <span className="shrink-0 text-[10px] font-medium uppercase text-ink-faint">nonaktif</span>
+                      ) : null}
+                    </div>
+                    <div className="truncate text-xs text-ink-soft">
+                      {student.currentLevel || 'Belum ada enrollment'} · {student.type}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
           </div>
         </div>
 
@@ -246,7 +270,7 @@ export function StudentsView() {
                 <div className="flex min-w-0 items-start gap-4">
                   <Avatar name={selected.name} size="lg" />
                   <div>
-                    <h3 className="text-xl font-extrabold sm:text-2xl">{selected.name}</h3>
+                    <h3 className="text-xl font-semibold sm:text-2xl">{selected.name}</h3>
                     <p className="text-sm text-ink-soft">
                       {selected.phone ? `WA ${selected.phone}` : 'Tanpa WA'}
                       {selected.email ? ` · ${selected.email}` : ''}
@@ -280,7 +304,7 @@ export function StudentsView() {
                   <div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold uppercase tracking-wide text-ink-soft">Hadir / terlambat</span>
-                      <span className="font-bold text-ink">
+                      <span className="font-semibold text-ink">
                         {attendanceRate === null ? '—' : `${Math.round(attendanceRate * 100)}%`}
                       </span>
                     </div>
@@ -292,13 +316,13 @@ export function StudentsView() {
                       {[...learningHistory].reverse().map((item) => (
                         <span
                           key={item.id}
-                          className="rounded-full border border-line bg-elevated px-3 py-1 text-xs text-ink-soft"
+                          className="rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs text-ink-soft"
                         >
                           {item.level}
                         </span>
                       ))}
                       {currentEnrollment ? (
-                        <span className="rounded-full bg-maple px-3 py-1 text-xs font-semibold text-white">
+                        <span className="rounded-lg bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent">
                           {currentEnrollment.level}
                         </span>
                       ) : (
@@ -313,7 +337,7 @@ export function StudentsView() {
 
             <div className="ui-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-bold text-ink">Current Enrollment</p>
+                <p className="font-semibold text-ink">Current Enrollment</p>
                 {canManage ? (
                   <Button tone="primary" onClick={startEnrollmentCreate}>
                     + Add New Enrollment / Next Level
@@ -373,7 +397,7 @@ export function StudentsView() {
 
             {learningHistory.length > 0 ? (
               <div className="ui-card overflow-hidden">
-                <div className="border-b border-line px-4 py-3 font-bold">Learning History</div>
+                <div className="border-b border-line px-4 py-3 font-semibold">Learning History</div>
                 <ul className="divide-y divide-line text-sm">
                   {learningHistory.map((item) => (
                     <li key={item.id} className="px-4 py-3">
@@ -398,7 +422,7 @@ export function StudentsView() {
                         <div className="text-xs text-ink-soft">{item.enrollmentRemark || item.notes}</div>
                       ) : null}
                       {canManage ? (
-                        <button className="mt-1 text-xs font-bold text-maple" onClick={() => startEnrollmentEdit(item)}>
+                        <button className="mt-1 text-xs font-semibold text-accent" onClick={() => startEnrollmentEdit(item)}>
                           Edit
                         </button>
                       ) : null}
@@ -411,7 +435,7 @@ export function StudentsView() {
             {permissions.canOverrideAcademic ? (
               <div className="ui-card space-y-3 p-4">
                 <div>
-                  <p className="font-bold text-ink">Tandai level selesai</p>
+                  <p className="font-semibold text-ink">Tandai level selesai</p>
                   <p className="text-xs text-ink-soft">
                     Menutup enrollment level saat ini dan (opsional) membuka enrollment level baru.
                   </p>
@@ -464,33 +488,41 @@ export function StudentsView() {
             ) : null}
 
             <div className="ui-card overflow-hidden">
-              <div className="border-b border-line px-4 py-3 font-bold">Riwayat sesi</div>
+              <div className="border-b border-line px-4 py-3 font-semibold">Riwayat sesi</div>
               <div className="ui-table-wrap">
-                <table className="w-full text-sm">
-                  <thead className="bg-paper/70 text-left text-xs uppercase text-ink-soft">
+                <table className="ui-table">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-2">Tanggal</th>
-                      <th className="px-4 py-2">Absensi</th>
-                      <th className="px-4 py-2">Nilai</th>
-                      <th className="px-4 py-2">Materi</th>
+                      <th>Tanggal</th>
+                      <th>Absensi</th>
+                      <th className="num">Nilai</th>
+                      <th>Materi</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {history.map(({ report, record, session }) => (
-                      <tr key={report.id} className="border-t border-line">
-                        <td className="px-4 py-2">
-                          <div>{session.date}</div>
-                          {isMakeupSession(session) ? (
-                            <div className="text-[11px] text-sky-700">{makeupLabel(session, schedules)}</div>
-                          ) : null}
+                    {history.length === 0 ? (
+                      <tr>
+                        <td className="text-ink-soft" colSpan={4}>
+                          Belum ada riwayat sesi.
                         </td>
-                        <td className="px-4 py-2">
-                          <Badge tone={ATTENDANCE_TONE[record.attendance]}>{record.attendance}</Badge>
-                        </td>
-                        <td className="px-4 py-2">{record.performanceScore ?? '—'}</td>
-                        <td className="px-4 py-2">{report.materialCovered}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      history.map(({ report, record, session }) => (
+                        <tr key={report.id}>
+                          <td className="whitespace-nowrap">
+                            <div className="tabular-nums text-ink">{session.date}</div>
+                            {isMakeupSession(session) ? (
+                              <div className="text-[11px] text-info">{makeupLabel(session, schedules)}</div>
+                            ) : null}
+                          </td>
+                          <td>
+                            <Badge tone={ATTENDANCE_TONE[record.attendance]}>{record.attendance}</Badge>
+                          </td>
+                          <td className="num text-ink">{record.performanceScore ?? '—'}</td>
+                          <td className="text-ink-soft">{report.materialCovered}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -586,6 +618,17 @@ export function StudentsView() {
                     {type}
                   </option>
                 ))}
+              </select>
+            </label>
+            <label>
+              <span className="ui-label">Status siswa</span>
+              <select
+                className="ui-select"
+                value={studentForm.isActive ? 'active' : 'inactive'}
+                onChange={(e) => setStudentForm({ ...studentForm, isActive: e.target.value === 'active' })}
+              >
+                <option value="active">Aktif</option>
+                <option value="inactive">Tidak aktif</option>
               </select>
             </label>
             <label className="md:col-span-2">

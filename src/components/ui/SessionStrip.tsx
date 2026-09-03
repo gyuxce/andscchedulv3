@@ -2,9 +2,9 @@ import type { SessionStripCell } from '../../lib/classProgress';
 import { formatDay } from '../../lib/dates';
 
 const CELL: Record<SessionStripCell['state'], string> = {
-  completed: 'bg-maple text-white border-maple shadow-[0_6px_14px_rgba(124,77,255,0.22)]',
-  next: 'border-2 border-maple bg-[var(--accent-soft)] text-maple',
-  due: 'border border-rose-400 bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200',
+  completed: 'bg-accent text-on-accent border border-accent',
+  next: 'border-2 border-accent bg-accent-soft text-accent',
+  due: 'border border-danger/50 bg-danger-soft text-danger',
   scheduled: 'border border-line bg-surface text-ink-soft',
   empty: 'border border-dashed border-line bg-transparent text-ink-soft/45'
 };

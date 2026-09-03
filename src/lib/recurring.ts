@@ -25,8 +25,12 @@ export function generateRecurringDates(
 export function addMinutesToTime(startTime: string, minutes: number) {
   const [h, m] = startTime.split(':').map(Number);
   const total = h * 60 + m + minutes;
-  const endH = Math.floor(total / 60) % 24;
-  const endM = total % 60;
+  // Sessions never roll past midnight here; clamp to 23:59 instead of wrapping
+  // with `% 24`, which would produce endTime < startTime and break overlap and
+  // duration math downstream.
+  const clamped = Math.min(Math.max(total, 0), 23 * 60 + 59);
+  const endH = Math.floor(clamped / 60);
+  const endM = clamped % 60;
   return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 }
 

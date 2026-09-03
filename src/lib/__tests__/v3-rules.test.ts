@@ -6,7 +6,8 @@ import { findConflicts } from '../schedule';
 import { getDisciplinaryMetrics } from '../disciplinary';
 import { getSessionWorkflow, isLateJoin } from '../session';
 import { filterAcademicReportRows, hasActiveOrCompletedMakeup } from '../makeup';
-import { generateRecurringDates } from '../recurring';
+import { addMinutesToTime, generateRecurringDates } from '../recurring';
+import { classCompositionError } from '../classComposition';
 import { getClassHealth, getClassProgress, getSessionOrdinal, getSessionStrip, computeProjectedEndDate } from '../classProgress';
 import { buildRecurringPreview } from '../schedulePreview';
 import { buildEomSessionRows, eomRowsToCsv, summarizeEomBySensei } from '../eomReport';
@@ -399,6 +400,24 @@ describe('recurring + session X of X + class health', () => {
     expect(computeProjectedEndDate('c1', schedules)).toBe('2026-10-14');
     expect(teachingClass.plannedEndDate).toBe('2026-09-30');
     expect(getClassHealth(teachingClass, schedules, [], new Date('2026-08-20')).status).toBe('delayed');
+  });
+});
+
+describe('class composition rule', () => {
+  it('requires Semi-Private to have 2–4 students, others unconstrained', () => {
+    expect(classCompositionError('Semi-Private', ['a'])).toBeTruthy();
+    expect(classCompositionError('Semi-Private', ['a', 'b', 'c', 'd', 'e'])).toBeTruthy();
+    expect(classCompositionError('Semi-Private', ['a', 'b'])).toBeNull();
+    expect(classCompositionError('Private', ['a'])).toBeNull();
+    expect(classCompositionError('Group', ['a', 'b', 'c', 'd', 'e', 'f'])).toBeNull();
+  });
+});
+
+describe('addMinutesToTime', () => {
+  it('adds duration and clamps at 23:59 instead of wrapping past midnight', () => {
+    expect(addMinutesToTime('19:00', 90)).toBe('20:30');
+    expect(addMinutesToTime('09:15', 45)).toBe('10:00');
+    expect(addMinutesToTime('23:00', 120)).toBe('23:59');
   });
 });
 

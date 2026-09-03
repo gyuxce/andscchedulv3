@@ -17,8 +17,8 @@ import { PageIntro } from './ui/PageIntro';
 import { WeekNav } from './ui/WeekNav';
 
 const LABEL_TONE = {
-  NEW: 'gold',
-  UNASSIGNED: 'danger',
+  NEW: 'muted',
+  UNASSIGNED: 'gold',
   CUTI: 'sky'
 } as const;
 
@@ -195,6 +195,22 @@ export function SenseiView() {
     });
   }, [visible, schedules, leavePeriods, classMasters, availability, weekAnchor, users, filter]);
 
+  const groups = useMemo(() => {
+    if (filter !== 'all') return [{ key: 'flat', label: '', rows: roster }];
+    const unassignedRows = roster.filter((row) => row.labels.includes('UNASSIGNED'));
+    const newRows = roster.filter(
+      (row) => !row.labels.includes('UNASSIGNED') && row.labels.includes('NEW')
+    );
+    const assignedRows = roster.filter(
+      (row) => !row.labels.includes('UNASSIGNED') && !row.labels.includes('NEW')
+    );
+    return [
+      { key: 'unassigned', label: 'Perlu ditugaskan', rows: unassignedRows },
+      { key: 'new', label: 'Baru — sudah bertugas', rows: newRows },
+      { key: 'assigned', label: 'Bertugas', rows: assignedRows }
+    ].filter((group) => group.rows.length);
+  }, [roster, filter]);
+
   return (
     <div className="space-y-6">
       <PageIntro
@@ -235,55 +251,65 @@ export function SenseiView() {
           { id: 'below_target', label: 'Di bawah 16 jam' }
         ]}
       />
-      <div className="ui-card divide-y divide-line overflow-hidden">
+      <div className="ui-card overflow-hidden">
         {roster.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-ink-soft">Tidak ada Sensei pada filter ini.</p>
         ) : (
-          roster.map(({ item, labels, workload, linked }) => {
-            const unassigned = labels.includes('UNASSIGNED');
-            const ratio = workload.targetHours > 0 ? workload.assignedHours / workload.targetHours : 0;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-elevated ${
-                  unassigned ? 'border-l-4 border-l-rose-400 bg-rose-50/40 dark:bg-rose-500/5' : ''
-                }`}
-                onClick={() => openDetail(item)}
-              >
-                <Avatar name={senseiDisplayName(item)} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="truncate font-bold text-ink">{senseiDisplayName(item)}</span>
-                    <Badge tone={timezoneAbbreviation(item.timezone) === 'WIB' ? 'muted' : 'sky'}>
-                      {timezoneAbbreviation(item.timezone)}
-                    </Badge>
-                    {linked ? <Badge tone="success">Login OK</Badge> : <Badge tone="gold">Belum login</Badge>}
-                    <Badge tone={item.primaryStatus === 'ACTIVE' ? 'success' : 'danger'}>{item.primaryStatus}</Badge>
-                    {labels.map((label) => (
-                      <Badge key={label} tone={LABEL_TONE[label]}>
-                        {label}
-                      </Badge>
-                    ))}
-                  </div>
-                  <p className="truncate text-xs text-ink-soft">{item.email || '—'}</p>
-                  <div className="mt-2 flex items-center gap-3">
-                    <Meter
-                      value={ratio}
-                      tone={unassigned ? 'danger' : ratio < 0.5 ? 'gold' : 'maple'}
-                      className="max-w-xs"
-                    />
-                    <span className="shrink-0 text-xs font-semibold text-ink">
-                      {formatHours(workload.assignedHours)} / {formatHours(workload.targetHours)}
-                    </span>
-                    <span className="hidden text-xs text-ink-soft sm:inline">
-                      sisa {formatHours(workload.remainingHours)} · {formatPercent(workload.utilization)}
-                    </span>
-                  </div>
+          groups.map((group) => (
+            <div key={group.key}>
+              {group.label ? (
+                <div className="flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+                  {group.label}
+                  <span className="text-ink-faint">{group.rows.length}</span>
                 </div>
-              </button>
-            );
-          })
+              ) : null}
+              <div className="divide-y divide-line">
+                {group.rows.map(({ item, labels, workload, linked }) => {
+                  const ratio = workload.targetHours > 0 ? workload.assignedHours / workload.targetHours : 0;
+                  const extraLabels = labels.filter(
+                    (label) => !(group.key === 'unassigned' && label === 'UNASSIGNED') && !(group.key === 'new' && label === 'NEW')
+                  );
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+                      onClick={() => openDetail(item)}
+                    >
+                      <Avatar name={senseiDisplayName(item)} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate font-semibold text-ink">{senseiDisplayName(item)}</span>
+                          {timezoneAbbreviation(item.timezone) !== 'WIB' ? (
+                            <span className="text-[11px] font-medium text-ink-soft">
+                              {timezoneAbbreviation(item.timezone)}
+                            </span>
+                          ) : null}
+                          {!linked ? <span className="text-[11px] text-ink-faint">belum login</span> : null}
+                          {item.primaryStatus !== 'ACTIVE' ? <Badge tone="danger">INACTIVE</Badge> : null}
+                          {extraLabels.map((label) => (
+                            <Badge key={label} tone={LABEL_TONE[label]}>
+                              {label}
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="truncate text-xs text-ink-soft">{item.email || '—'}</p>
+                        <div className="mt-2 flex items-center gap-3">
+                          <Meter value={ratio} tone={ratio < 0.5 ? 'gold' : 'maple'} className="max-w-xs" />
+                          <span className="shrink-0 text-xs font-semibold text-ink">
+                            {formatHours(workload.assignedHours)} / {formatHours(workload.targetHours)}
+                          </span>
+                          <span className="hidden text-xs text-ink-soft sm:inline">
+                            sisa {formatHours(workload.remainingHours)} · {formatPercent(workload.utilization)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))
         )}
       </div>
 
@@ -458,7 +484,7 @@ export function SenseiView() {
           )}
 
           {(creating || detailMode === 'edit') && canEditOps ? (
-            <div className="mt-3 space-y-2 rounded-2xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-500/30 dark:bg-sky-500/10">
+            <div className="mt-3 space-y-2 rounded-xl border border-info/25 bg-info-soft p-3">
               <p className="ui-label">Akun login dashboard</p>
               {hasLogin ? (
                 <p className="text-sm text-ink-soft">
@@ -495,7 +521,7 @@ export function SenseiView() {
                     </label>
                   </div>
                   {loginPassword && loginPassword !== loginPassword2 ? (
-                    <p className="text-xs font-semibold text-rose-700">Password tidak sama.</p>
+                    <p className="text-xs font-semibold text-danger">Password tidak sama.</p>
                   ) : null}
                   {!creating && selected ? (
                     <Button
@@ -519,7 +545,7 @@ export function SenseiView() {
 
           {!creating && selected && detailMode === 'edit' && canEditOps ? (
             <div className="mt-3 space-y-3">
-              <div className="space-y-2 rounded-2xl border border-line p-3">
+              <div className="space-y-2 rounded-xl border border-line p-3">
                 <p className="ui-label">Periode CUTI</p>
                 {selectedLeave ? (
                   <p className="text-xs text-ink-soft">
@@ -555,7 +581,7 @@ export function SenseiView() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-2 rounded-2xl border border-line p-3">
+              <div className="space-y-2 rounded-xl border border-line p-3">
                 <p className="ui-label">Override status utama (dengan alasan)</p>
                 <input className="ui-input" placeholder="Alasan" value={reason} onChange={(e) => setReason(e.target.value)} />
                 <div className="flex flex-wrap gap-2">

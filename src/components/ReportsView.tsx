@@ -143,60 +143,60 @@ export function ReportsView() {
       {showRecap ? (
         <>
           <div className="ui-card overflow-auto">
-            <table className="min-w-[1100px] w-full text-left text-sm">
-              <thead className="bg-paper text-xs uppercase text-ink-soft">
+            <table className="ui-table min-w-[1100px]">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Sensei</th>
-                  <th className="px-3 py-2">Class</th>
-                  <th className="px-3 py-2">Level / Type</th>
-                  <th className="px-3 py-2">Students</th>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Schedule</th>
-                  <th className="px-3 py-2">Clock</th>
-                  <th className="px-3 py-2">Durasi</th>
-                  <th className="px-3 py-2">X/X</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Late / Swap / Cancel</th>
-                  <th className="px-3 py-2">Kind</th>
+                  <th>Sensei</th>
+                  <th>Class</th>
+                  <th>Level / Type</th>
+                  <th>Students</th>
+                  <th>Date</th>
+                  <th>Schedule</th>
+                  <th>Clock</th>
+                  <th>Durasi</th>
+                  <th>X/X</th>
+                  <th>Status</th>
+                  <th>Late / Swap / Cancel</th>
+                  <th>Kind</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="px-3 py-6 text-center text-ink-soft">
+                    <td colSpan={12} className="text-center text-ink-soft">
                       Tidak ada sesi di filter ini.
                     </td>
                   </tr>
                 ) : (
                   rows.map((row, index) => (
-                    <tr key={`${row.senseiId}-${row.date}-${row.startTime}-${index}`} className="border-t border-line">
-                      <td className="px-3 py-2 font-semibold">{row.senseiName}</td>
-                      <td className="px-3 py-2">{row.className}</td>
-                      <td className="px-3 py-2">
+                    <tr key={`${row.senseiId}-${row.date}-${row.startTime}-${index}`}>
+                      <td className="font-medium text-ink">{row.senseiName}</td>
+                      <td className="text-ink-soft">{row.className}</td>
+                      <td>
                         {row.level}
                         <div className="text-xs text-ink-soft">{row.classType}</div>
                       </td>
-                      <td className="px-3 py-2">{row.students || '—'}</td>
-                      <td className="px-3 py-2">{row.date}</td>
-                      <td className="px-3 py-2">
+                      <td className="text-ink-soft">{row.students || '—'}</td>
+                      <td className="whitespace-nowrap tabular-nums text-ink-soft">{row.date}</td>
+                      <td className="whitespace-nowrap tabular-nums text-ink-soft">
                         {row.startTime}–{row.endTime}
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="text-xs text-ink-soft">
                         <div>In {row.clockIn || '—'}</div>
                         <div>Out {row.clockOut || '—'}</div>
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="text-xs text-ink-soft">
                         <div>Plan {row.scheduledMinutes}m</div>
                         <div>Actual {row.actualMinutes == null ? '—' : `${row.actualMinutes}m`}</div>
                       </td>
-                      <td className="px-3 py-2">{row.sessionLabel}</td>
-                      <td className="px-3 py-2">{row.status}</td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="text-ink-soft">{row.sessionLabel}</td>
+                      <td className="text-ink-soft">{row.status}</td>
+                      <td className="text-xs text-ink-soft">
                         {row.lateJoin === 'Yes' ? `Late ${row.lateMinutes || '?'}m` : 'On time'}
                         {row.swap ? <div>{row.swap}</div> : null}
                         {row.cancellation ? <div>{row.cancellation}</div> : null}
                       </td>
-                      <td className="px-3 py-2">{row.sessionKind}</td>
+                      <td className="text-ink-soft">{row.sessionKind}</td>
                     </tr>
                   ))
                 )}
@@ -204,34 +204,36 @@ export function ReportsView() {
             </table>
           </div>
 
-          <div className="ui-card overflow-auto">
-            <p className="border-b border-line px-4 py-3 text-sm font-bold">Summary per Sensei</p>
-            <table className="min-w-[720px] w-full text-left text-sm">
-              <thead className="bg-paper text-xs uppercase text-ink-soft">
-                <tr>
-                  <th className="px-3 py-2">Sensei</th>
-                  <th className="px-3 py-2">Completed</th>
-                  <th className="px-3 py-2">Scheduled hours</th>
-                  <th className="px-3 py-2">Actual hours</th>
-                  <th className="px-3 py-2">Late joins</th>
-                  <th className="px-3 py-2">Sensei swaps</th>
-                  <th className="px-3 py-2">Sensei cancels</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summaries.map((item) => (
-                  <tr key={item.senseiId} className="border-t border-line">
-                    <td className="px-3 py-2 font-semibold">{item.senseiName}</td>
-                    <td className="px-3 py-2">{item.completedSessions}</td>
-                    <td className="px-3 py-2">{item.scheduledHours.toFixed(2)}</td>
-                    <td className="px-3 py-2">{item.actualHours.toFixed(2)}</td>
-                    <td className="px-3 py-2">{item.lateJoins}</td>
-                    <td className="px-3 py-2">{item.senseiInitiatedSwaps}</td>
-                    <td className="px-3 py-2">{item.senseiRelatedCancellations}</td>
+          <div className="ui-card overflow-hidden">
+            <p className="border-b border-line px-4 py-3 text-sm font-semibold">Summary per Sensei</p>
+            <div className="overflow-auto">
+              <table className="ui-table min-w-[720px]">
+                <thead>
+                  <tr>
+                    <th>Sensei</th>
+                    <th className="num">Completed</th>
+                    <th className="num">Scheduled hours</th>
+                    <th className="num">Actual hours</th>
+                    <th className="num">Late joins</th>
+                    <th className="num">Sensei swaps</th>
+                    <th className="num">Sensei cancels</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {summaries.map((item) => (
+                    <tr key={item.senseiId}>
+                      <td className="font-medium text-ink">{item.senseiName}</td>
+                      <td className="num text-ink">{item.completedSessions}</td>
+                      <td className="num text-ink-soft">{item.scheduledHours.toFixed(2)}</td>
+                      <td className="num text-ink-soft">{item.actualHours.toFixed(2)}</td>
+                      <td className="num text-ink-soft">{item.lateJoins}</td>
+                      <td className="num text-ink-soft">{item.senseiInitiatedSwaps}</td>
+                      <td className="num text-ink-soft">{item.senseiRelatedCancellations}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       ) : null}

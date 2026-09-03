@@ -171,7 +171,7 @@ export function TeachingView() {
                 <p className="text-sm text-ink-soft">{studentSummary(featured.session.studentIds, allStudents)}</p>
                 <p className="mt-1 text-sm text-ink-soft">{displayName(allSensei, featured.session.senseiId)}</p>
                 {featured.state === 'ready' ? (
-                  <p className="mt-2 text-sm font-semibold text-maple">
+                  <p className="mt-2 text-sm font-semibold text-accent">
                     {formatCountdown(combineDateTime(featured.session.date, featured.session.startTime), now) ||
                       'Waktunya mulai'}
                   </p>
@@ -215,7 +215,7 @@ export function TeachingView() {
                   >
                     <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${TYPE_RAIL[session.type]}`} />
                     <span className="min-w-0">
-                      <span className="block text-xs font-bold text-ink">
+                      <span className="block text-xs font-semibold text-ink">
                         {session.startTime} · {session.level}
                       </span>
                       <span className="block text-[11px] text-ink-soft">{workflowLabel(state)}</span>
@@ -289,13 +289,13 @@ export function TeachingView() {
               <button
                 key={session.id}
                 type="button"
-                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-elevated"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-2"
                 onClick={() => openSession(session)}
               >
                 <span className={`h-8 w-1.5 shrink-0 rounded-full ${TYPE_RAIL[session.type]}`} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-ink">{session.level}</span>
+                    <span className="font-semibold text-ink">{session.level}</span>
                     <Badge tone={TYPE_TONE[session.type]}>{session.type}</Badge>
                     <Badge tone={WORKFLOW_TONE[state]}>{workflowLabel(state)}</Badge>
                   </div>
@@ -309,7 +309,7 @@ export function TeachingView() {
                 </div>
                 <div className="hidden shrink-0 text-right text-[11px] text-ink-soft sm:block">
                   <div>{log?.clockInAt ? 'In ·' : 'In ○'} {log?.clockOutAt ? 'Out ·' : 'Out ○'}</div>
-                  {log?.lateJoin ? <div className="font-bold text-rose-700">Terlambat</div> : null}
+                  {log?.lateJoin ? <div className="font-bold text-danger">Terlambat</div> : null}
                 </div>
               </button>
             ))
@@ -444,7 +444,7 @@ function SessionDrawer(props: {
         {props.log?.lateJoin ? <Badge tone="danger">Late join</Badge> : null}
         {props.log?.overridden ? <Badge tone="gold">Clock override</Badge> : null}
       </div>
-      <div className="grid gap-2 rounded-2xl border border-line p-3 text-sm md:grid-cols-3">
+      <div className="grid gap-2 rounded-xl border border-line p-3 text-sm md:grid-cols-3">
         <div>
           <p className="ui-label">Durasi jadwal</p>
           <p className="font-semibold">{formatDurationMinutes(scheduled)}</p>
@@ -456,7 +456,7 @@ function SessionDrawer(props: {
         </div>
         <div>
           <p className="ui-label">Selisih</p>
-          <p className={`font-semibold ${variance != null && variance < 0 ? 'text-rose-700' : ''}`}>
+          <p className={`font-semibold ${variance != null && variance < 0 ? 'text-danger' : ''}`}>
             {formatDurationMinutes(variance)}
           </p>
         </div>
@@ -466,7 +466,7 @@ function SessionDrawer(props: {
         {props.canOperate && props.state === 'in_progress' ? <Button tone="primary" onClick={props.onClockOut}>Clock out</Button> : null}
       </div>
       {props.canOverride ? (
-        <div className="grid gap-2 rounded-2xl border border-line p-3 md:grid-cols-3">
+        <div className="grid gap-2 rounded-xl border border-line p-3 md:grid-cols-3">
           <input className="ui-input" type="datetime-local" value={props.clockInAt} onChange={(event) => props.setClockInAt(event.target.value)} />
           <input className="ui-input" type="datetime-local" value={props.clockOutAt} onChange={(event) => props.setClockOutAt(event.target.value)} />
           <input className="ui-input" placeholder="Alasan override" value={props.overrideReason} onChange={(event) => props.setOverrideReason(event.target.value)} />
@@ -474,9 +474,9 @@ function SessionDrawer(props: {
         </div>
       ) : null}
 
-      <h4 className="font-bold">Laporan sesi</h4>
+      <h4 className="font-semibold">Laporan sesi</h4>
       {records.map((record, index) => (
-        <div key={record.studentId} className="grid gap-2 rounded-2xl border border-line p-3 md:grid-cols-4">
+        <div key={record.studentId} className="grid gap-2 rounded-xl border border-line p-3 md:grid-cols-4">
           <div className="font-semibold">{displayName(props.students, record.studentId)}</div>
           <select
             className="ui-select"
@@ -565,7 +565,7 @@ function SessionDrawer(props: {
         </Button>
       ) : null}
       {props.canOverride && props.report ? (
-        <div className="rounded-2xl border border-line p-3">
+        <div className="rounded-xl border border-line p-3">
           <p className="ui-label">Koreksi akademik (audit)</p>
           <input className="ui-input" placeholder="Alasan koreksi" value={academicReason} onChange={(event) => setAcademicReason(event.target.value)} />
           <div className="mt-2 flex flex-wrap gap-2">

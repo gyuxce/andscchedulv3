@@ -156,7 +156,7 @@ export function CommandPalette({
                 <li key={hit.id}>
                   <button
                     type="button"
-                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${
                       index === active ? 'bg-elevated' : 'hover:bg-elevated/70'
                     }`}
                     onMouseEnter={() => setActive(index)}

@@ -44,11 +44,24 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 function parseSettings(rows: Record<string, unknown>[]): AppSettings {
   const byKey = new Map(rows.map((row) => [String(row.key), row.value]));
-  const graceRaw = byKey.get('late_grace_minutes');
-  const grace = typeof graceRaw === 'number' ? graceRaw : Number(graceRaw);
+  const readNumber = (key: string) => {
+    const raw = byKey.get(key);
+    const value = typeof raw === 'number' ? raw : Number(raw);
+    return Number.isFinite(value) ? value : null;
+  };
+
+  const grace = readNumber('late_grace_minutes');
+  const weekly = readNumber('weekly_hour_target');
+  const minAttendance = readNumber('min_attendance_percent');
+
   return {
     ...DEFAULT_SETTINGS,
-    lateGraceMinutes: Number.isFinite(grace) && grace >= 0 ? grace : DEFAULT_SETTINGS.lateGraceMinutes
+    lateGraceMinutes:
+      grace !== null && grace >= 0 ? grace : DEFAULT_SETTINGS.lateGraceMinutes,
+    weeklyHourTarget:
+      weekly !== null && weekly > 0 ? weekly : DEFAULT_SETTINGS.weeklyHourTarget,
+    minAttendancePercent:
+      minAttendance !== null && minAttendance >= 0 && minAttendance <= 100 ? minAttendance : null
   };
 }
 
@@ -92,23 +105,27 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     supabase.from('enrollments').select('*').order('updated_at', { ascending: false })
   ]);
 
-  const firstError = [
-    senseiRes,
-    statusRes,
-    studentsRes,
-    groupsRes,
-    schedulesRes,
-    availabilityRes,
-    logsRes,
-    reportsRes,
-    studentRecordsRes,
-    qaRes,
-    auditRes,
-    profilesRes
-  ].find((result) => result.error);
-
-  if (firstError?.error) {
-    throw new Error(firstError.error.message);
+  // Degrade gracefully: one slow / timed-out table shouldn't blank the whole
+  // dashboard. Only a total failure (can't even read sensei + profiles) throws.
+  const named: Array<[string, { error: { message: string } | null }]> = [
+    ['sensei', senseiRes],
+    ['sensei_status', statusRes],
+    ['students', studentsRes],
+    ['groups', groupsRes],
+    ['schedules', schedulesRes],
+    ['sensei_availability', availabilityRes],
+    ['session_logs', logsRes],
+    ['session_reports', reportsRes],
+    ['session_student_records', studentRecordsRes],
+    ['teaching_qa_scores', qaRes],
+    ['audit_logs', auditRes],
+    ['profiles', profilesRes]
+  ];
+  for (const [name, result] of named) {
+    if (result.error) console.warn(`loadDashboardSnapshot: ${name} — ${result.error.message}`);
+  }
+  if (senseiRes.error && profilesRes.error) {
+    throw new Error(senseiRes.error.message);
   }
 
   const statusBySensei = new Map(
@@ -187,6 +204,16 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot | null>
     enrollments,
     settings
   };
+}
+
+export async function updateProfileRemote(
+  userId: string,
+  patch: { role?: string; status?: string; sensei_id?: string | null }
+) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
+  if (error) throw new Error(error.message);
 }
 
 export async function ensureProfile(userId: string, email: string) {
@@ -325,15 +352,24 @@ export async function upsertSenseiStatusRemote(input: {
 }) {
   const supabase = getSupabase();
   if (!supabase) return;
-  const { error } = await supabase.from('sensei_status').upsert({
+  // Supabase upsert only writes the columns present in the payload (INSERT ... ON
+  // CONFLICT DO UPDATE SET <those columns>). So we deliberately omit leave/join
+  // columns unless the caller passes them — a plain status or profile edit must
+  // not wipe an approved CUTI period that lives on the same row.
+  const row: Record<string, unknown> = {
     sensei_id: input.senseiId,
     primary_status: input.primaryStatus,
-    join_date: input.joinDate || null,
-    leave_start: input.leaveStart ?? null,
-    leave_end: input.leaveEnd ?? null,
     updated_at: new Date().toISOString(),
     updated_by: input.updatedBy || null
-  });
+  };
+  if ('joinDate' in input) {
+    row.join_date = input.joinDate || null;
+  }
+  if ('leaveStart' in input || 'leaveEnd' in input) {
+    row.leave_start = input.leaveStart ?? null;
+    row.leave_end = input.leaveEnd ?? null;
+  }
+  const { error } = await supabase.from('sensei_status').upsert(row);
   if (error) throw new Error(error.message);
 }
 
@@ -359,13 +395,26 @@ export async function upsertSenseiTimezoneRemote(senseiId: string, timezone: Sen
 export async function upsertAppSettingsRemote(settings: AppSettings, updatedBy?: string) {
   const supabase = getSupabase();
   if (!supabase) return;
-  const { error } = await supabase.from('app_settings').upsert({
-    key: 'late_grace_minutes',
-    value: settings.lateGraceMinutes,
-    updated_at: new Date().toISOString(),
-    updated_by: updatedBy || null
-  });
+  const now = new Date().toISOString();
+  const rows = [
+    { key: 'late_grace_minutes', value: settings.lateGraceMinutes },
+    { key: 'weekly_hour_target', value: settings.weeklyHourTarget },
+    // value is JSONB NOT NULL, so a null threshold is stored as "no row" instead.
+    ...(typeof settings.minAttendancePercent === 'number'
+      ? [{ key: 'min_attendance_percent', value: settings.minAttendancePercent }]
+      : [])
+  ].map((row) => ({ ...row, updated_at: now, updated_by: updatedBy || null }));
+
+  const { error } = await supabase.from('app_settings').upsert(rows);
   if (error) throw new Error(error.message);
+
+  if (settings.minAttendancePercent === null) {
+    const { error: deleteError } = await supabase
+      .from('app_settings')
+      .delete()
+      .eq('key', 'min_attendance_percent');
+    if (deleteError) throw new Error(deleteError.message);
+  }
 }
 
 export async function upsertLevelCompletionRemote(completion: LevelCompletion) {
