@@ -10,7 +10,9 @@
     "lint": "tsc -p tsconfig.app.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "remap:v2-csv": "node scripts/remap-v2-csv-ids.mjs"
+    "remap:v2-csv": "node scripts/remap-v2-csv-ids.mjs",
+    "copy:v2": "node scripts/copy-v2-to-v3.mjs",
+    "copy:v2:apply": "node scripts/copy-v2-to-v3.mjs --apply"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

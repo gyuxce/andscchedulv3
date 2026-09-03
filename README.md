@@ -52,6 +52,8 @@ npm run build
 | `schema-rls.sql` | RBAC policies (jalankan ulang setelah schema additive) |
 | `cleanup-demo-data.sql` | Hapus data seed/demo dari project live |
 
+Re-sync data dari V2 (admin masih input di V2): lihat **`MIGRATION-V2-TO-V3.md`**.
+
 ### Buat akun login Sensei dari dashboard
 1. Login sebagai **Super Admin**
 2. **Sensei → + Tambah Sensei** (atau buka Sensei yang sudah ada)

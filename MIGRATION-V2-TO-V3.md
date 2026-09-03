@@ -1,5 +1,36 @@
 # Migrasi data V2 → V3
 
+Admin masih input di **V2** (`DB ANS SCHEDULE & CRMHNZ`). V3 diisi ulang dari V2 dengan **upsert** — baris baru/berubah ikut masuk, Class Master / enrollment / laporan V3 tidak dihapus.
+
+## Re-sync hari ini (disarankan)
+
+1. Copy `.env.copy.example` → `.env.copy`.
+2. Isi 4 nilai dari Supabase → Project Settings → API (pakai **service_role**, bukan anon):
+   - V2 URL + service_role
+   - V3 URL + service_role
+3. Dry-run dulu:
+
+```bash
+node --env-file=.env.copy scripts/copy-v2-to-v3.mjs
+```
+
+4. Kalau host V2 / V3 benar dan angka masuk akal:
+
+```bash
+node --env-file=.env.copy scripts/copy-v2-to-v3.mjs --apply
+```
+
+Yang di-copy: `sensei`, `students`, `groups`, `schedules`, `lesson_trackers`.  
+Yang **tidak** di-copy: Auth/`profiles`, `class_masters`, `enrollments`, `session_reports`, ketersediaan V3.
+
+ID non-UUID di-remap dengan rumus yang sama seperti CSV (`scripts/lib/v2-ids.mjs`), jadi baris yang sudah pernah diimpor tidak dobel. `schedules.class_id` yang sudah tertaut Class Master di V3 **dipertahankan**.
+
+Setelah apply: login dashboard V3 → cek Sensei, Siswa, Jadwal Resmi. V2 jangan dihapus.
+
+---
+
+## Jalur cadangan: impor CSV
+
 Panduan impor dari folder backup CSV `backup-ans-v2` ke **project Supabase V3** (bukan V2).
 
 ## Sebelum mulai
