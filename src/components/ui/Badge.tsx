@@ -1,27 +1,19 @@
 import type { ReactNode } from 'react';
 
 const tones = {
-  maple:
-    'bg-[var(--accent-soft)] text-maple border-violet-200 dark:border-violet-500/25 dark:text-violet-200',
-  pine: 'bg-emerald-50 text-pine border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25',
-  sky: 'bg-sky-50 text-sky border-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/25',
-  gold: 'bg-amber-50 text-[#8a6d12] border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/25',
-  muted: 'bg-surface text-ink-soft border-line',
-  danger: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/25',
-  success:
-    'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25'
+  maple: 'bg-accent-soft text-accent',
+  pine: 'bg-ok-soft text-ok',
+  sky: 'bg-info-soft text-info',
+  gold: 'bg-warn-soft text-warn',
+  muted: 'bg-surface-2 text-ink-soft',
+  danger: 'bg-danger-soft text-danger',
+  success: 'bg-ok-soft text-ok'
 };
 
-export function Badge({
-  children,
-  tone = 'muted'
-}: {
-  children: ReactNode;
-  tone?: keyof typeof tones;
-}) {
+export function Badge({ children, tone = 'muted' }: { children: ReactNode; tone?: keyof typeof tones }) {
   return (
     <span
-      className={`inline-flex h-6 items-center rounded-full border px-2.5 text-[11px] font-semibold tracking-wide ${tones[tone]}`}
+      className={`inline-flex h-6 items-center rounded-full border border-current/20 px-2.5 text-[11px] font-semibold tracking-wide ${tones[tone]}`}
     >
       {children}
     </span>

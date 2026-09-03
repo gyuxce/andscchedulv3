@@ -108,15 +108,23 @@ function formatValue(
   if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak';
   if (Array.isArray(value)) {
     if (field === 'studentIds') {
-      return value.length
-        ? value.map((id) => displayName(lookups.students, String(id))).join(', ')
-        : '—';
+      return value.length ? value.map((id) => displayName(lookups.students, String(id))).join(', ') : '—';
     }
     return value.length ? value.map(String).join(', ') : '—';
   }
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    const preferred = ['level', 'type', 'date', 'startTime', 'endTime', 'status', 'senseiId', 'score', 'attendance'];
+    const preferred = [
+      'level',
+      'type',
+      'date',
+      'startTime',
+      'endTime',
+      'status',
+      'senseiId',
+      'score',
+      'attendance'
+    ];
     const parts = preferred
       .filter((key) => record[key] != null && record[key] !== '')
       .map((key) => `${FIELD_LABELS[key] || key}: ${formatValue(record[key], lookups, key)}`);
@@ -186,50 +194,50 @@ export function AuditView() {
   return (
     <div className="space-y-6">
       <PageIntro kicker="Audit Log" title="Audit log">
-        Koreksi sensitif wajib punya jejak: nilai lama, nilai baru, pelaku, waktu, dan alasan. Soft-delete/archive
-        dipakai, bukan hapus permanen.
+        Koreksi sensitif wajib punya jejak: nilai lama, nilai baru, pelaku, waktu, dan alasan.
+        Soft-delete/archive dipakai, bukan hapus permanen.
       </PageIntro>
       <div className="ui-card overflow-hidden">
         <div className="ui-table-wrap">
-        <table className="w-full text-sm">
-          <thead className="bg-paper/80 text-left text-xs uppercase text-ink-soft">
-            <tr>
-              <th className="px-4 py-3">Waktu</th>
-              <th className="px-4 py-3">Pelaku</th>
-              <th className="px-4 py-3">Aktivitas</th>
-              <th className="px-4 py-3">Alasan</th>
-              <th className="px-4 py-3">Ringkasan perubahan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.length === 0 ? (
+          <table className="ui-table">
+            <thead>
               <tr>
-                <td className="px-4 py-6 text-ink-soft" colSpan={5}>
-                  Belum ada jejak audit.
-                </td>
+                <th>Waktu</th>
+                <th>Pelaku</th>
+                <th>Aktivitas</th>
+                <th>Alasan</th>
+                <th>Ringkasan perubahan</th>
               </tr>
-            ) : (
-              logs.map((log) => (
-                <tr key={log.id} className="border-t border-line align-top">
-                  <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(log.createdAt)}</td>
-                  <td className="px-4 py-3">{log.actorName}</td>
-                  <td className="px-4 py-3">
-                    <Badge tone="sky">{actionLabel(log.action)}</Badge>
-                    <div className="mt-1 text-xs text-ink-soft">{entityLabel(log.entity)}</div>
-                  </td>
-                  <td className="px-4 py-3">{log.reason || '—'}</td>
-                  <td className="px-4 py-3">
-                    <ul className="space-y-1 text-xs leading-relaxed text-ink-soft">
-                      {summarizeChange(log.oldValue, log.newValue, lookups).map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
+            </thead>
+            <tbody>
+              {logs.length === 0 ? (
+                <tr>
+                  <td className="text-ink-soft" colSpan={5}>
+                    Belum ada jejak audit.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                logs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="whitespace-nowrap text-ink-soft">{formatDateTime(log.createdAt)}</td>
+                    <td className="font-medium text-ink">{log.actorName}</td>
+                    <td>
+                      <Badge tone="sky">{actionLabel(log.action)}</Badge>
+                      <div className="mt-1 text-xs text-ink-soft">{entityLabel(log.entity)}</div>
+                    </td>
+                    <td className="text-ink-soft">{log.reason || '—'}</td>
+                    <td>
+                      <ul className="space-y-1 text-xs leading-relaxed text-ink-soft">
+                        {summarizeChange(log.oldValue, log.newValue, lookups).map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

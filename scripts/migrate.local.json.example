@@ -1,0 +1,10 @@
+{
+  "from": {
+    "url": "https://OLD-PROJECT-REF.supabase.co",
+    "serviceKey": "OLD project service_role key (Settings -> API -> service_role, secret)"
+  },
+  "to": {
+    "url": "https://mbxwpfnmludrgcaotabh.supabase.co",
+    "serviceKey": "NEW project service_role key"
+  }
+}

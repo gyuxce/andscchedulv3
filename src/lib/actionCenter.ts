@@ -192,3 +192,31 @@ export function buildActionItems(input: {
   const rank = { high: 0, medium: 1, low: 2 };
   return items.sort((a, b) => rank[a.severity] - rank[b.severity]);
 }
+
+const SEVERITY_RANK = { high: 0, medium: 1, low: 2 } as const;
+
+export interface ActionGroup {
+  kind: ActionItem['kind'];
+  count: number;
+  /** Highest severity present in the group. */
+  severity: ActionItem['severity'];
+  items: ActionItem[];
+}
+
+/** Collapse a flat action list into one card per kind, worst-first. */
+export function groupActionItems(items: ActionItem[]): ActionGroup[] {
+  const map = new Map<ActionItem['kind'], ActionGroup>();
+  for (const item of items) {
+    const group = map.get(item.kind);
+    if (!group) {
+      map.set(item.kind, { kind: item.kind, count: 1, severity: item.severity, items: [item] });
+      continue;
+    }
+    group.count += 1;
+    group.items.push(item);
+    if (SEVERITY_RANK[item.severity] < SEVERITY_RANK[group.severity]) group.severity = item.severity;
+  }
+  return [...map.values()].sort(
+    (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || b.count - a.count
+  );
+}

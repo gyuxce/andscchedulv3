@@ -1,10 +1,4 @@
-import type {
-  ClassMaster,
-  ClassSession,
-  Enrollment,
-  EnrollmentStatus,
-  SessionReport
-} from '../types';
+import type { ClassMaster, ClassSession, Enrollment, EnrollmentStatus, SessionReport } from '../types';
 import { toDateKey } from './dates';
 
 function todayIsoDate() {
@@ -15,11 +9,7 @@ export function isCurrentEnrollmentStatus(status: EnrollmentStatus) {
   return status === 'active' || status === 'ending_soon';
 }
 
-export function findActiveEnrollment(
-  enrollments: Enrollment[],
-  studentId: string,
-  level?: string
-) {
+export function findActiveEnrollment(enrollments: Enrollment[], studentId: string, level?: string) {
   return enrollments.find(
     (item) =>
       item.studentId === studentId &&
@@ -83,7 +73,8 @@ export function deriveEnrollmentDisplayStatus(
 
   if (required > 0 && remaining != null && remaining > 0 && remaining <= 2) return 'ending_soon';
   if (plannedSoon && (remaining == null || remaining > 0)) return 'ending_soon';
-  if (required > 0 && completed >= required) return enrollment.status === 'ending_soon' ? 'ending_soon' : 'active';
+  if (required > 0 && completed >= required)
+    return enrollment.status === 'ending_soon' ? 'ending_soon' : 'active';
   return enrollment.status === 'ending_soon' ? 'active' : enrollment.status;
 }
 

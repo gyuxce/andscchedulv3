@@ -31,7 +31,9 @@ export function ProgressRing({
       </svg>
       <div className="absolute text-center">
         <div className="text-lg font-bold leading-none text-ink">{label ?? `${value}/${max || 0}`}</div>
-        {hint ? <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">{hint}</div> : null}
+        {hint ? (
+          <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">{hint}</div>
+        ) : null}
       </div>
     </div>
   );

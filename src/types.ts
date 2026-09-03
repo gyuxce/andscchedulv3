@@ -98,12 +98,7 @@ export interface LevelCompletion {
 }
 
 export type EnrollmentStatus =
-  | 'active'
-  | 'ending_soon'
-  | 'completed'
-  | 'stopped'
-  | 'transferred'
-  | 'cancelled';
+  'active' | 'ending_soon' | 'completed' | 'stopped' | 'transferred' | 'cancelled';
 
 export type PaymentStatus = 'LUNAS' | 'CICILAN' | 'BELUM_BAYAR';
 

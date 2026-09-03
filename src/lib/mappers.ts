@@ -49,10 +49,7 @@ export function mapSensei(row: Record<string, unknown>): Sensei {
   };
 }
 
-export function mapSenseiWithStatus(
-  sensei: Sensei,
-  statusRow?: Record<string, unknown> | null
-): Sensei {
+export function mapSenseiWithStatus(sensei: Sensei, statusRow?: Record<string, unknown> | null): Sensei {
   if (!statusRow) return sensei;
   return {
     ...sensei,
@@ -99,8 +96,7 @@ export function mapSchedule(row: Record<string, unknown>): ClassSession {
     isExtra: Boolean(row.is_extra),
     cancellationReason: row.cancellation_reason ? String(row.cancellation_reason) : null,
     cancellationInitiator: (row.cancellation_initiator as ClassSession['cancellationInitiator']) || null,
-    replacementSecured:
-      typeof row.replacement_secured === 'boolean' ? row.replacement_secured : null,
+    replacementSecured: typeof row.replacement_secured === 'boolean' ? row.replacement_secured : null,
     originalSenseiId: row.original_sensei_id ? String(row.original_sensei_id) : null,
     swapInitiator: (row.swap_initiator as ClassSession['swapInitiator']) || null,
     swapReason: row.swap_reason ? String(row.swap_reason) : null,
@@ -172,8 +168,7 @@ export function mapSessionReport(
     students: students.map((item) => ({
       studentId: String(item.student_id),
       attendance: (item.attendance as AttendanceStatus) || 'Present',
-      performanceScore:
-        item.performance_score == null ? null : Number(item.performance_score),
+      performanceScore: item.performance_score == null ? null : Number(item.performance_score),
       performanceNote: item.performance_note ? String(item.performance_note) : undefined
     })),
     materialCovered: String(row.material_covered || ''),
@@ -262,9 +257,7 @@ export function mapEnrollment(row: Record<string, unknown>): Enrollment {
   ) as EnrollmentStatus;
   const paymentRaw = row.payment_status ? String(row.payment_status) : null;
   const paymentStatus =
-    paymentRaw === 'LUNAS' || paymentRaw === 'CICILAN' || paymentRaw === 'BELUM_BAYAR'
-      ? paymentRaw
-      : null;
+    paymentRaw === 'LUNAS' || paymentRaw === 'CICILAN' || paymentRaw === 'BELUM_BAYAR' ? paymentRaw : null;
   return {
     id: String(row.id),
     studentId: String(row.student_id),
@@ -277,13 +270,9 @@ export function mapEnrollment(row: Record<string, unknown>): Enrollment {
     endDate: row.end_date ? String(row.end_date).slice(0, 10) : null,
     plannedEndDate: row.planned_end_date ? String(row.planned_end_date).slice(0, 10) : null,
     requiredMeetings:
-      row.required_meetings == null || row.required_meetings === ''
-        ? null
-        : Number(row.required_meetings),
+      row.required_meetings == null || row.required_meetings === '' ? null : Number(row.required_meetings),
     sessionsCompleted:
-      row.sessions_completed == null || row.sessions_completed === ''
-        ? null
-        : Number(row.sessions_completed),
+      row.sessions_completed == null || row.sessions_completed === '' ? null : Number(row.sessions_completed),
     paymentStatus,
     paymentRemark: row.payment_remark ? String(row.payment_remark) : undefined,
     enrollmentRemark: row.enrollment_remark ? String(row.enrollment_remark) : undefined,

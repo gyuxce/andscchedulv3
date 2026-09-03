@@ -32,8 +32,7 @@ export function hasActiveAssignment(
 ) {
   if (
     classMasters.some(
-      (item) =>
-        item.senseiId === senseiId && (item.status === 'active' || item.status === 'ready')
+      (item) => item.senseiId === senseiId && (item.status === 'active' || item.status === 'ready')
     )
   ) {
     return true;

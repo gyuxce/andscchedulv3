@@ -1,19 +1,30 @@
+import { useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import type { ClassSession } from '../../types';
 import { isToday, timeToMinutes, toDateKey } from '../../lib/dates';
-import { displayName, TYPE_RAIL, TYPE_TILE } from '../../lib/display';
+import { displayName, senseiRail, TYPE_TILE } from '../../lib/display';
 import { isMakeupSession } from '../../lib/makeup';
 import { useNow } from '../../lib/useNow';
 
-const CAL_START = 7 * 60;
-const CAL_END = 21 * 60;
-const PX_PER_HOUR = 52;
-const HEIGHT = ((CAL_END - CAL_START) / 60) * PX_PER_HOUR;
-const HOURS = Array.from({ length: 15 }, (_, index) => 7 + index);
+const PX_PER_HOUR = 54;
 
-function topFor(time: string) {
-  return ((Math.max(timeToMinutes(time), CAL_START) - CAL_START) / 60) * PX_PER_HOUR;
+/** Fit the visible window to the sessions actually on screen, so empty early
+ *  hours don't waste vertical space. Falls back to a sane daytime range. */
+function calBounds(sessions: ClassSession[]) {
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const session of sessions) {
+    min = Math.min(min, timeToMinutes(session.startTime));
+    max = Math.max(max, timeToMinutes(session.endTime));
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    min = 8 * 60;
+    max = 20 * 60;
+  }
+  const start = Math.max(6, Math.floor(min / 60)) * 60;
+  const end = Math.max(start + 120, Math.min(22, Math.ceil(max / 60)) * 60);
+  return { start, end };
 }
 
 function heightFor(start: string, end: string) {
@@ -43,15 +54,39 @@ export function WeekCalendar({
   sessions,
   sensei,
   conflictIds,
-  onSelect
+  onSelect,
+  focus
 }: {
   days: Date[];
   sessions: ClassSession[];
   sensei: Array<{ id: string; name: string }>;
   conflictIds: Set<string>;
   onSelect: (session: ClassSession) => void;
+  /** Bump `tick` to scroll a session into view and pulse it (e.g. from the conflict chip). */
+  focus?: { id: string; tick: number } | null;
 }) {
   const now = useNow(60_000);
+  const cellRefs = useRef(new Map<string, HTMLButtonElement>());
+
+  useEffect(() => {
+    if (!focus) return;
+    const el = cellRefs.current.get(focus.id);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+    el.classList.remove('cal-pulse');
+    void el.offsetWidth;
+    el.classList.add('cal-pulse');
+    const timer = window.setTimeout(() => el.classList.remove('cal-pulse'), 1600);
+    return () => window.clearTimeout(timer);
+  }, [focus]);
+  const { start: CAL_START, end: CAL_END } = useMemo(() => calBounds(sessions), [sessions]);
+  const HEIGHT = ((CAL_END - CAL_START) / 60) * PX_PER_HOUR;
+  const HOURS = useMemo(
+    () => Array.from({ length: Math.round((CAL_END - CAL_START) / 60) + 1 }, (_, i) => CAL_START / 60 + i),
+    [CAL_START, CAL_END]
+  );
+  const topFor = (time: string) =>
+    ((Math.max(timeToMinutes(time), CAL_START) - CAL_START) / 60) * PX_PER_HOUR;
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const showNow = nowMinutes >= CAL_START && nowMinutes <= CAL_END;
   const nowTop = ((nowMinutes - CAL_START) / 60) * PX_PER_HOUR;
@@ -68,13 +103,15 @@ export function WeekCalendar({
             <div
               key={day.toISOString()}
               className={`sticky top-0 z-10 border-b border-l border-line px-2 py-3 text-center ${
-                today ? 'bg-[var(--accent-soft)]' : 'bg-surface'
+                today ? 'border-b-2 border-b-accent bg-accent-soft' : 'bg-surface'
               }`}
             >
               <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
                 {format(day, 'EEE', { locale: localeId })}
               </div>
-              <div className={`text-sm font-bold ${today ? 'text-maple' : 'text-ink'}`}>{format(day, 'd')}</div>
+              <div className={`text-sm font-bold ${today ? 'text-accent' : 'text-ink'}`}>
+                {format(day, 'd')}
+              </div>
             </div>
           );
         })}
@@ -96,12 +133,20 @@ export function WeekCalendar({
           const today = isToday(date);
           const daySessions = sessions.filter((session) => session.date === date);
           const { lane, count } = lanesFor(daySessions);
+          // Cap the columns so a heavily overbooked day (often migrated data) stays
+          // readable — beyond the cap, blocks stack instead of shrinking to slivers.
+          const cols = Math.min(count, 6);
           return (
             <div
               key={date}
-              className={`relative border-l border-line ${today ? 'bg-[var(--accent-soft)]/35' : ''}`}
+              className={`relative border-l border-line ${today ? 'bg-surface-2' : ''}`}
               style={{ height: HEIGHT }}
             >
+              {count > cols ? (
+                <span className="absolute right-1 top-1 z-30 rounded bg-danger-soft px-1 py-0.5 text-[9px] font-bold text-danger">
+                  {count} paralel
+                </span>
+              ) : null}
               {HOURS.map((hour) => (
                 <div
                   key={hour}
@@ -111,50 +156,65 @@ export function WeekCalendar({
               ))}
               {today && showNow ? (
                 <div className="absolute inset-x-0 z-20" style={{ top: nowTop }}>
-                  <div className="absolute -left-1 h-2 w-2 -translate-y-1/2 rounded-full bg-rose-500" />
-                  <div className="h-px bg-rose-500" />
+                  <div className="absolute -left-1 h-2 w-2 -translate-y-1/2 rounded-full bg-danger" />
+                  <div className="h-px bg-danger" />
                 </div>
               ) : null}
               {daySessions.map((session) => {
                 const index = lane.get(session.id) ?? 0;
-                const width = 100 / count;
+                const col = index % cols;
+                const width = 100 / cols;
                 const conflict = conflictIds.has(session.id);
                 const makeup = isMakeupSession(session);
                 return (
                   <button
                     key={session.id}
                     type="button"
+                    title={`${session.level} · ${session.startTime}–${session.endTime} · ${displayName(sensei, session.senseiId)}`}
+                    ref={(el) => {
+                      if (el) cellRefs.current.set(session.id, el);
+                      else cellRefs.current.delete(session.id);
+                    }}
                     onClick={() => onSelect(session)}
-                    className={`absolute z-10 overflow-hidden rounded-xl border text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] ${
+                    className={`absolute overflow-hidden rounded-lg border text-left transition-colors hover:border-line-strong ${
                       session.status === 'cancelled'
-                        ? 'border-rose-200 bg-rose-50/80 opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10'
+                        ? 'border-line bg-surface-2 opacity-60'
                         : conflict
-                          ? 'border-rose-400 bg-rose-50 ring-2 ring-rose-300 dark:border-rose-400/60 dark:bg-rose-500/15'
+                          ? 'border-danger bg-danger-soft ring-1 ring-danger/40'
                           : makeup
-                            ? 'border-dashed border-sky-400 bg-sky-50 dark:bg-sky-500/10'
+                            ? 'border-dashed border-info/60 bg-info-soft'
                             : session.isExtra
-                              ? 'border-amber-300 bg-amber-50 dark:bg-amber-500/10'
+                              ? 'border-warn/50 bg-warn-soft'
                               : TYPE_TILE[session.type]
                     }`}
                     style={{
                       top: topFor(session.startTime),
                       height: Math.max(heightFor(session.startTime, session.endTime), 44),
-                      left: `calc(${index * width}% + 4px)`,
-                      width: `calc(${width}% - 8px)`
+                      left: `calc(${col * width}% + 4px)`,
+                      width: `calc(${width}% - 8px)`,
+                      zIndex: 10 + Math.min(index, 8)
                     }}
                   >
-                    <span className={`absolute inset-y-0 left-0 w-1 ${TYPE_RAIL[session.type]}`} />
+                    <span className={`absolute inset-y-0 left-0 w-1 ${senseiRail(session.senseiId)}`} />
                     <span className="block p-1.5 pl-2.5">
-                      <span className="block truncate text-[11px] font-bold leading-tight text-ink">{session.level}</span>
+                      <span className="block truncate text-[11px] font-bold leading-tight text-ink">
+                        {session.level}
+                      </span>
                       <span className="block truncate text-[10px] text-ink-soft">
                         {session.startTime}–{session.endTime}
                       </span>
                       <span className="block truncate text-[10px] text-ink-soft">
                         {displayName(sensei, session.senseiId)}
                       </span>
-                      {conflict ? <span className="text-[9px] font-bold uppercase text-rose-700">Konflik</span> : null}
-                      {makeup ? <span className="text-[9px] font-bold uppercase text-sky-700">Makeup</span> : null}
-                      {session.isExtra ? <span className="text-[9px] font-bold uppercase text-amber-800">Extra</span> : null}
+                      {conflict ? (
+                        <span className="text-[9px] font-bold uppercase text-danger">Konflik</span>
+                      ) : null}
+                      {makeup ? (
+                        <span className="text-[9px] font-bold uppercase text-info">Makeup</span>
+                      ) : null}
+                      {session.isExtra ? (
+                        <span className="text-[9px] font-bold uppercase text-warn">Extra</span>
+                      ) : null}
                     </span>
                   </button>
                 );

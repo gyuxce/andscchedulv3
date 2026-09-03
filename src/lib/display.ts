@@ -1,11 +1,13 @@
 import type { AttendanceStatus, ClassType, SessionWorkflowState } from '../types';
 
+// Class type is identified by its label, not by colour — colour is reserved for
+// state (semantic) so the UI reads as one system instead of a palette per screen.
 export const TYPE_TONE: Record<ClassType, 'gold' | 'pine' | 'maple' | 'sky' | 'muted'> = {
-  Private: 'gold',
-  'Semi-Private': 'pine',
-  Group: 'maple',
-  'Kids Private': 'sky',
-  'Kids Semi Private': 'sky'
+  Private: 'muted',
+  'Semi-Private': 'muted',
+  Group: 'muted',
+  'Kids Private': 'muted',
+  'Kids Semi Private': 'muted'
 };
 
 export const WORKFLOW_TONE: Record<SessionWorkflowState, 'muted' | 'sky' | 'gold' | 'success' | 'danger'> = {
@@ -29,20 +31,40 @@ export function displayName(list: Array<{ id: string; name: string }>, id?: stri
 }
 
 export const TYPE_RAIL: Record<ClassType, string> = {
-  Private: 'bg-amber-400',
-  'Semi-Private': 'bg-emerald-500',
-  Group: 'bg-maple',
-  'Kids Private': 'bg-sky-400',
-  'Kids Semi Private': 'bg-sky-400'
+  Private: 'bg-line-strong',
+  'Semi-Private': 'bg-line-strong',
+  Group: 'bg-line-strong',
+  'Kids Private': 'bg-line-strong',
+  'Kids Semi Private': 'bg-line-strong'
 };
 
 export const TYPE_TILE: Record<ClassType, string> = {
-  Private: 'bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/30',
-  'Semi-Private': 'bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30',
-  Group: 'bg-[var(--accent-soft)] border-violet-200 dark:border-violet-500/30',
-  'Kids Private': 'bg-sky-50 border-sky-200 dark:bg-sky-500/10 dark:border-sky-500/30',
-  'Kids Semi Private': 'bg-sky-50 border-sky-200 dark:bg-sky-500/10 dark:border-sky-500/30'
+  Private: 'bg-surface border-line',
+  'Semi-Private': 'bg-surface border-line',
+  Group: 'bg-surface border-line',
+  'Kids Private': 'bg-surface border-line',
+  'Kids Semi Private': 'bg-surface border-line'
 };
+
+const CAL_RAILS = [
+  'bg-[var(--cal-1)]',
+  'bg-[var(--cal-2)]',
+  'bg-[var(--cal-3)]',
+  'bg-[var(--cal-4)]',
+  'bg-[var(--cal-5)]',
+  'bg-[var(--cal-6)]'
+];
+
+/** Deterministic low-chroma rail colour per Sensei, so a Sensei's sessions read
+ *  as one visual thread across the week without flooding blocks with colour. */
+export function senseiRail(senseiId?: string | null): string {
+  if (!senseiId) return 'bg-line-strong';
+  let hash = 0;
+  for (let i = 0; i < senseiId.length; i += 1) {
+    hash = (hash * 31 + senseiId.charCodeAt(i)) >>> 0;
+  }
+  return CAL_RAILS[hash % CAL_RAILS.length];
+}
 
 export function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);

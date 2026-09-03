@@ -41,15 +41,16 @@ export function StudentPicker({
           filtered.map((student) => {
             const checked = value.includes(student.id);
             return (
-              <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-paper">
+              <label
+                key={student.id}
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-paper"
+              >
                 <input
                   type="checkbox"
                   disabled={disabled}
                   checked={checked}
                   onChange={() =>
-                    onChange(
-                      checked ? value.filter((id) => id !== student.id) : [...value, student.id]
-                    )
+                    onChange(checked ? value.filter((id) => id !== student.id) : [...value, student.id])
                   }
                 />
                 <span className="text-sm">
@@ -64,9 +65,7 @@ export function StudentPicker({
           })
         )}
       </div>
-      {value.length > 0 ? (
-        <p className="text-xs text-ink-soft">{value.length} siswa dipilih</p>
-      ) : null}
+      {value.length > 0 ? <p className="text-xs text-ink-soft">{value.length} siswa dipilih</p> : null}
     </div>
   );
 }

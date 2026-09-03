@@ -27,8 +27,10 @@ export function systemTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+/** Dark is the product default; the OS setting only applies once the user has
+ *  explicitly chosen a theme (which then persists). */
 export function resolveTheme(): Theme {
-  return readStoredTheme() ?? systemTheme();
+  return readStoredTheme() ?? 'dark';
 }
 
 export function applyTheme(theme: Theme) {

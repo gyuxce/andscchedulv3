@@ -4,10 +4,7 @@ import { toDateKey } from './dates';
 /** Non-cancelled academic calendar sessions (excludes Extra meetings). */
 export function classCalendarSessions(classId: string, schedules: ClassSession[]) {
   return schedules
-    .filter(
-      (session) =>
-        session.classId === classId && session.status !== 'cancelled' && !session.isExtra
-    )
+    .filter((session) => session.classId === classId && session.status !== 'cancelled' && !session.isExtra)
     .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
 }
 
@@ -100,13 +97,7 @@ export function computeProjectedEndDate(classId: string, schedules: ClassSession
   return calendar[calendar.length - 1]?.date ?? null;
 }
 
-export type ClassHealthStatus =
-  | 'on_track'
-  | 'ending_soon'
-  | 'delayed'
-  | 'overdue'
-  | 'completed'
-  | 'inactive';
+export type ClassHealthStatus = 'on_track' | 'ending_soon' | 'delayed' | 'overdue' | 'completed' | 'inactive';
 
 export function getClassHealth(
   teachingClass: ClassMaster,
@@ -124,13 +115,13 @@ export function getClassHealth(
 
   const today = now.toISOString().slice(0, 10);
   const plannedEnd = teachingClass.plannedEndDate;
-  const projectedEnd =
-    teachingClass.projectedEndDate || computeProjectedEndDate(teachingClass.id, schedules);
+  const projectedEnd = teachingClass.projectedEndDate || computeProjectedEndDate(teachingClass.id, schedules);
 
   if (plannedEnd && plannedEnd < today && progress.remaining > 0) {
     return {
       status: 'overdue',
-      detail: `Original plan ${plannedEnd} lewat · sisa ${progress.remaining} sesi` +
+      detail:
+        `Original plan ${plannedEnd} lewat · sisa ${progress.remaining} sesi` +
         (projectedEnd ? ` · projected ${projectedEnd}` : '')
     };
   }
@@ -142,12 +133,7 @@ export function getClassHealth(
     };
   }
 
-  if (
-    projectedEnd &&
-    plannedEnd &&
-    projectedEnd > plannedEnd &&
-    progress.remaining > 0
-  ) {
+  if (projectedEnd && plannedEnd && projectedEnd > plannedEnd && progress.remaining > 0) {
     return {
       status: 'delayed',
       detail: `Original ${plannedEnd} · projected ${projectedEnd} · ${progress.completed}/${progress.required}`

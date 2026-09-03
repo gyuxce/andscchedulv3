@@ -20,13 +20,7 @@ type Hit = {
   tab: TabId;
 };
 
-export function CommandPalette({
-  open,
-  onClose
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const currentUser = useDashboardStore((state) => state.currentUser);
   const setTab = useDashboardStore((state) => state.setTab);
   const allSensei = useDashboardStore((state) => state.sensei);
@@ -36,7 +30,7 @@ export function CommandPalette({
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const tabs = currentUser ? NAV_BY_ROLE[currentUser.role] : [];
+  const tabs = useMemo(() => (currentUser ? NAV_BY_ROLE[currentUser.role] : []), [currentUser]);
   const senseiList = sensei.length ? sensei : allSensei;
   const studentList = students.length ? students : allStudents;
   const today = toDateKey(new Date());
@@ -133,7 +127,11 @@ export function CommandPalette({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
-      <button type="button" className="absolute inset-0 bg-[var(--overlay)] backdrop-blur-[2px]" onClick={onClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-[var(--overlay)] backdrop-blur-[2px]"
+        onClick={onClose}
+      />
       <div className="relative z-10 w-full max-w-xl overflow-hidden rounded-[28px] border border-line bg-surface shadow-[var(--shadow-lift)]">
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search size={16} className="text-ink-soft" />
@@ -156,7 +154,7 @@ export function CommandPalette({
                 <li key={hit.id}>
                   <button
                     type="button"
-                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${
                       index === active ? 'bg-elevated' : 'hover:bg-elevated/70'
                     }`}
                     onMouseEnter={() => setActive(index)}

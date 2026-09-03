@@ -10,6 +10,7 @@ import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { mapProfile } from '../lib/mappers';
 import { hasActiveOrCompletedMakeup } from '../lib/makeup';
 import { createAuthLogin } from '../lib/createAuthLogin';
+import { classCompositionError } from '../lib/classComposition';
 import { computeProjectedEndDate } from '../lib/classProgress';
 import { addMinutesToTime, generateRecurringDates, suggestPlannedEndDate } from '../lib/recurring';
 import { previewConflicts, buildRecurringPreview } from '../lib/schedulePreview';
@@ -29,6 +30,7 @@ import {
   upsertEnrollmentRemote,
   upsertSessionReportRemote,
   upsertStudentRemote,
+  updateProfileRemote,
   writeAudit
 } from '../services/supabaseData';
 import { ensureClassEnrollments, progressEnrollmentJourney } from '../lib/enrollment';
@@ -167,12 +169,7 @@ interface DashboardStore extends DashboardSnapshot {
     attendance: AttendanceStatus,
     reason: string
   ) => void;
-  overridePerformance: (
-    reportId: string,
-    studentId: string,
-    score: number,
-    reason: string
-  ) => void;
+  overridePerformance: (reportId: string, studentId: string, score: number, reason: string) => void;
   reviewRecording: (reportId: string, notes: string) => void;
   upsertQaScore: (senseiId: string, month: string, score: number, notes: string) => void;
   overrideSenseiStatus: (senseiId: string, status: 'ACTIVE' | 'INACTIVE', reason: string) => void;
@@ -184,7 +181,9 @@ interface DashboardStore extends DashboardSnapshot {
     reason: string
   ) => boolean;
   upsertStudent: (input: Omit<Student, 'id'> & { id?: string }) => string | null;
-  upsertEnrollment: (input: Omit<Enrollment, 'id' | 'updatedAt' | 'updatedBy'> & { id?: string }) => string | null;
+  upsertEnrollment: (
+    input: Omit<Enrollment, 'id' | 'updatedAt' | 'updatedBy'> & { id?: string }
+  ) => string | null;
   updateSettings: (patch: Partial<AppSettings>) => void;
   completeLevel: (input: {
     studentId: string;
@@ -210,6 +209,10 @@ interface DashboardStore extends DashboardSnapshot {
     senseiId?: string;
   }) => Promise<boolean>;
   upsertUser: (user: Omit<UserAccount, 'id'> & { id?: string }) => void;
+  updateUser: (
+    userId: string,
+    patch: { role?: AppRole; status?: UserStatus; senseiId?: string | null }
+  ) => Promise<boolean>;
 }
 
 function actor(state: DashboardStore) {
@@ -408,7 +411,7 @@ export const useDashboardStore = create<DashboardStore>()(
           id,
           senseiId: resolvedSenseiId,
           date: slot.pattern === 'specific_date' ? slot.date || null : null,
-          weekday: slot.pattern === 'weekly' ? slot.weekday ?? null : null
+          weekday: slot.pattern === 'weekly' ? (slot.weekday ?? null) : null
         };
         set((current) => {
           const exists = current.availability.some((item) => item.id === id);
@@ -446,6 +449,11 @@ export const useDashboardStore = create<DashboardStore>()(
       },
       createClass: (input, reason) => {
         const state = get();
+        const compositionError = classCompositionError(input.type, input.studentIds);
+        if (compositionError) {
+          toast.error(compositionError);
+          return false;
+        }
         if (input.makeupOfSessionId) {
           const original = state.schedules.find((item) => item.id === input.makeupOfSessionId);
           if (!original) {
@@ -514,11 +522,14 @@ export const useDashboardStore = create<DashboardStore>()(
           current.classMasters = classMasters;
           return { schedules, classMasters, auditLogs: current.auditLogs };
         });
-        void safeRemote(async () => {
-          await upsertScheduleRemote(session);
-          if (patchedOriginal) await upsertScheduleRemote(patchedOriginal);
-          if (patchedClass) await upsertClassMasterRemote(patchedClass);
-        }, input.makeupOfSessionId ? 'Simpan makeup' : input.isExtra ? 'Simpan extra meeting' : 'Simpan kelas');
+        void safeRemote(
+          async () => {
+            await upsertScheduleRemote(session);
+            if (patchedOriginal) await upsertScheduleRemote(patchedOriginal);
+            if (patchedClass) await upsertClassMasterRemote(patchedClass);
+          },
+          input.makeupOfSessionId ? 'Simpan makeup' : input.isExtra ? 'Simpan extra meeting' : 'Simpan kelas'
+        );
         toast.success(
           input.makeupOfSessionId
             ? 'Makeup class ditambahkan dan tertaut ke sesi asli'
@@ -536,6 +547,11 @@ export const useDashboardStore = create<DashboardStore>()(
         }
         if (!input.senseiId || input.studentIds.length === 0) {
           toast.error('Sensei dan minimal 1 siswa wajib');
+          return false;
+        }
+        const recurringCompositionError = classCompositionError(input.type, input.studentIds);
+        if (recurringCompositionError) {
+          toast.error(recurringCompositionError);
           return false;
         }
         if (input.weekdays.length === 0) {
@@ -634,9 +650,7 @@ export const useDashboardStore = create<DashboardStore>()(
           for (const enrollment of ensured.changed) await upsertEnrollmentRemote(enrollment);
           for (const session of created) await upsertScheduleRemote(session);
         }, 'Simpan kelas & jadwal berulang');
-        toast.success(
-          `1 kelas + ${created.length} sesi disimpan (${preview[0]?.date} → ${plannedEnd})`
-        );
+        toast.success(`1 kelas + ${created.length} sesi disimpan (${preview[0]?.date} → ${plannedEnd})`);
         return true;
       },
       createExtraSession: (input, reason) => {
@@ -655,6 +669,11 @@ export const useDashboardStore = create<DashboardStore>()(
           updatedAt: new Date().toISOString(),
           updatedBy: state.currentUser?.name
         };
+        const editCompositionError = classCompositionError(next.type, next.studentIds);
+        if (editCompositionError) {
+          toast.error(editCompositionError);
+          return false;
+        }
         if (wouldConflict(state.schedules, next)) {
           toast.error('Perubahan menyebabkan konflik jadwal');
           return false;
@@ -812,9 +831,7 @@ export const useDashboardStore = create<DashboardStore>()(
         let savedLog = null as ReturnType<typeof get>['sessionLogs'][number] | null;
         set((state) => {
           const nextLogs = state.sessionLogs.map((item) =>
-            item.scheduleId === scheduleId
-              ? { ...item, clockOutAt: at ?? new Date().toISOString() }
-              : item
+            item.scheduleId === scheduleId ? { ...item, clockOutAt: at ?? new Date().toISOString() } : item
           );
           savedLog = nextLogs.find((item) => item.scheduleId === scheduleId) || null;
           return { sessionLogs: nextLogs };
@@ -962,16 +979,15 @@ export const useDashboardStore = create<DashboardStore>()(
       reviewRecording: (reportId, notes) => {
         let nextReport: SessionReport | null = null;
         set((state) => {
-          nextReport =
-            state.sessionReports.find((item) => item.id === reportId)
-              ? {
-                  ...state.sessionReports.find((item) => item.id === reportId)!,
-                  qaReviewStatus: 'Reviewed' as const,
-                  qaReviewerId: state.currentUser?.id,
-                  qaReviewedAt: new Date().toISOString(),
-                  qaReviewNotes: notes
-                }
-              : null;
+          nextReport = state.sessionReports.find((item) => item.id === reportId)
+            ? {
+                ...state.sessionReports.find((item) => item.id === reportId)!,
+                qaReviewStatus: 'Reviewed' as const,
+                qaReviewerId: state.currentUser?.id,
+                qaReviewedAt: new Date().toISOString(),
+                qaReviewNotes: notes
+              }
+            : null;
           return {
             sessionReports: state.sessionReports.map((item) =>
               item.id === reportId && nextReport ? nextReport : item
@@ -1251,16 +1267,13 @@ export const useDashboardStore = create<DashboardStore>()(
           pushAudit(state, {
             action: 'update_app_settings',
             entity: 'app_settings',
-            recordId: 'late_grace_minutes',
+            recordId: 'app_settings',
             oldValue: previous,
             newValue: next
           });
           return { settings: next, auditLogs: state.auditLogs };
         });
-        void safeRemote(
-          () => upsertAppSettingsRemote(next, get().currentUser?.email),
-          'Simpan pengaturan'
-        );
+        void safeRemote(() => upsertAppSettingsRemote(next, get().currentUser?.email), 'Simpan pengaturan');
         toast.success('Pengaturan disimpan');
       },
       completeLevel: ({ studentId, level, nextLevel, notes }) => {
@@ -1337,8 +1350,9 @@ export const useDashboardStore = create<DashboardStore>()(
           toast.error('Sensei dan minimal 1 siswa wajib');
           return null;
         }
-        if (input.type === 'Semi-Private' && (input.studentIds.length < 2 || input.studentIds.length > 4)) {
-          toast.error('Semi-Private sebaiknya 2–4 siswa');
+        const compositionError = classCompositionError(input.type, input.studentIds);
+        if (compositionError) {
+          toast.error(compositionError);
           return null;
         }
         const id = input.id ?? createId();
@@ -1449,7 +1463,9 @@ export const useDashboardStore = create<DashboardStore>()(
           await upsertClassMasterRemote(updatedClass);
           for (const session of created) await upsertScheduleRemote(session);
         }, 'Generate jadwal berulang');
-        toast.success(`${created.length} sesi digenerate (Sesi 1–${created.length} dari ${teachingClass.requiredMeetings})`);
+        toast.success(
+          `${created.length} sesi digenerate (Sesi 1–${created.length} dari ${teachingClass.requiredMeetings})`
+        );
         return created.length;
       },
       upsertUser: (user) => {
@@ -1458,9 +1474,7 @@ export const useDashboardStore = create<DashboardStore>()(
           const next = { ...user, id };
           const exists = state.users.some((item) => item.id === id);
           return {
-            users: exists
-              ? state.users.map((item) => (item.id === id ? next : item))
-              : [...state.users, next]
+            users: exists ? state.users.map((item) => (item.id === id ? next : item)) : [...state.users, next]
           };
         });
         toast.success('Pengguna disimpan');
@@ -1515,6 +1529,72 @@ export const useDashboardStore = create<DashboardStore>()(
           };
         });
         toast.success(`Akun login ${account.email} siap (Approved). Sensei bisa masuk sekarang.`);
+        return true;
+      },
+      updateUser: async (userId, patch) => {
+        const state = get();
+        if (state.currentUser?.role !== 'Super Admin') {
+          toast.error('Hanya Super Admin yang bisa mengubah akun');
+          return false;
+        }
+        const existing = state.users.find((item) => item.id === userId);
+        const remotePatch: { role?: string; status?: string; sensei_id?: string | null } = {};
+        if (patch.role) remotePatch.role = patch.role;
+        if (patch.status) remotePatch.status = patch.status;
+        if (patch.senseiId !== undefined) remotePatch.sensei_id = patch.senseiId || null;
+        try {
+          await updateProfileRemote(userId, remotePatch);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Gagal menyimpan akun');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'update_user',
+            entity: 'profiles',
+            recordId: userId,
+            oldValue: existing
+              ? { role: existing.role, status: existing.status, senseiId: existing.senseiId ?? null }
+              : undefined,
+            newValue: {
+              role: patch.role ?? existing?.role,
+              status: patch.status ?? existing?.status,
+              senseiId: patch.senseiId ?? existing?.senseiId ?? null
+            },
+            reason: 'Ubah role/status/tautan Sensei dari dashboard'
+          });
+          const linkedSensei =
+            patch.senseiId !== undefined
+              ? current.sensei.find((item) => item.id === patch.senseiId)
+              : undefined;
+          return {
+            users: current.users.map((item) =>
+              item.id === userId
+                ? {
+                    ...item,
+                    role: patch.role ?? item.role,
+                    status: patch.status ?? item.status,
+                    senseiId: patch.senseiId !== undefined ? patch.senseiId || undefined : item.senseiId,
+                    name: linkedSensei?.name || item.name
+                  }
+                : item
+            ),
+            currentUser:
+              current.currentUser?.id === userId
+                ? {
+                    ...current.currentUser,
+                    role: patch.role ?? current.currentUser.role,
+                    status: patch.status ?? current.currentUser.status,
+                    senseiId:
+                      patch.senseiId !== undefined
+                        ? patch.senseiId || undefined
+                        : current.currentUser.senseiId
+                  }
+                : current.currentUser,
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Akun diperbarui');
         return true;
       }
     }),

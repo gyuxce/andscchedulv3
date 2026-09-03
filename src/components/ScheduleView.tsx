@@ -1,17 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { AlertTriangle, CalendarRange, List as ListIcon } from 'lucide-react';
 import { CLASS_LEVELS, CLASS_TYPES, DAYS_OF_WEEK } from '../constants';
-import { hoursBetween, toDateKey, weekDays } from '../lib/dates';
-import { displayName } from '../lib/display';
+import { formatDay, hoursBetween, toDateKey, weekDays } from '../lib/dates';
+import { displayName, senseiRail, TYPE_TONE } from '../lib/display';
 import { findMakeupsOf, hasActiveOrCompletedMakeup, isMakeupSession, makeupLabel } from '../lib/makeup';
 import { addMinutesToTime } from '../lib/recurring';
 import { findConflicts } from '../lib/schedule';
-import {
-  buildRecurringPreview,
-  formatPreviewDate,
-  previewConflicts
-} from '../lib/schedulePreview';
+import { buildRecurringPreview, formatPreviewDate, previewConflicts } from '../lib/schedulePreview';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import type { CancellationInitiator, ClassSession, ClassType, SwapInitiator } from '../types';
+import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { DetailFields } from './ui/DetailFields';
 import { Modal } from './ui/Modal';
@@ -74,9 +72,37 @@ export function ScheduleView() {
   const [swapTo, setSwapTo] = useState('');
   const [swapInitiator, setSwapInitiator] = useState<SwapInitiator>('Admin');
   const [detailMode, setDetailMode] = useState<'view' | 'edit'>('view');
+  const [view, setView] = useState<'board' | 'list'>('board');
+  const [senseiFilter, setSenseiFilter] = useState('all');
 
   const conflicts = useMemo(() => findConflicts(schedules), [schedules]);
   const conflictIds = new Set(conflicts.flatMap((pair) => [pair.a.id, pair.b.id]));
+
+  const weekSessions = useMemo(() => {
+    const keys = new Set(weekDays(weekAnchor).map((day) => toDateKey(day)));
+    return schedules
+      .filter((s) => keys.has(s.date) && (senseiFilter === 'all' || s.senseiId === senseiFilter))
+      .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
+  }, [schedules, weekAnchor, senseiFilter]);
+
+  const listByDay = useMemo(() => {
+    const map = new Map<string, ClassSession[]>();
+    for (const s of weekSessions) {
+      const arr = map.get(s.date) ?? [];
+      arr.push(s);
+      map.set(s.date, arr);
+    }
+    return [...map.entries()];
+  }, [weekSessions]);
+  const [focus, setFocus] = useState<{ id: string; tick: number } | null>(null);
+  const conflictCursor = useRef(0);
+  const cycleConflict = () => {
+    if (!conflicts.length) return;
+    const pair = conflicts[conflictCursor.current % conflicts.length];
+    conflictCursor.current += 1;
+    if (!days.some((day) => toDateKey(day) === pair.a.date)) setWeekAnchor(pair.a.date);
+    setFocus((prev) => ({ id: pair.a.id, tick: (prev?.tick ?? 0) + 1 }));
+  };
 
   const studentOptions = permissions.canViewAllSchedules ? allStudents : students;
 
@@ -231,6 +257,49 @@ export function ScheduleView() {
         title="Kalender kelas"
         actions={
           <>
+            {conflicts.length > 0 ? (
+              <button
+                type="button"
+                onClick={cycleConflict}
+                title={`${conflicts.length} konflik jadwal · klik untuk menuju bloknya`}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-danger/40 bg-danger-soft px-3 text-xs font-semibold text-danger"
+              >
+                <AlertTriangle size={14} />
+                {conflicts.length} konflik
+              </button>
+            ) : null}
+            <div className="inline-flex rounded-lg border border-line-strong p-0.5">
+              <button
+                type="button"
+                onClick={() => setView('board')}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                  view === 'board' ? 'bg-accent text-on-accent' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                <CalendarRange size={14} /> Board
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                  view === 'list' ? 'bg-accent text-on-accent' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                <ListIcon size={14} /> List
+              </button>
+            </div>
+            <select
+              className="ui-select h-9 w-auto min-w-[150px]"
+              value={senseiFilter}
+              onChange={(event) => setSenseiFilter(event.target.value)}
+            >
+              <option value="all">Semua Sensei</option>
+              {allSensei.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
             <WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />
             {permissions.canEditOfficialSchedule ? (
               <Button tone="primary" className="w-full sm:w-auto" onClick={openRecurring}>
@@ -240,34 +309,128 @@ export function ScheduleView() {
           </>
         }
       >
-        Kelas resmi = 1 Class Master + N sesi berulang. Makeup tertaut ke sesi batal; Extra meeting terpisah dari rencana.
-        {conflicts.length > 0 ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
-            <span>
-              <b>{conflicts.length} konflik</b>
-              {conflicts[0]
-                ? ` · ${displayName(allSensei, conflicts[0].a.senseiId)} ${conflicts[0].a.date} ${conflicts[0].a.startTime}`
-                : ''}
-            </span>
-            <Button
-              className="h-8"
-              onClick={() => {
-                if (conflicts[0]) openEdit(conflicts[0].a);
-              }}
-            >
-              Selesaikan
-            </Button>
-          </div>
-        ) : null}
+        Kelas resmi = 1 Class Master + N sesi berulang. Makeup tertaut ke sesi batal; Extra meeting terpisah
+        dari rencana.
       </PageIntro>
-      <p className="text-xs text-ink-soft lg:hidden">Geser ke samping untuk melihat jadwal mingguan.</p>
-      <WeekCalendar
-        days={days}
-        sessions={schedules.filter((session) => days.some((day) => toDateKey(day) === session.date))}
-        sensei={allSensei}
-        conflictIds={conflictIds}
-        onSelect={openEdit}
-      />
+      {view === 'board' && senseiFilter !== 'all' ? (
+        <>
+          <p className="text-xs text-ink-soft lg:hidden">Geser ke samping untuk melihat jadwal mingguan.</p>
+          <WeekCalendar
+            days={days}
+            sessions={weekSessions}
+            sensei={allSensei}
+            conflictIds={conflictIds}
+            onSelect={openEdit}
+            focus={focus}
+          />
+        </>
+      ) : view === 'board' ? (
+        <div className="ui-card overflow-hidden">
+          <p className="border-b border-line px-4 py-2 text-[11px] text-ink-soft">
+            Semua Sensei — agenda per hari. Pilih 1 Sensei untuk grid berbasis jam.
+          </p>
+          <div className="grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-4 lg:grid-cols-7 lg:divide-y-0">
+            {days.map((day) => {
+              const key = toDateKey(day);
+              const rows = weekSessions.filter((s) => s.date === key);
+              const isToday = key === toDateKey(new Date());
+              return (
+                <div key={key} className="min-w-0">
+                  <div
+                    className={`border-b px-2 py-2 text-center ${
+                      isToday ? 'border-b-2 border-b-accent bg-accent-soft' : 'border-line'
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                      {formatDay(day, 'EEE')}
+                    </div>
+                    <div className={`text-sm font-bold ${isToday ? 'text-accent' : 'text-ink'}`}>
+                      {formatDay(day, 'd')}
+                    </div>
+                  </div>
+                  <div className="min-h-[64px] space-y-1 p-1.5">
+                    {rows.length === 0 ? (
+                      <p className="px-1 py-2 text-center text-[10px] text-ink-faint">—</p>
+                    ) : (
+                      rows.map((s) => {
+                        const conflict = conflictIds.has(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => openEdit(s)}
+                            title={`${s.startTime}–${s.endTime} · ${s.level} · ${displayName(allSensei, s.senseiId)}`}
+                            className={`flex w-full items-stretch gap-1.5 overflow-hidden rounded-md border text-left transition-colors hover:border-line-strong ${
+                              conflict ? 'border-danger bg-danger-soft' : 'border-line bg-surface'
+                            }`}
+                          >
+                            <span className={`w-1 shrink-0 ${senseiRail(s.senseiId)}`} />
+                            <span className="min-w-0 py-1 pr-1.5">
+                              <span className="block truncate text-[11px] font-semibold leading-tight text-ink">
+                                {s.startTime} {s.level}
+                              </span>
+                              <span className="block truncate text-[10px] text-ink-soft">
+                                {displayName(allSensei, s.senseiId)}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="ui-card divide-y divide-line overflow-hidden">
+          {listByDay.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-ink-soft">
+              Tidak ada sesi pada minggu / filter ini.
+            </p>
+          ) : (
+            listByDay.map(([date, rows]) => (
+              <div key={date}>
+                <div className="bg-surface-2 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+                  {formatDay(date, 'EEEE, d MMM')} · {rows.length} sesi
+                </div>
+                <div className="divide-y divide-line">
+                  {rows.map((s) => {
+                    const conflict = conflictIds.has(s.id);
+                    const mk = isMakeupSession(s);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => openEdit(s)}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-2"
+                      >
+                        <span className="w-24 shrink-0 text-xs tabular-nums text-ink-soft">
+                          {s.startTime}–{s.endTime}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="truncate text-sm font-semibold text-ink">{s.level}</span>
+                            <Badge tone={TYPE_TONE[s.type]}>{s.type}</Badge>
+                            {s.status === 'cancelled' ? <Badge tone="danger">Batal</Badge> : null}
+                            {conflict ? <Badge tone="danger">Konflik</Badge> : null}
+                            {mk ? <Badge tone="sky">Makeup</Badge> : null}
+                            {s.isExtra ? <Badge tone="gold">Extra</Badge> : null}
+                          </span>
+                          <span className="block truncate text-xs text-ink-soft">
+                            {displayName(allSensei, s.senseiId)} · {s.studentIds.length} siswa
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {creatingRecurring && (
         <Modal
@@ -296,7 +459,9 @@ export function ScheduleView() {
                   className="ui-input"
                   value={recurringForm.displayName}
                   placeholder="Private Nathan Pra Guntai"
-                  onChange={(event) => setRecurringForm({ ...recurringForm, displayName: event.target.value })}
+                  onChange={(event) =>
+                    setRecurringForm({ ...recurringForm, displayName: event.target.value })
+                  }
                 />
               </label>
               <div className="grid gap-3 md:grid-cols-2">
@@ -362,7 +527,9 @@ export function ScheduleView() {
                     className="ui-input"
                     type="date"
                     value={recurringForm.startDate}
-                    onChange={(event) => setRecurringForm({ ...recurringForm, startDate: event.target.value })}
+                    onChange={(event) =>
+                      setRecurringForm({ ...recurringForm, startDate: event.target.value })
+                    }
                   />
                 </label>
                 <label>
@@ -371,7 +538,9 @@ export function ScheduleView() {
                     className="ui-input"
                     type="time"
                     value={recurringForm.startTime}
-                    onChange={(event) => setRecurringForm({ ...recurringForm, startTime: event.target.value })}
+                    onChange={(event) =>
+                      setRecurringForm({ ...recurringForm, startTime: event.target.value })
+                    }
                   />
                 </label>
                 <label>
@@ -445,23 +614,25 @@ export function ScheduleView() {
             <section className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">Preview schedule</p>
               {preview.length === 0 ? (
-                <p className="text-sm text-ink-soft">Isi start date, hari, dan jumlah pertemuan untuk melihat preview.</p>
+                <p className="text-sm text-ink-soft">
+                  Isi start date, hari, dan jumlah pertemuan untuk melihat preview.
+                </p>
               ) : (
                 <div className="max-h-56 overflow-auto rounded-xl border border-line">
-                  <table className="w-full text-left text-sm">
-                    <thead className="sticky top-0 bg-paper text-xs uppercase text-ink-soft">
+                  <table className="ui-table">
+                    <thead>
                       <tr>
-                        <th className="px-3 py-2">Session</th>
-                        <th className="px-3 py-2">Date</th>
-                        <th className="px-3 py-2">Time</th>
+                        <th>Session</th>
+                        <th>Date</th>
+                        <th>Time</th>
                       </tr>
                     </thead>
                     <tbody>
                       {preview.map((row) => (
-                        <tr key={row.label} className="border-t border-line">
-                          <td className="px-3 py-1.5 font-semibold">{row.label}</td>
-                          <td className="px-3 py-1.5">{formatPreviewDate(row.date)}</td>
-                          <td className="px-3 py-1.5">
+                        <tr key={row.label}>
+                          <td className="font-medium text-ink">{row.label}</td>
+                          <td className="text-ink-soft">{formatPreviewDate(row.date)}</td>
+                          <td className="tabular-nums text-ink-soft">
                             {row.startTime}–{row.endTime}
                           </td>
                         </tr>
@@ -471,7 +642,7 @@ export function ScheduleView() {
                 </div>
               )}
               {previewConflictList.length > 0 ? (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
+                <div className="rounded-xl border border-danger/25 bg-danger-soft px-3 py-2 text-sm text-ink">
                   <p className="font-semibold">
                     {previewConflictList.length} konflik dengan jadwal resmi Sensei yang sama.
                   </p>
@@ -553,27 +724,31 @@ export function ScheduleView() {
           }
         >
           {sessionForm.makeupOfSessionId && creatingSession ? (
-            <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-500/10 dark:text-sky-100">
-              Makeup tertaut ke sesi asli. Progress/absensi memakai sesi makeup, bukan sesi batal. Required meetings tidak naik.
+            <p className="rounded-xl border border-info/25 bg-info-soft px-3 py-2 text-sm text-ink">
+              Makeup tertaut ke sesi asli. Progress/absensi memakai sesi makeup, bukan sesi batal. Required
+              meetings tidak naik.
             </p>
           ) : null}
           {sessionForm.isExtra && creatingSession ? (
-            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100">
-              Extra meeting di luar rencana. Tidak dihitung ke required X/X kecuali Admin mengubah total secara eksplisit.
+            <p className="rounded-xl border border-warn/25 bg-warn-soft px-3 py-2 text-sm text-ink">
+              Extra meeting di luar rencana. Tidak dihitung ke required X/X kecuali Admin mengubah total
+              secara eksplisit.
             </p>
           ) : null}
           {editing && isMakeupSession(editing) ? (
-            <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-500/10 dark:text-sky-100">
+            <p className="rounded-xl border border-info/25 bg-info-soft px-3 py-2 text-sm text-ink">
               {makeupLabel(editing, schedules)}
             </p>
           ) : null}
           {editing?.isExtra ? (
-            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100">Sesi Extra — di luar required meetings.</p>
+            <p className="rounded-xl border border-warn/25 bg-warn-soft px-3 py-2 text-sm text-ink">
+              Sesi Extra — di luar required meetings.
+            </p>
           ) : null}
           {editingClass ? (
             <p className="text-xs text-ink-soft">
-              Class: {editingClass.displayName} · Original end {editingClass.plannedEndDate || '—'} · Projected{' '}
-              {editingClass.projectedEndDate || '—'}
+              Class: {editingClass.displayName} · Original end {editingClass.plannedEndDate || '—'} ·
+              Projected {editingClass.projectedEndDate || '—'}
             </p>
           ) : null}
           {editing && editing.status === 'cancelled' && linkedMakeups.length > 0 ? (
@@ -607,7 +782,7 @@ export function ScheduleView() {
                 ]}
               />
               {permissions.canEditOfficialSchedule && editing.classId ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+                <div className="rounded-xl border border-warn/25 bg-warn-soft p-3">
                   <p className="ui-label">Extra meeting</p>
                   <p className="mb-2 text-xs text-ink-soft">
                     Tambah sesi di luar required meetings tanpa mengubah total rencana.
@@ -617,12 +792,12 @@ export function ScheduleView() {
                   </Button>
                 </div>
               ) : null}
-              {permissions.canEditOfficialSchedule &&
-              editing.status === 'cancelled' &&
-              !alreadyHasMakeup ? (
-                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-500/30 dark:bg-sky-500/10">
+              {permissions.canEditOfficialSchedule && editing.status === 'cancelled' && !alreadyHasMakeup ? (
+                <div className="rounded-xl border border-info/25 bg-info-soft p-3">
                   <p className="ui-label">Replacement / Makeup</p>
-                  <p className="mb-2 text-xs text-ink-soft">Buat sesi pengganti tertaut ke kelas batal ini.</p>
+                  <p className="mb-2 text-xs text-ink-soft">
+                    Buat sesi pengganti tertaut ke kelas batal ini.
+                  </p>
                   <Button tone="primary" onClick={() => openMakeup(editing)}>
                     Jadwalkan makeup
                   </Button>
@@ -653,7 +828,9 @@ export function ScheduleView() {
                   <select
                     className="ui-select"
                     value={sessionForm.type}
-                    onChange={(event) => setSessionForm({ ...sessionForm, type: event.target.value as ClassType })}
+                    onChange={(event) =>
+                      setSessionForm({ ...sessionForm, type: event.target.value as ClassType })
+                    }
                   >
                     {CLASS_TYPES.map((type) => (
                       <option key={type}>{type}</option>
@@ -722,14 +899,18 @@ export function ScheduleView() {
                 />
               </label>
               <p className="text-xs text-ink-soft">
-                Durasi {hoursBetween(sessionForm.startTime, sessionForm.endTime)} jam. Ketersediaan Sensei hanya
-                referensi kapasitas.
+                Durasi {hoursBetween(sessionForm.startTime, sessionForm.endTime)} jam. Ketersediaan Sensei
+                hanya referensi kapasitas.
               </p>
               {editing && permissions.canAssignSensei && editing.status !== 'cancelled' ? (
-                <div className="grid gap-3 rounded-2xl border border-line p-3 md:grid-cols-2">
+                <div className="grid gap-3 rounded-xl border border-line p-3 md:grid-cols-2">
                   <div>
                     <p className="ui-label">Tukar Sensei</p>
-                    <select className="ui-select" value={swapTo} onChange={(event) => setSwapTo(event.target.value)}>
+                    <select
+                      className="ui-select"
+                      value={swapTo}
+                      onChange={(event) => setSwapTo(event.target.value)}
+                    >
                       <option value="">Pilih pengganti</option>
                       {allSensei
                         .filter((item) => item.id !== editing.senseiId && item.primaryStatus === 'ACTIVE')

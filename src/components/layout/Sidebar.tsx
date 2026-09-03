@@ -46,13 +46,7 @@ const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
 
 const COLLAPSE_KEY = 'ans-sidebar-collapsed';
 
-export function Sidebar({
-  mobileOpen,
-  onClose
-}: {
-  mobileOpen: boolean;
-  onClose: () => void;
-}) {
+export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
   const currentUser = useDashboardStore((state) => state.currentUser);
   const activeTab = useDashboardStore((state) => state.activeTab);
   const setTab = useDashboardStore((state) => state.setTab);
@@ -94,30 +88,41 @@ export function Sidebar({
     ids: group.ids.filter((id) => tabs.includes(id))
   })).filter((group) => group.ids.length);
 
-  const NavBody = ({ compact }: { compact: boolean }) => (
+  const renderNavBody = (compact: boolean) => (
     <>
-      <div className={`border-b border-line ${compact ? 'px-2 py-4' : 'px-5 py-5'}`}>
-        <div className="flex items-start justify-between gap-2">
-          <div className={compact ? 'w-full text-center' : ''}>
-            <p className="text-[10px] tracking-[0.28em] text-ink-soft">秋の空</p>
-            {compact ? (
-              <h1 className="mt-1 text-sm font-bold tracking-tight">ANS</h1>
-            ) : (
-              <>
-                <h1 className="mt-1 text-lg font-bold tracking-tight">ANS Dashboard</h1>
-                <p className="mt-0.5 text-xs text-ink-soft">Operasional & akademik</p>
-              </>
-            )}
-          </div>
+      <div
+        className={`flex items-center gap-2 border-b border-line ${
+          compact ? 'justify-center px-2 py-3' : 'px-4 py-3.5'
+        }`}
+      >
+        <div className={compact ? 'text-center' : 'min-w-0 flex-1'}>
+          {compact ? (
+            <span className="text-sm font-bold tracking-tight">ANS</span>
+          ) : (
+            <>
+              <div className="text-[15px] font-bold leading-tight tracking-tight">ANS Dashboard</div>
+              <div className="text-[11px] text-ink-soft">Operasional &amp; akademik</div>
+            </>
+          )}
+        </div>
+        {!compact ? (
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-ink-soft hover:bg-elevated lg:hidden"
-            aria-label="Tutup menu"
+            onClick={() => setCollapsed(true)}
+            className="ui-icon-btn hidden h-7 w-7 lg:inline-flex"
+            aria-label="Ciutkan sidebar"
           >
-            <X size={18} />
+            <ChevronsLeft size={15} />
           </button>
-        </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-2 lg:hidden"
+          aria-label="Tutup menu"
+        >
+          <X size={18} />
+        </button>
       </div>
       <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {groups.map((group) => (
@@ -140,12 +145,12 @@ export function Sidebar({
                       setTab(tab);
                       onClose();
                     }}
-                    className={`flex h-10 w-full items-center rounded-full text-sm font-medium transition ${
+                    className={`flex h-9 w-full items-center rounded-lg text-sm transition-colors ${
                       compact ? 'justify-center px-0' : 'gap-2.5 px-3'
                     } ${
                       active
-                        ? 'bg-maple text-white shadow-[0_8px_18px_rgba(124,77,255,0.28)]'
-                        : 'text-ink-soft hover:bg-elevated hover:text-ink'
+                        ? 'bg-accent-soft font-semibold text-accent'
+                        : 'font-medium text-ink-soft hover:bg-surface-2 hover:text-ink'
                     }`}
                   >
                     <Icon size={16} />
@@ -157,35 +162,51 @@ export function Sidebar({
           </div>
         ))}
       </nav>
-      <div className={`mt-auto space-y-3 border-t border-line ${compact ? 'p-2' : 'p-4'}`}>
-        {compact ? null : (
-          <div className="rounded-[22px] bg-[var(--solid)] px-4 py-3 text-[var(--on-solid)]">
-            <div className="truncate text-sm font-semibold">{currentUser.name}</div>
-            <div className="text-xs opacity-60">{currentUser.role}</div>
+      <div className={`mt-auto border-t border-line ${compact ? 'p-2' : 'p-3'}`}>
+        {compact ? (
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              title="Keluar"
+              onClick={() => {
+                void logout();
+                onClose();
+              }}
+              className="ui-icon-btn"
+            >
+              <LogOut size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              className="ui-icon-btn"
+              aria-label="Perlebar sidebar"
+            >
+              <ChevronsLeft size={15} className="rotate-180" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-[11px] font-bold text-ink-soft">
+              {currentUser.name.slice(0, 2).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-semibold text-ink">{currentUser.name}</div>
+              <div className="truncate text-[11px] text-ink-soft">{currentUser.role}</div>
+            </div>
+            <button
+              type="button"
+              title="Keluar"
+              onClick={() => {
+                void logout();
+                onClose();
+              }}
+              className="ui-icon-btn h-8 w-8"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
         )}
-        <button
-          type="button"
-          title="Keluar"
-          onClick={() => {
-            void logout();
-            onClose();
-          }}
-          className={`flex h-10 w-full items-center rounded-full bg-[var(--solid)] text-xs font-semibold text-[var(--on-solid)] hover:opacity-90 ${
-            compact ? 'justify-center' : 'gap-2 px-4'
-          }`}
-        >
-          <LogOut size={14} />
-          {compact ? null : 'Keluar'}
-        </button>
-        <button
-          type="button"
-          className="hidden h-8 w-full items-center justify-center rounded-full text-ink-soft hover:bg-elevated hover:text-ink lg:flex"
-          onClick={() => setCollapsed((value) => !value)}
-          aria-label={compact ? 'Perlebar sidebar' : 'Ciutkan sidebar'}
-        >
-          <ChevronsLeft size={16} className={compact ? 'rotate-180' : ''} />
-        </button>
       </div>
     </>
   );
@@ -194,10 +215,10 @@ export function Sidebar({
     <>
       <aside
         className={`sticky top-0 hidden h-dvh min-h-dvh shrink-0 flex-col self-stretch border-r border-line bg-[var(--sidebar)] text-[var(--sidebar-text)] lg:flex ${
-          collapsed ? 'w-[72px]' : 'w-[248px]'
+          collapsed ? 'w-[64px]' : 'w-[232px]'
         }`}
       >
-        <NavBody compact={collapsed} />
+        {renderNavBody(collapsed)}
       </aside>
 
       <div
@@ -215,7 +236,7 @@ export function Sidebar({
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <NavBody compact={false} />
+          {renderNavBody(false)}
         </aside>
       </div>
     </>

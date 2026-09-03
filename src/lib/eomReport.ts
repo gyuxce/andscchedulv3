@@ -2,14 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { getSessionOrdinal } from './classProgress';
 import { actualDurationMinutes, scheduledDurationMinutes } from './duration';
 import { displayName } from './display';
-import type {
-  ClassMaster,
-  ClassSession,
-  Sensei,
-  SessionLog,
-  SessionReport,
-  Student
-} from '../types';
+import type { ClassMaster, ClassSession, Sensei, SessionLog, SessionReport, Student } from '../types';
 
 export type EomSessionRow = {
   senseiId: string;
