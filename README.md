@@ -1,98 +1,87 @@
 # ANS Dashboard V3
 
-Operational and academic dashboard for **Aki No Sora × ILUSA**.
+Operational & academic dashboard for **Aki No Sora × ILUSA** — classes, Sensei
+availability, session execution, Kyouiku QA, and Action Center monitoring.
+Business/CRM (acquisition, payment, churn, membership) is intentionally out of scope.
 
-V3 runs classes, Sensei availability, session execution, Kyouiku QA, and Action Center monitoring. Business/CRM functions (acquisition, payment, churn, membership) are intentionally out of scope.
+> Proprietary — internal tool. See [`LICENSE`](LICENSE).
+
+## Stack
+
+React 19 · TypeScript (strict) · Vite 6 · Tailwind CSS v4 · Zustand ·
+Supabase (Postgres + Auth + RLS) · Vitest.
 
 ## Roles
 
-| Role | What they can do |
+| Role | Scope |
 | --- | --- |
-| Super Admin / Ops | Full operational control, official schedule CRUD, assign/swap, overrides with audit, users |
-| Kyouiku / Head Sensei | View schedules and Sensei ops, input Teaching Performance, review recordings |
-| Sensei | Own availability, own clock-in/out, own session reports |
+| Super Admin / Ops | Full control: schedule CRUD, assign/swap, overrides (audited), users |
+| Kyouiku / Head Sensei | View schedules & Sensei ops, input Teaching Performance, review recordings |
+| Sensei | Own availability, own clock-in/out, own session reports (data scoped by RLS) |
 
-Student login is reserved for V4. Student records in V3 exist only for learning operations.
+Student login is reserved for V4.
 
 ## Functional pillars
 
-1. **Schedule & class operations** — Sensei availability is a separate object from the official class schedule.
-2. **Academic execution** — attendance, performance, progress, notes, recording reference, per student for Group/Semi-Private.
-3. **Sensei management & QA** — ACTIVE/INACTIVE plus NEW, UNASSIGNED, CUTI labels; 16-hour weekly target; manual QA 0–100.
-4. **Operational monitoring** — Action Center for missing reports/recordings, late joins, conflicts, unassigned Sensei, weekly-hour gaps.
+1. **Schedule & class ops** — Sensei availability is a separate object from the official schedule.
+2. **Academic execution** — attendance, performance, progress, notes, recording ref, per student.
+3. **Sensei management & QA** — ACTIVE/INACTIVE + NEW/UNASSIGNED/CUTI labels; 16h weekly target; manual QA 0–100.
+4. **Operational monitoring** — Action Center: missing reports/recordings, late joins, conflicts, unassigned Sensei, hour gaps.
 
 ## Local run
 
-Login memakai akun resmi yang sudah diaktifkan (email + password).
-
 ```bash
-cp .env.example .env.local
-# isi VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
+cp .env.example .env.local     # fill VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
 npm install
-npm run dev
+npm run dev                    # http://localhost:3000
 ```
 
-```bash
-npm test
-npm run build
-```
+## Scripts
 
-## Database setup
-
-| File | Dipakai di mana |
+| Script | Does |
 | --- | --- |
-| `schema.sql` | Project database **baru / kosong** |
-| `schema-v3.sql` | Project yang **sudah punya** tabel lama (`sensei`, `schedules`, …) |
-| `schema-timezone-settings.sql` | Additive — timezone Sensei + `app_settings` |
-| `schema-level-completions.sql` | Additive — `level_completions` |
-| `schema-class-master.sql` | Additive — Class Master + `schedules.class_id` |
-| `schema-enrollments.sql` | Additive — Enrollment dasar |
-| `schema-v31-master-data.sql` | Additive — V3.1 Sensei display_name + enrollment payment/progress/status |
-| `schema-v31-recurring-eom.sql` | Additive — projected_end_date + schedules.is_extra (CONTEXT Update 11.14) |
-| `schema-rls.sql` | RBAC policies (jalankan ulang setelah schema additive) |
-| `cleanup-demo-data.sql` | Hapus data seed/demo dari project live |
+| `npm run dev` | Vite dev server |
+| `npm run build` | typecheck + production build → `dist/` |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` / `lint:fix` | ESLint |
+| `npm run format` / `format:check` | Prettier |
+| `npm test` / `test:watch` | Vitest |
+| `npm run migrate:probe` | diff V2 vs V3 schema |
+| `npm run migrate:run` | V2 → V3 data migration (dry run without `--apply`) |
 
-### Buat akun login Sensei dari dashboard
-1. Login sebagai **Super Admin**
-2. **Sensei → + Tambah Sensei** (atau buka Sensei yang sudah ada)
-3. Isi email + **Password login** / ulangi password
-4. Simpan / **Buat akun login sekarang**
-5. Sensei login di halaman masuk dengan email + password itu
+## Database
 
-Catatan: di Supabase → Authentication → Providers → Email, matikan **Confirm email** untuk staging agar akun langsung bisa dipakai.
+SQL lives in [`db/`](db/) — see [`db/README.md`](db/README.md) for run order.
+Quick start (new project): run `db/schema.sql` then `db/schema-rls.sql` in the
+Supabase SQL Editor, then create a user in Authentication and set its
+`profiles.role = 'Super Admin'`, `status = 'Approved'`.
 
-### Project baru
-1. Buka SQL Editor.
-2. Jalankan **`schema.sql`**, lalu **`schema-rls.sql`**.
-3. Set env `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (lokal atau Vercel).
-4. Buat user di Authentication, lalu di `profiles` set `role` + `status = Approved`.
-5. Sensei: samakan email Auth dengan `sensei.email`.
+Create Sensei logins from the dashboard: **Sensei → open a Sensei → Password
+login** (email must match `sensei.email`; this also sets `profiles.sensei_id`).
+In Supabase → Authentication → Providers → Email, turn off **Confirm email** for
+staging so accounts work immediately.
 
-### Project yang sudah jalan
-Jalankan berurutan (jangan loncat):
-1. `schema-timezone-settings.sql`
-2. `schema-level-completions.sql`
-3. `schema-class-master.sql`
-4. `schema-enrollments.sql`
-5. **`schema-v31-master-data.sql`**
-6. **`schema-v31-recurring-eom.sql`**
-7. **`schema-profiles-sensei-id.sql`** ← tautkan login Sensei ke master (`profiles.sensei_id`)
-8. `schema-rls.sql` ulang
+**V2 → V3 data migration:** [`docs/migration-v2-to-v3.md`](docs/migration-v2-to-v3.md).
 
-Kalau Sensei tidak bisa isi Ketersediaan (“belum tertaut”): pastikan `sensei.email` = email Auth, atau set `profiles.sensei_id`, lalu login ulang.
+## Project layout
 
-Kalau masih ada data seed lama, jalankan **`cleanup-demo-data.sql`**, lalu hapus user demo di Authentication → Users.
+```
+src/
+  components/   views + layout + ui primitives
+  lib/          pure domain logic (tested) + helpers
+  services/     Supabase IO
+  store/        Zustand store (orchestration)
+db/             SQL schema + RLS + migrations
+docs/           guides
+scripts/        one-off tooling (migration, schema probe)
+```
 
 ## Deploy (Vercel)
 
-Environment variables:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Build `npm run build`, output `dist`.
 
-Build: `npm run build` · Output: `dist`
+## Open Kyouiku decisions (TBC)
 
-## Open Kyouiku decisions still TBC
-
-- Exact attendance % treatment of Late / Excused / Partial / cancelled
+- Attendance % treatment of Late / Excused / Partial / cancelled
 - Minimum attendance for level completion
-- Sensei visibility of own QA/disciplinary/recording details
+- Sensei visibility of own QA / disciplinary / recording detail
