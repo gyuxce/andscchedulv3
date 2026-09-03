@@ -31,7 +31,7 @@ const opts = { auth: { persistSession: false }, db: { schema: 'public' } };
 const from = createClient(cfg.from.url, cfg.from.serviceKey, opts);
 const to = createClient(cfg.to.url, cfg.to.serviceKey, opts);
 
-// ── id remap (same algorithm as scripts/remap-v2-csv-ids.mjs) ────────────────
+// ── deterministic id remap: valid uuid passes through, else sha1 -> uuid ──────
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function toUuid(value) {
   const raw = String(value ?? '').trim();
