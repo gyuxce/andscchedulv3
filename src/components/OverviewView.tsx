@@ -1,13 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
-  Clock,
-  Gauge,
-  Users,
-  Video
-} from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Clock, Gauge, Users, Video } from 'lucide-react';
 import { buildActionItems, groupActionItems } from '../lib/actionCenter';
 import { getClassHealth } from '../lib/classProgress';
 import { toDateKey, weekDays } from '../lib/dates';
@@ -85,8 +77,16 @@ export function OverviewView() {
   const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const setTab = useDashboardStore((state) => state.setTab);
   const clockIn = useDashboardStore((state) => state.clockIn);
-  const { sensei, students, schedules, availability, sessionLogs, sessionReports, classMasters, linkedSenseiId } =
-    useScopedData();
+  const {
+    sensei,
+    students,
+    schedules,
+    availability,
+    sessionLogs,
+    sessionReports,
+    classMasters,
+    linkedSenseiId
+  } = useScopedData();
   const allSensei = useDashboardStore((state) => state.sensei);
   const [selectedKind, setSelectedKind] = useState<ActionItem['kind'] | null>(null);
   const [page, setPage] = useState(0);
@@ -214,8 +214,8 @@ export function OverviewView() {
         title="Ringkasan operasional"
         actions={<WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />}
       >
-        Hari ini di atas, antrian tindakan di tengah, angka pantauan di bawah. Alert sesi memakai lingkup 14 hari
-        terakhir sampai akhir minggu terpilih.
+        Hari ini di atas, antrian tindakan di tengah, angka pantauan di bawah. Alert sesi memakai lingkup 14
+        hari terakhir sampai akhir minggu terpilih.
       </PageIntro>
 
       {/* ZONE 1 — Hari ini */}
@@ -252,7 +252,9 @@ export function OverviewView() {
                         {displayName(allSensei, session.senseiId)}
                       </div>
                     </div>
-                    <Badge tone={state === 'in_progress' ? 'sky' : state === 'report_pending' ? 'gold' : 'muted'}>
+                    <Badge
+                      tone={state === 'in_progress' ? 'sky' : state === 'report_pending' ? 'gold' : 'muted'}
+                    >
                       {workflowLabel(state)}
                     </Badge>
                     {own && permissions.canClockOwn && state === 'ready' ? (
@@ -326,7 +328,11 @@ export function OverviewView() {
             </div>
             {detailItems.length > PAGE_SIZE ? (
               <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3">
-                <Button className="h-8" disabled={page <= 0} onClick={() => setPage((v) => Math.max(0, v - 1))}>
+                <Button
+                  className="h-8"
+                  disabled={page <= 0}
+                  onClick={() => setPage((v) => Math.max(0, v - 1))}
+                >
                   Sebelumnya
                 </Button>
                 <span className="text-xs text-ink-soft">
@@ -353,7 +359,9 @@ export function OverviewView() {
                   onClick={() => setSelectedKind(group.kind)}
                   className="ui-card relative flex flex-col gap-1.5 p-4 text-left transition-colors hover:border-line-strong"
                 >
-                  <span className={`absolute right-4 top-4 h-2 w-2 rounded-full ${SEV_DOT[group.severity]}`} />
+                  <span
+                    className={`absolute right-4 top-4 h-2 w-2 rounded-full ${SEV_DOT[group.severity]}`}
+                  />
                   <span className="flex items-center gap-2 text-ink-soft">
                     <Icon size={15} />
                     <span className="text-2xl font-bold tabular-nums text-ink">{group.count}</span>
@@ -380,7 +388,9 @@ export function OverviewView() {
                 onClick={() => go(cell.tab)}
                 className="bg-surface p-4 text-left transition-colors hover:bg-surface-2"
               >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-soft">{cell.label}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-soft">
+                  {cell.label}
+                </p>
                 <p className="mt-1.5 text-xl font-bold tabular-nums tracking-tight text-ink">{cell.value}</p>
                 {cell.note ? <p className="mt-0.5 text-[11px] text-ink-soft">{cell.note}</p> : null}
               </button>

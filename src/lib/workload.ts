@@ -62,18 +62,12 @@ export function availabilityHoursForWeek(
   return hours;
 }
 
-export function assignedHoursForWeek(
-  schedules: ClassSession[],
-  senseiId: string,
-  weekAnchor: Date | string
-) {
+export function assignedHoursForWeek(schedules: ClassSession[], senseiId: string, weekAnchor: Date | string) {
   const validDates = new Set(weekDays(weekAnchor).map(toDateKey));
   return schedules
     .filter(
       (session) =>
-        session.senseiId === senseiId &&
-        session.status !== 'cancelled' &&
-        validDates.has(session.date)
+        session.senseiId === senseiId && session.status !== 'cancelled' && validDates.has(session.date)
     )
     .reduce((sum, session) => sum + hoursBetween(session.startTime, session.endTime), 0);
 }

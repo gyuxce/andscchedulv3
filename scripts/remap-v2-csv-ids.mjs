@@ -17,8 +17,7 @@ import path from 'node:path';
 const inputDir = path.resolve(process.argv[2] || './backup-ans-v2');
 const outputDir = path.resolve(process.argv[3] || './backup-ans-v2-ready');
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const ID_COLUMNS = new Set([
   'id',
@@ -262,7 +261,12 @@ function normalizeCell(header, value, fileKey) {
     return TIME_ADJ.has(next) ? next : 'None';
   }
 
-  if (header === 'is_active' || header === 'is_delayed' || header === 'is_extra' || header === 'replacement_secured') {
+  if (
+    header === 'is_active' ||
+    header === 'is_delayed' ||
+    header === 'is_extra' ||
+    header === 'replacement_secured'
+  ) {
     if (!next) return '';
     if (/^(true|t|1|yes)$/i.test(next)) return 'true';
     if (/^(false|f|0|no)$/i.test(next)) return 'false';
@@ -353,9 +357,9 @@ async function buildReadyTable(fileName) {
 
   const dropped = headers.filter((h) => h && !allowed.has(h));
   const outHeaders = keepIdx.map((item) => item.header);
-  const dataRows = rows.slice(1).map((row) =>
-    keepIdx.map(({ header, index }) => normalizeCell(header, row[index] ?? '', key))
-  );
+  const dataRows = rows
+    .slice(1)
+    .map((row) => keepIdx.map(({ header, index }) => normalizeCell(header, row[index] ?? '', key)));
 
   return { key, fileName, skip: false, dropped, headers: outHeaders, dataRows };
 }
@@ -376,11 +380,15 @@ async function main() {
   }
 
   const byKey = Object.fromEntries(tables.filter((t) => !t.skip).map((t) => [t.key, t]));
-  const senseiIds = byKey.sensei_rows ? collectIds(byKey.sensei_rows.headers, byKey.sensei_rows.dataRows) : new Set();
+  const senseiIds = byKey.sensei_rows
+    ? collectIds(byKey.sensei_rows.headers, byKey.sensei_rows.dataRows)
+    : new Set();
   const studentIds = byKey.students_rows
     ? collectIds(byKey.students_rows.headers, byKey.students_rows.dataRows)
     : new Set();
-  const groupIds = byKey.groups_rows ? collectIds(byKey.groups_rows.headers, byKey.groups_rows.dataRows) : new Set();
+  const groupIds = byKey.groups_rows
+    ? collectIds(byKey.groups_rows.headers, byKey.groups_rows.dataRows)
+    : new Set();
   const scheduleIds = byKey.schedules_rows
     ? collectIds(byKey.schedules_rows.headers, byKey.schedules_rows.dataRows)
     : new Set();
@@ -422,7 +430,9 @@ async function main() {
     );
   }
 
-  console.log('\nSelesai. Impor urutan: sensei → students → groups → schedules → lesson_trackers → audit_logs');
+  console.log(
+    '\nSelesai. Impor urutan: sensei → students → groups → schedules → lesson_trackers → audit_logs'
+  );
   console.log('Penting: groups HARUS diimpor sebelum schedules.');
 }
 

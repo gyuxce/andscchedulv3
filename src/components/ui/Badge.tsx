@@ -10,13 +10,7 @@ const tones = {
   success: 'bg-ok-soft text-ok'
 };
 
-export function Badge({
-  children,
-  tone = 'muted'
-}: {
-  children: ReactNode;
-  tone?: keyof typeof tones;
-}) {
+export function Badge({ children, tone = 'muted' }: { children: ReactNode; tone?: keyof typeof tones }) {
   return (
     <span
       className={`inline-flex h-6 items-center rounded-full border border-current/20 px-2.5 text-[11px] font-semibold tracking-wide ${tones[tone]}`}

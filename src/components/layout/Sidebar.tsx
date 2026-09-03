@@ -46,13 +46,7 @@ const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
 
 const COLLAPSE_KEY = 'ans-sidebar-collapsed';
 
-export function Sidebar({
-  mobileOpen,
-  onClose
-}: {
-  mobileOpen: boolean;
-  onClose: () => void;
-}) {
+export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
   const currentUser = useDashboardStore((state) => state.currentUser);
   const activeTab = useDashboardStore((state) => state.activeTab);
   const setTab = useDashboardStore((state) => state.setTab);

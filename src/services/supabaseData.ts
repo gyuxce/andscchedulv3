@@ -56,10 +56,8 @@ function parseSettings(rows: Record<string, unknown>[]): AppSettings {
 
   return {
     ...DEFAULT_SETTINGS,
-    lateGraceMinutes:
-      grace !== null && grace >= 0 ? grace : DEFAULT_SETTINGS.lateGraceMinutes,
-    weeklyHourTarget:
-      weekly !== null && weekly > 0 ? weekly : DEFAULT_SETTINGS.weeklyHourTarget,
+    lateGraceMinutes: grace !== null && grace >= 0 ? grace : DEFAULT_SETTINGS.lateGraceMinutes,
+    weeklyHourTarget: weekly !== null && weekly > 0 ? weekly : DEFAULT_SETTINGS.weeklyHourTarget,
     minAttendancePercent:
       minAttendance !== null && minAttendance >= 0 && minAttendance <= 100 ? minAttendance : null
   };

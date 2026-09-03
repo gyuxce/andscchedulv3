@@ -1,11 +1,4 @@
-import type {
-  AppRole,
-  AttendanceStatus,
-  ClassType,
-  EnrollmentStatus,
-  PaymentStatus,
-  TabId
-} from './types';
+import type { AppRole, AttendanceStatus, ClassType, EnrollmentStatus, PaymentStatus, TabId } from './types';
 
 export const WEEKLY_HOUR_TARGET = 16;
 
@@ -19,12 +12,7 @@ export const CLASS_TYPES: ClassType[] = [
 
 export const PAYMENT_STATUSES: PaymentStatus[] = ['LUNAS', 'CICILAN', 'BELUM_BAYAR'];
 
-export const ENROLLMENT_STATUSES: EnrollmentStatus[] = [
-  'active',
-  'ending_soon',
-  'completed',
-  'stopped'
-];
+export const ENROLLMENT_STATUSES: EnrollmentStatus[] = ['active', 'ending_soon', 'completed', 'stopped'];
 
 export const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, string> = {
   active: 'ACTIVE',
@@ -161,7 +149,17 @@ export const NAV_BY_ROLE: Record<AppRole, TabId[]> = {
     'reports',
     'audit'
   ],
-  Sensei: ['overview', 'classes', 'schedule', 'availability', 'teaching', 'students', 'qa', 'disciplinary', 'reports']
+  Sensei: [
+    'overview',
+    'classes',
+    'schedule',
+    'availability',
+    'teaching',
+    'students',
+    'qa',
+    'disciplinary',
+    'reports'
+  ]
 };
 
 export const TAB_LABELS: Record<TabId, string> = {

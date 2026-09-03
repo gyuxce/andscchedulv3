@@ -13,8 +13,7 @@ export type CreateAuthLoginInput = {
 };
 
 export type CreateAuthLoginResult =
-  | { ok: true; userId: string; alreadyExisted?: boolean }
-  | { ok: false; error: string };
+  { ok: true; userId: string; alreadyExisted?: boolean } | { ok: false; error: string };
 
 /**
  * Create a Supabase Auth login from the dashboard while Super Admin stays signed in.
@@ -79,8 +78,7 @@ export async function createAuthLogin(input: CreateAuthLoginInput): Promise<Crea
   if (!userId) {
     return {
       ok: false,
-      error:
-        'Auth tidak mengembalikan user id. Cek Auth settings (Confirm email) di Supabase.'
+      error: 'Auth tidak mengembalikan user id. Cek Auth settings (Confirm email) di Supabase.'
     };
   }
 

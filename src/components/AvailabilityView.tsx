@@ -39,16 +39,12 @@ export function AvailabilityView() {
 
   const openModal = () => {
     if (!permissions.canOverrideAvailability && !isUuid(ownSenseiId)) {
-      toast.error(
-        'Akun Sensei belum tertaut. Di tabel sensei, samakan kolom email dengan email login Auth.'
-      );
+      toast.error('Akun Sensei belum tertaut. Di tabel sensei, samakan kolom email dengan email login Auth.');
       return;
     }
     setForm((current) => ({
       ...current,
-      senseiId: permissions.canOverrideAvailability
-        ? current.senseiId || allSensei[0]?.id || ''
-        : ownSenseiId
+      senseiId: permissions.canOverrideAvailability ? current.senseiId || allSensei[0]?.id || '' : ownSenseiId
     }));
     setOpen(true);
   };
@@ -59,9 +55,7 @@ export function AvailabilityView() {
   const openForDay = (senseiId: string, dateKey: string, weekday: number) => {
     if (!canEdit(senseiId)) return;
     if (!permissions.canOverrideAvailability && !isUuid(ownSenseiId)) {
-      toast.error(
-        'Akun Sensei belum tertaut. Di tabel sensei, samakan kolom email dengan email login Auth.'
-      );
+      toast.error('Akun Sensei belum tertaut. Di tabel sensei, samakan kolom email dengan email login Auth.');
       return;
     }
     setForm({
@@ -92,22 +86,23 @@ export function AvailabilityView() {
           </>
         }
       >
-        Ketersediaan adalah slot yang dibuka Sensei, bukan kelas resmi. Admin memakai ini sebagai informasi kapasitas sebelum assign.
+        Ketersediaan adalah slot yang dibuka Sensei, bukan kelas resmi. Admin memakai ini sebagai informasi
+        kapasitas sebelum assign.
       </PageIntro>
 
       <div className="flex flex-col gap-3 rounded-xl border border-info/25 bg-info-soft px-4 py-3 text-sm text-ink sm:flex-row sm:items-center sm:justify-between">
         <p>
-          Peta minggu ini: latar tipis = jam tersedia, batang biru = sudah terisi jadwal resmi. Ini <b>bukan</b>{' '}
-          kalender kelas.
+          Peta minggu ini: latar tipis = jam tersedia, batang biru = sudah terisi jadwal resmi. Ini{' '}
+          <b>bukan</b> kalender kelas.
         </p>
         <CapacityLegend />
       </div>
 
       {!permissions.canViewAllSensei && !isUuid(ownSenseiId) ? (
         <div className="rounded-xl border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-ink">
-          Akun Sensei belum tertaut ke master data. Email login: <b>{currentUser?.email}</b>.
-          Samakan dengan kolom <b>email</b> di tabel <b>sensei</b>, atau minta Admin set{' '}
-          <b>profiles.sensei_id</b>, lalu login ulang.
+          Akun Sensei belum tertaut ke master data. Email login: <b>{currentUser?.email}</b>. Samakan dengan
+          kolom <b>email</b> di tabel <b>sensei</b>, atau minta Admin set <b>profiles.sensei_id</b>, lalu
+          login ulang.
         </div>
       ) : null}
 

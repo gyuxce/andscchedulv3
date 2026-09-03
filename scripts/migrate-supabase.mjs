@@ -48,18 +48,31 @@ function toUuid(value) {
 const TIMEZONES = new Set(['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']);
 const SCHEDULE_STATUS = new Set(['active', 'completed', 'cancelled']);
 const ATTENDANCE = new Set(['Hadir', 'Izin', 'Sakit', 'Alpa', 'No Show']);
-const ATT_MAP = { present: 'Hadir', hadir: 'Hadir', izin: 'Izin', sakit: 'Sakit', alpa: 'Alpa', absent: 'Alpa', 'no show': 'No Show', noshow: 'No Show' };
+const ATT_MAP = {
+  present: 'Hadir',
+  hadir: 'Hadir',
+  izin: 'Izin',
+  sakit: 'Sakit',
+  alpa: 'Alpa',
+  absent: 'Alpa',
+  'no show': 'No Show',
+  noshow: 'No Show'
+};
 const TIME_ADJ = new Set(['None', 'Pending', 'Approved', 'Rejected']);
 
 const tz = (v) => (TIMEZONES.has(v) ? v : 'Asia/Jakarta');
 const hhmm = (v) => (v ? String(v).slice(0, 5) : v);
-const pick = (row, keys) => Object.fromEntries(keys.filter((k) => row[k] !== undefined).map((k) => [k, row[k]]));
+const pick = (row, keys) =>
+  Object.fromEntries(keys.filter((k) => row[k] !== undefined).map((k) => [k, row[k]]));
 
 const PAGE = 1000;
 async function pull(client, table) {
   const rows = [];
   for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await client.from(table).select('*').range(offset, offset + PAGE - 1);
+    const { data, error } = await client
+      .from(table)
+      .select('*')
+      .range(offset, offset + PAGE - 1);
     if (error) throw new Error(error.message);
     rows.push(...data);
     if (!data || data.length < PAGE) break;
@@ -81,7 +94,15 @@ const PLAN = [
   {
     name: 'sensei',
     map: (r) => ({
-      ...pick(r, ['name', 'note', 'no_wa', 'email', 'level_mengajar', 'kelas_tersedia', 'sensei_leave_quota']),
+      ...pick(r, [
+        'name',
+        'note',
+        'no_wa',
+        'email',
+        'level_mengajar',
+        'kelas_tersedia',
+        'sensei_leave_quota'
+      ]),
       id: toUuid(r.id),
       timezone: tz(r.timezone)
     })
@@ -109,9 +130,19 @@ const PLAN = [
       const groupId = toUuid(r.group_id);
       return {
         ...pick(r, [
-          'type', 'level', 'date', 'start_time', 'end_time', 'updated_at', 'updated_by',
-          'substitution_status', 'substitution_requested_at', 'substitution_requested_by',
-          'substitution_assigned_at', 'substitution_assigned_by', 'substitution_sensei_name'
+          'type',
+          'level',
+          'date',
+          'start_time',
+          'end_time',
+          'updated_at',
+          'updated_by',
+          'substitution_status',
+          'substitution_requested_at',
+          'substitution_requested_by',
+          'substitution_assigned_at',
+          'substitution_assigned_by',
+          'substitution_sensei_name'
         ]),
         id: toUuid(r.id),
         sensei_id: senseiId,
@@ -119,7 +150,9 @@ const PLAN = [
         student_ids: filterIds(r.student_ids, ref.students),
         group_id: inSet(ref.groups, groupId) ? groupId : null,
         original_sensei_id: r.original_sensei_id ? toUuid(r.original_sensei_id) : null,
-        status: SCHEDULE_STATUS.has(String(r.status).toLowerCase()) ? String(r.status).toLowerCase() : 'active'
+        status: SCHEDULE_STATUS.has(String(r.status).toLowerCase())
+          ? String(r.status).toLowerCase()
+          : 'active'
       };
     }
   },
@@ -184,14 +217,26 @@ const PLAN = [
     name: 'lesson_trackers',
     map: (r) => ({
       ...pick(r, [
-        'date', 'material', 'score', 'notes', 'case_notes', 'student_feedback', 'actual_start_time',
-        'is_delayed', 'created_at', 'curriculum_unit', 'actual_end_time', 'time_adjustment_note'
+        'date',
+        'material',
+        'score',
+        'notes',
+        'case_notes',
+        'student_feedback',
+        'actual_start_time',
+        'is_delayed',
+        'created_at',
+        'curriculum_unit',
+        'actual_end_time',
+        'time_adjustment_note'
       ]),
       id: String(r.id), // text PK — keep as-is
       schedule_id: inSet(ref.schedules, toUuid(r.schedule_id)) ? toUuid(r.schedule_id) : null,
       student_id: inSet(ref.students, toUuid(r.student_id)) ? toUuid(r.student_id) : null,
       sensei_id: inSet(ref.sensei, toUuid(r.sensei_id)) ? toUuid(r.sensei_id) : null,
-      attendance: ATTENDANCE.has(r.attendance) ? r.attendance : ATT_MAP[String(r.attendance).toLowerCase()] || 'Hadir',
+      attendance: ATTENDANCE.has(r.attendance)
+        ? r.attendance
+        : ATT_MAP[String(r.attendance).toLowerCase()] || 'Hadir',
       time_adjustment_status: TIME_ADJ.has(r.time_adjustment_status) ? r.time_adjustment_status : 'None'
     })
   },
@@ -202,16 +247,32 @@ const PLAN = [
 
 // Child -> parent order for wiping the NEW project before a clean re-import.
 const WIPE_ORDER = [
-  'session_student_records', 'session_reports', 'teaching_qa_scores', 'level_completions',
-  'enrollments', 'class_masters', 'lesson_trackers', 'session_logs', 'sensei_availability',
-  'sensei_time_blocks', 'offdays', 'sensei_status', 'schedules', 'groups', 'students', 'sensei'
+  'session_student_records',
+  'session_reports',
+  'teaching_qa_scores',
+  'level_completions',
+  'enrollments',
+  'class_masters',
+  'lesson_trackers',
+  'session_logs',
+  'sensei_availability',
+  'sensei_time_blocks',
+  'offdays',
+  'sensei_status',
+  'schedules',
+  'groups',
+  'students',
+  'sensei'
 ];
 
 async function wipeTarget() {
   console.log('--- WIPE project baru (hapus semua baris di tabel target) ---');
   for (const table of WIPE_ORDER) {
     const before = await count(to, table);
-    if (before == null) { console.log(`  ${table.padEnd(24)} (tidak ada / dilewati)`); continue; }
+    if (before == null) {
+      console.log(`  ${table.padEnd(24)} (tidak ada / dilewati)`);
+      continue;
+    }
     const { error } = await to.from(table).delete().not('id', 'is', null);
     // tables whose pk is not "id"
     if (error && /column "id" does not exist/i.test(error.message)) {
@@ -228,13 +289,26 @@ async function wipeTarget() {
 }
 
 // ── run ─────────────────────────────────────────────────────────────────────
-console.log(APPLY ? (OVERWRITE ? '=== APPLY (overwrite) ===' : WIPE ? '=== APPLY (wipe + import) ===' : '=== APPLY (keep existing) ===') : '=== DRY RUN (no writes) ===');
+console.log(
+  APPLY
+    ? OVERWRITE
+      ? '=== APPLY (overwrite) ==='
+      : WIPE
+        ? '=== APPLY (wipe + import) ==='
+        : '=== APPLY (keep existing) ==='
+    : '=== DRY RUN (no writes) ==='
+);
 console.log(`from ${cfg.from.url}\n  to ${cfg.to.url}\n`);
 
 if (APPLY && WIPE) await wipeTarget();
 
 // prime reference id sets
-for (const [key, table] of [['sensei', 'sensei'], ['students', 'students'], ['groups', 'groups'], ['schedules', 'schedules']]) {
+for (const [key, table] of [
+  ['sensei', 'sensei'],
+  ['students', 'students'],
+  ['groups', 'groups'],
+  ['schedules', 'schedules']
+]) {
   const rows = await pull(from, table).catch(() => []);
   for (const r of rows) ref[key].add(toUuid(r.id));
 }
@@ -250,7 +324,10 @@ async function pushChunk(table, chunk, pk, dropped) {
       /column "([^"]+)" of relation/.exec(error.message) ||
       /Could not find the '([^']+)' column/.exec(error.message) ||
       /column ([a-z0-9_]+) does not exist/i.exec(error.message);
-    if (m) { dropped.add(m[1]); continue; }
+    if (m) {
+      dropped.add(m[1]);
+      continue;
+    }
     return { ok: false, error: error.message };
   }
   return { ok: false, error: 'too many unknown columns' };
@@ -279,7 +356,10 @@ for (const step of PLAN) {
   let fail = 0;
   for (let i = 0; i < shaped.length; i += PAGE) {
     const res = await pushChunk(step.name, shaped.slice(i, i + PAGE), pk, dropped);
-    if (!res.ok) { console.log(`    ! ${i}-${i + PAGE}: ${res.error}`); fail += 1; }
+    if (!res.ok) {
+      console.log(`    ! ${i}-${i + PAGE}: ${res.error}`);
+      fail += 1;
+    }
   }
   if (dropped.size) console.log(`    (kolom di-skip: ${[...dropped].join(', ')})`);
   const after = await count(to, step.name);

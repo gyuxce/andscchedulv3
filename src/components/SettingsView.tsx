@@ -22,14 +22,16 @@ export function SettingsView() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageIntro kicker="Pengaturan" title="Pengaturan operasional">
-        Grace late-join dihitung dari jam mulai kelas di timezone Sensei pengajar (WIB / WITA / WIT), bukan dari zona
-        browser atau paksa WIB.
+        Grace late-join dihitung dari jam mulai kelas di timezone Sensei pengajar (WIB / WITA / WIT), bukan
+        dari zona browser atau paksa WIB.
       </PageIntro>
 
       <section className="ui-card space-y-3 p-5">
         <div>
           <p className="ui-label">Tampilan</p>
-          <p className="mt-1 text-xs text-ink-soft">Tema disimpan di perangkat ini. Tidak mengubah data operasional.</p>
+          <p className="mt-1 text-xs text-ink-soft">
+            Tema disimpan di perangkat ini. Tidak mengubah data operasional.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button tone={theme === 'light' ? 'primary' : 'secondary'} onClick={() => setTheme('light')}>
@@ -45,8 +47,8 @@ export function SettingsView() {
         <div>
           <p className="ui-label">Grace late-join (menit)</p>
           <p className="mt-1 text-xs text-ink-soft">
-            Clock-in lebih dari N menit setelah jam mulai kelas (zona Sensei) ditandai terlambat.
-            Isi 0 untuk tanpa toleransi.
+            Clock-in lebih dari N menit setelah jam mulai kelas (zona Sensei) ditandai terlambat. Isi 0 untuk
+            tanpa toleransi.
           </p>
         </div>
         <input

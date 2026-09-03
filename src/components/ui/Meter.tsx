@@ -9,7 +9,8 @@ export function Meter({
   tone?: 'maple' | 'gold' | 'danger' | 'pine';
   className?: string;
 }) {
-  const ratio = max > 0 && value != null && Number.isFinite(value) ? Math.min(Math.max(value / max, 0), 1) : 0;
+  const ratio =
+    max > 0 && value != null && Number.isFinite(value) ? Math.min(Math.max(value / max, 0), 1) : 0;
   const fill = {
     maple: 'bg-accent',
     gold: 'bg-warn',

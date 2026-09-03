@@ -15,7 +15,11 @@ export function QaView() {
   const reviewRecording = useDashboardStore((state) => state.reviewRecording);
   const { qaScores, sessionReports, schedules, sensei } = useScopedData();
   const month = new Date().toISOString().slice(0, 7);
-  const [scoreForm, setScoreForm] = useState({ senseiId: sensei[0]?.id ?? allSensei[0]?.id ?? '', score: 85, notes: '' });
+  const [scoreForm, setScoreForm] = useState({
+    senseiId: sensei[0]?.id ?? allSensei[0]?.id ?? '',
+    score: 85,
+    notes: ''
+  });
   const [reviewId, setReviewId] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const recordings = sessionReports
@@ -28,8 +32,8 @@ export function QaView() {
   return (
     <div className="space-y-6">
       <PageIntro kicker="QA & Rekaman" title="QA & rekaman">
-        Teaching Performance diinput manual oleh Kyouiku (0–100). Rekaman disimpan sebagai referensi URL. Skor komposit
-        disiplin belum digabung di V3.
+        Teaching Performance diinput manual oleh Kyouiku (0–100). Rekaman disimpan sebagai referensi URL. Skor
+        komposit disiplin belum digabung di V3.
       </PageIntro>
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="ui-card overflow-hidden">
@@ -64,14 +68,35 @@ export function QaView() {
           </div>
           {permissions.canEditQa ? (
             <div className="m-4 mt-3 space-y-2 rounded-xl border border-line bg-surface-2 p-3">
-              <select className="ui-select" value={scoreForm.senseiId} onChange={(event) => setScoreForm({ ...scoreForm, senseiId: event.target.value })}>
+              <select
+                className="ui-select"
+                value={scoreForm.senseiId}
+                onChange={(event) => setScoreForm({ ...scoreForm, senseiId: event.target.value })}
+              >
                 {(permissions.canViewAllSensei ? allSensei : sensei).map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
                 ))}
               </select>
-              <input className="ui-input" type="number" min={0} max={100} value={scoreForm.score} onChange={(event) => setScoreForm({ ...scoreForm, score: Number(event.target.value) })} />
-              <input className="ui-input" placeholder="Catatan QA" value={scoreForm.notes} onChange={(event) => setScoreForm({ ...scoreForm, notes: event.target.value })} />
-              <Button tone="primary" onClick={() => upsertQaScore(scoreForm.senseiId, month, scoreForm.score, scoreForm.notes)}>
+              <input
+                className="ui-input"
+                type="number"
+                min={0}
+                max={100}
+                value={scoreForm.score}
+                onChange={(event) => setScoreForm({ ...scoreForm, score: Number(event.target.value) })}
+              />
+              <input
+                className="ui-input"
+                placeholder="Catatan QA"
+                value={scoreForm.notes}
+                onChange={(event) => setScoreForm({ ...scoreForm, notes: event.target.value })}
+              />
+              <Button
+                tone="primary"
+                onClick={() => upsertQaScore(scoreForm.senseiId, month, scoreForm.score, scoreForm.notes)}
+              >
                 Simpan skor {month}
               </Button>
             </div>
@@ -87,16 +112,34 @@ export function QaView() {
             {recordings.map(({ report, session }) => (
               <div key={report.id} className="rounded-xl border border-line p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold">{session?.level} · {session?.date}</div>
-                  <Badge tone={report.recordingStatus === 'Available' ? 'success' : report.recordingStatus === 'Missing' ? 'danger' : 'muted'}>
+                  <div className="font-semibold">
+                    {session?.level} · {session?.date}
+                  </div>
+                  <Badge
+                    tone={
+                      report.recordingStatus === 'Available'
+                        ? 'success'
+                        : report.recordingStatus === 'Missing'
+                          ? 'danger'
+                          : 'muted'
+                    }
+                  >
                     {report.recordingStatus}
                   </Badge>
                 </div>
                 <p className="text-xs text-ink-soft">{report.recordingUrl || 'Belum ada URL'}</p>
                 <div className="mt-1 flex items-center justify-between">
-                  <Badge tone={report.qaReviewStatus === 'Reviewed' ? 'pine' : 'gold'}>{report.qaReviewStatus}</Badge>
+                  <Badge tone={report.qaReviewStatus === 'Reviewed' ? 'pine' : 'gold'}>
+                    {report.qaReviewStatus}
+                  </Badge>
                   {permissions.canReviewQa && report.recordingStatus === 'Available' ? (
-                    <button className="text-xs font-semibold text-accent" onClick={() => { setReviewId(report.id); setReviewNotes(report.qaReviewNotes ?? ''); }}>
+                    <button
+                      className="text-xs font-semibold text-accent"
+                      onClick={() => {
+                        setReviewId(report.id);
+                        setReviewNotes(report.qaReviewNotes ?? '');
+                      }}
+                    >
                       Review
                     </button>
                   ) : null}
@@ -118,13 +161,24 @@ export function QaView() {
           footer={
             <>
               <Button onClick={() => setReviewId(null)}>Batal</Button>
-              <Button tone="primary" onClick={() => { reviewRecording(reviewId, reviewNotes); setReviewId(null); }}>
+              <Button
+                tone="primary"
+                onClick={() => {
+                  reviewRecording(reviewId, reviewNotes);
+                  setReviewId(null);
+                }}
+              >
                 Tandai reviewed
               </Button>
             </>
           }
         >
-          <textarea className="ui-textarea" value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} placeholder="Catatan review Kyouiku" />
+          <textarea
+            className="ui-textarea"
+            value={reviewNotes}
+            onChange={(event) => setReviewNotes(event.target.value)}
+            placeholder="Catatan review Kyouiku"
+          />
         </Modal>
       ) : null}
     </div>

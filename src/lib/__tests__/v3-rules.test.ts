@@ -8,7 +8,13 @@ import { getSessionWorkflow, isLateJoin } from '../session';
 import { filterAcademicReportRows, hasActiveOrCompletedMakeup } from '../makeup';
 import { addMinutesToTime, generateRecurringDates } from '../recurring';
 import { classCompositionError } from '../classComposition';
-import { getClassHealth, getClassProgress, getSessionOrdinal, getSessionStrip, computeProjectedEndDate } from '../classProgress';
+import {
+  getClassHealth,
+  getClassProgress,
+  getSessionOrdinal,
+  getSessionStrip,
+  computeProjectedEndDate
+} from '../classProgress';
 import { buildRecurringPreview } from '../schedulePreview';
 import { buildEomSessionRows, eomRowsToCsv, summarizeEomBySensei } from '../eomReport';
 import { buildActionItems } from '../actionCenter';
@@ -18,7 +24,12 @@ import {
   formatDurationMinutes,
   scheduledDurationMinutes
 } from '../duration';
-import { ensureClassEnrollments, progressEnrollmentJourney, deriveEnrollmentDisplayStatus, getEnrollmentProgress } from '../enrollment';
+import {
+  ensureClassEnrollments,
+  progressEnrollmentJourney,
+  deriveEnrollmentDisplayStatus,
+  getEnrollmentProgress
+} from '../enrollment';
 import { resolveSenseiId } from '../senseiLink';
 import type { ClassMaster, ClassSession, Sensei } from '../../types';
 
@@ -33,7 +44,9 @@ const yuki: Sensei = {
   timezone: 'Asia/Jakarta'
 };
 
-const classOf = (partial: Partial<ClassSession> & Pick<ClassSession, 'id' | 'date' | 'startTime' | 'endTime'>): ClassSession => ({
+const classOf = (
+  partial: Partial<ClassSession> & Pick<ClassSession, 'id' | 'date' | 'startTime' | 'endTime'>
+): ClassSession => ({
   senseiId: 's1',
   studentIds: ['st1'],
   type: 'Private',
@@ -68,7 +81,16 @@ describe('Sensei labels', () => {
     const labels = getOperationalLabels(
       yuki,
       [classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '10:00' })],
-      [{ id: 'l1', senseiId: 's1', startDate: '2026-08-10', endDate: '2026-08-20', reason: 'cuti', status: 'approved' }],
+      [
+        {
+          id: 'l1',
+          senseiId: 's1',
+          startDate: '2026-08-10',
+          endDate: '2026-08-20',
+          reason: 'cuti',
+          status: 'approved'
+        }
+      ],
       new Date('2026-08-14')
     );
     expect(labels).toContain('CUTI');
@@ -122,12 +144,9 @@ describe('workload', () => {
         isActive: true
       }
     ];
-    const cap = getDayCapacity(
-      's1',
-      '2026-08-14',
-      slots,
-      [classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '11:00' })]
-    );
+    const cap = getDayCapacity('s1', '2026-08-14', slots, [
+      classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '11:00' })
+    ]);
     expect(cap.availableHours).toBe(4);
     expect(cap.assignedHours).toBe(2);
     expect(cap.remainingHours).toBe(2);
@@ -151,7 +170,16 @@ describe('session workflow and late join', () => {
   it('follows clock-in → clock-out → report', () => {
     const session = classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '10:00' });
     expect(getSessionWorkflow(session)).toBe('ready');
-    expect(getSessionWorkflow(session, { id: 'l', scheduleId: 'c1', senseiId: 's1', clockInAt: 'x', lateJoin: false, overridden: false })).toBe('in_progress');
+    expect(
+      getSessionWorkflow(session, {
+        id: 'l',
+        scheduleId: 'c1',
+        senseiId: 's1',
+        clockInAt: 'x',
+        lateJoin: false,
+        overridden: false
+      })
+    ).toBe('in_progress');
   });
 
   it('marks late join after scheduled start when grace is 0 (Sensei WIB)', () => {
@@ -346,9 +374,23 @@ describe('recurring + session X of X + class health', () => {
       status: 'active'
     };
     const schedules = [
-      classOf({ id: '1', classId: 'c1', date: '2026-08-03', startTime: '09:00', endTime: '10:30', status: 'completed' }),
+      classOf({
+        id: '1',
+        classId: 'c1',
+        date: '2026-08-03',
+        startTime: '09:00',
+        endTime: '10:30',
+        status: 'completed'
+      }),
       classOf({ id: '2', classId: 'c1', date: '2026-08-05', startTime: '09:00', endTime: '10:30' }),
-      classOf({ id: '3', classId: 'c1', date: '2026-08-07', startTime: '09:00', endTime: '10:30', status: 'cancelled' }),
+      classOf({
+        id: '3',
+        classId: 'c1',
+        date: '2026-08-07',
+        startTime: '09:00',
+        endTime: '10:30',
+        status: 'cancelled'
+      }),
       classOf({ id: '4', classId: 'c1', date: '2026-08-10', startTime: '09:00', endTime: '10:30' })
     ];
     expect(getSessionOrdinal(schedules[1], schedules, teachingClass)?.label).toBe('Sesi 2 dari 4');
@@ -368,7 +410,12 @@ describe('recurring + session X of X + class health', () => {
       requiredMeetings: 10
     });
     expect(preview).toHaveLength(10);
-    expect(preview[0]).toMatchObject({ date: '2026-08-17', startTime: '19:00', endTime: '20:30', label: '1 / 10' });
+    expect(preview[0]).toMatchObject({
+      date: '2026-08-17',
+      startTime: '19:00',
+      endTime: '20:30',
+      label: '1 / 10'
+    });
     expect(preview[1].date).toBe('2026-08-18');
     expect(preview[9].label).toBe('10 / 10');
   });
@@ -389,11 +436,25 @@ describe('recurring + session X of X + class health', () => {
       status: 'active'
     };
     const schedules = [
-      classOf({ id: '1', classId: 'c1', date: '2026-08-17', startTime: '19:00', endTime: '20:30', status: 'completed' }),
+      classOf({
+        id: '1',
+        classId: 'c1',
+        date: '2026-08-17',
+        startTime: '19:00',
+        endTime: '20:30',
+        status: 'completed'
+      }),
       classOf({ id: '2', classId: 'c1', date: '2026-08-18', startTime: '19:00', endTime: '20:30' }),
       classOf({ id: '3', classId: 'c1', date: '2026-08-24', startTime: '19:00', endTime: '20:30' }),
       classOf({ id: '4', classId: 'c1', date: '2026-10-14', startTime: '19:00', endTime: '20:30' }),
-      classOf({ id: 'x1', classId: 'c1', date: '2026-10-15', startTime: '19:00', endTime: '20:30', isExtra: true })
+      classOf({
+        id: 'x1',
+        classId: 'c1',
+        date: '2026-10-15',
+        startTime: '19:00',
+        endTime: '20:30',
+        isExtra: true
+      })
     ];
     expect(getSessionOrdinal(schedules[4], schedules, teachingClass)?.label).toBe('Extra');
     expect(getClassProgress(teachingClass, schedules, []).calendarCount).toBe(4);
@@ -588,14 +649,10 @@ describe('resolveSenseiId', () => {
   ];
 
   it('matches by email case-insensitively', () => {
-    expect(
-      resolveSenseiId(list, { email: 'Zarasvatipradnya@gmail.com' })
-    ).toBe(list[0].id);
+    expect(resolveSenseiId(list, { email: 'Zarasvatipradnya@gmail.com' })).toBe(list[0].id);
   });
 
   it('trusts profiles.sensei_id even when list empty', () => {
-    expect(
-      resolveSenseiId([], { senseiId: list[0].id, email: 'other@test.com' })
-    ).toBe(list[0].id);
+    expect(resolveSenseiId([], { senseiId: list[0].id, email: 'other@test.com' })).toBe(list[0].id);
   });
 });

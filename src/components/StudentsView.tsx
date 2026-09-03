@@ -16,13 +16,7 @@ import {
 import { filterAcademicReportRows, isMakeupSession, makeupLabel } from '../lib/makeup';
 import { senseiDisplayName } from '../lib/labels';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
-import type {
-  ClassType,
-  Enrollment,
-  EnrollmentStatus,
-  PaymentStatus,
-  Student
-} from '../types';
+import type { ClassType, Enrollment, EnrollmentStatus, PaymentStatus, Student } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
@@ -98,8 +92,8 @@ export function StudentsView() {
   }, [selected, sessionReports, schedules]);
 
   const attendanceRate = history.length
-    ? history.filter((item) => item.record.attendance === 'Present' || item.record.attendance === 'Late').length /
-      history.length
+    ? history.filter((item) => item.record.attendance === 'Present' || item.record.attendance === 'Late')
+        .length / history.length
     : null;
 
   const studentCompletions = selected
@@ -195,7 +189,8 @@ export function StudentsView() {
           ) : null
         }
       >
-        Profil siswa adalah master permanen. Level/kelas disimpan di Enrollment / Learning Journey (history tidak di-overwrite).
+        Profil siswa adalah master permanen. Level/kelas disimpan di Enrollment / Learning Journey (history
+        tidak di-overwrite).
       </PageIntro>
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
@@ -251,7 +246,9 @@ export function StudentsView() {
                     <div className="flex items-center gap-1.5">
                       <span className="truncate font-semibold">{student.name}</span>
                       {!student.isActive ? (
-                        <span className="shrink-0 text-[10px] font-medium uppercase text-ink-faint">nonaktif</span>
+                        <span className="shrink-0 text-[10px] font-medium uppercase text-ink-faint">
+                          nonaktif
+                        </span>
                       ) : null}
                     </div>
                     <div className="truncate text-xs text-ink-soft">
@@ -303,7 +300,9 @@ export function StudentsView() {
                 <div className="min-w-0 flex-1 space-y-3">
                   <div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold uppercase tracking-wide text-ink-soft">Hadir / terlambat</span>
+                      <span className="font-semibold uppercase tracking-wide text-ink-soft">
+                        Hadir / terlambat
+                      </span>
                       <span className="font-semibold text-ink">
                         {attendanceRate === null ? '—' : `${Math.round(attendanceRate * 100)}%`}
                       </span>
@@ -311,7 +310,9 @@ export function StudentsView() {
                     <Meter className="mt-1.5" value={attendanceRate ?? 0} tone="pine" />
                   </div>
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Learning journey</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                      Learning journey
+                    </p>
                     <div className="flex flex-wrap items-center gap-2">
                       {[...learningHistory].reverse().map((item) => (
                         <span
@@ -330,7 +331,9 @@ export function StudentsView() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-ink-soft">{history.length} sesi tercatat (tanpa double-count makeup)</p>
+                  <p className="text-xs text-ink-soft">
+                    {history.length} sesi tercatat (tanpa double-count makeup)
+                  </p>
                 </div>
               </div>
             </div>
@@ -360,7 +363,9 @@ export function StudentsView() {
                   </div>
                   <p className="text-xs text-ink-soft">
                     Mulai {currentEnrollment.startDate || '—'}
-                    {currentEnrollment.plannedEndDate ? ` · Planned end ${currentEnrollment.plannedEndDate}` : ''}
+                    {currentEnrollment.plannedEndDate
+                      ? ` · Planned end ${currentEnrollment.plannedEndDate}`
+                      : ''}
                     {currentEnrollment.senseiId
                       ? ` · Sensei ${displayName(allSensei, currentEnrollment.senseiId)}`
                       : ''}
@@ -378,7 +383,11 @@ export function StudentsView() {
                         Sesi {currentProgress.completed} / {currentProgress.required}
                         {currentDisplayStatus === 'ending_soon' ? ' · Ending Soon' : ''}
                       </p>
-                      <Meter className="mt-1.5" value={currentProgress.completed} max={currentProgress.required} />
+                      <Meter
+                        className="mt-1.5"
+                        value={currentProgress.completed}
+                        max={currentProgress.required}
+                      />
                     </div>
                   ) : null}
                   {currentEnrollment.enrollmentRemark || currentEnrollment.notes ? (
@@ -408,7 +417,9 @@ export function StudentsView() {
                         <span className="font-semibold">{item.level}</span>
                         {item.classType ? <span className="text-ink-soft">· {item.classType}</span> : null}
                         {item.paymentStatus ? (
-                          <span className="text-xs text-ink-soft">{PAYMENT_STATUS_LABEL[item.paymentStatus]}</span>
+                          <span className="text-xs text-ink-soft">
+                            {PAYMENT_STATUS_LABEL[item.paymentStatus]}
+                          </span>
                         ) : null}
                       </div>
                       <div className="text-xs text-ink-soft">
@@ -422,7 +433,10 @@ export function StudentsView() {
                         <div className="text-xs text-ink-soft">{item.enrollmentRemark || item.notes}</div>
                       ) : null}
                       {canManage ? (
-                        <button className="mt-1 text-xs font-semibold text-accent" onClick={() => startEnrollmentEdit(item)}>
+                        <button
+                          className="mt-1 text-xs font-semibold text-accent"
+                          onClick={() => startEnrollmentEdit(item)}
+                        >
                           Edit
                         </button>
                       ) : null}
@@ -447,7 +461,11 @@ export function StudentsView() {
                   </div>
                   <label>
                     <span className="ui-label">Naik ke level (opsional)</span>
-                    <select className="ui-select" value={nextLevel} onChange={(e) => setNextLevel(e.target.value)}>
+                    <select
+                      className="ui-select"
+                      value={nextLevel}
+                      onChange={(e) => setNextLevel(e.target.value)}
+                    >
                       <option value="">Tetap di level ini</option>
                       {CLASS_LEVELS.filter((level) => level !== selected.currentLevel).map((level) => (
                         <option key={level} value={level}>
@@ -689,7 +707,9 @@ export function StudentsView() {
               <select
                 className="ui-select"
                 value={enrollmentForm.classType || 'Private'}
-                onChange={(e) => setEnrollmentForm({ ...enrollmentForm, classType: e.target.value as ClassType })}
+                onChange={(e) =>
+                  setEnrollmentForm({ ...enrollmentForm, classType: e.target.value as ClassType })
+                }
               >
                 {CLASS_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -755,7 +775,9 @@ export function StudentsView() {
                 className="ui-input"
                 type="date"
                 value={enrollmentForm.plannedEndDate || ''}
-                onChange={(e) => setEnrollmentForm({ ...enrollmentForm, plannedEndDate: e.target.value || null })}
+                onChange={(e) =>
+                  setEnrollmentForm({ ...enrollmentForm, plannedEndDate: e.target.value || null })
+                }
               />
             </label>
             <label>

@@ -1,10 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  buildEomSessionRows,
-  downloadEomExcel,
-  eomRowsToCsv,
-  summarizeEomBySensei
-} from '../lib/eomReport';
+import { buildEomSessionRows, downloadEomExcel, eomRowsToCsv, summarizeEomBySensei } from '../lib/eomReport';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import type { ClassStatus } from '../types';
 import { Button } from './ui/Button';
@@ -30,10 +25,9 @@ export function ReportsView() {
   const [statusFilter, setStatusFilter] = useState<ClassStatus | 'all'>('all');
   const [showRecap, setShowRecap] = useState(true);
 
-  const effectiveSenseiId =
-    permissions.canViewAllSchedules
-      ? senseiFilter
-      : linkedSenseiId || currentUser?.senseiId || 'none';
+  const effectiveSenseiId = permissions.canViewAllSchedules
+    ? senseiFilter
+    : linkedSenseiId || currentUser?.senseiId || 'none';
 
   const rows = useMemo(
     () =>
@@ -101,7 +95,12 @@ export function ReportsView() {
       <div className="ui-card grid gap-3 p-4 md:grid-cols-3">
         <label>
           <span className="ui-label">Bulan</span>
-          <input className="ui-input" type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+          <input
+            className="ui-input"
+            type="month"
+            value={month}
+            onChange={(event) => setMonth(event.target.value)}
+          />
         </label>
         {permissions.canViewAllSchedules ? (
           <label>

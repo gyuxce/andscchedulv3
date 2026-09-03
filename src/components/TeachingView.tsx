@@ -120,15 +120,20 @@ export function TeachingView() {
   const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   const selectedLog = selected ? sessionLogs.find((item) => item.scheduleId === selected.id) : undefined;
-  const selectedReport = selected ? sessionReports.find((item) => item.scheduleId === selected.id) : undefined;
+  const selectedReport = selected
+    ? sessionReports.find((item) => item.scheduleId === selected.id)
+    : undefined;
   const selectedState = selected ? getSessionWorkflow(selected, selectedLog, selectedReport) : 'ready';
-  const canClock = Boolean(selected && permissions.canClockOwn && linkedSenseiId && linkedSenseiId === selected.senseiId);
+  const canClock = Boolean(
+    selected && permissions.canClockOwn && linkedSenseiId && linkedSenseiId === selected.senseiId
+  );
 
   const nowRows = useMemo(
     () =>
       rows.filter(
         ({ session, state }) =>
-          session.date === today && (state === 'ready' || state === 'in_progress' || state === 'report_pending')
+          session.date === today &&
+          (state === 'ready' || state === 'in_progress' || state === 'report_pending')
       ),
     [rows, today]
   );
@@ -155,7 +160,8 @@ export function TeachingView() {
         title="Sesi hari ini"
         actions={<WeekNav weekAnchor={weekAnchor} onChange={setWeekAnchor} />}
       >
-        Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Default menampilkan minggu yang dipilih.
+        Alur Sensei: Jadwal → Clock In → Mengajar → Clock Out → Laporan Sesi. Default menampilkan minggu yang
+        dipilih.
       </PageIntro>
 
       {featured ? (
@@ -168,12 +174,18 @@ export function TeachingView() {
                   Hari ini · {featured.session.startTime}–{featured.session.endTime}
                 </p>
                 <h3 className="mt-1 text-2xl font-bold tracking-tight text-ink">{featured.session.level}</h3>
-                <p className="text-sm text-ink-soft">{studentSummary(featured.session.studentIds, allStudents)}</p>
-                <p className="mt-1 text-sm text-ink-soft">{displayName(allSensei, featured.session.senseiId)}</p>
+                <p className="text-sm text-ink-soft">
+                  {studentSummary(featured.session.studentIds, allStudents)}
+                </p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  {displayName(allSensei, featured.session.senseiId)}
+                </p>
                 {featured.state === 'ready' ? (
                   <p className="mt-2 text-sm font-semibold text-accent">
-                    {formatCountdown(combineDateTime(featured.session.date, featured.session.startTime), now) ||
-                      'Waktunya mulai'}
+                    {formatCountdown(
+                      combineDateTime(featured.session.date, featured.session.startTime),
+                      now
+                    ) || 'Waktunya mulai'}
                   </p>
                 ) : null}
               </div>
@@ -197,11 +209,15 @@ export function TeachingView() {
               <Button onClick={() => openSession(featured.session)}>Detail</Button>
             </div>
             {featured.log?.clockInAt ? (
-              <p className="mt-3 pl-2 text-[11px] text-ink-soft">Clock in {formatDateTime(featured.log.clockInAt)}</p>
+              <p className="mt-3 pl-2 text-[11px] text-ink-soft">
+                Clock in {formatDateTime(featured.log.clockInAt)}
+              </p>
             ) : null}
           </div>
           <div className="ui-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">Timeline hari ini</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+              Timeline hari ini
+            </p>
             <div className="mt-3 space-y-3">
               {todayTimeline.length === 0 ? (
                 <p className="text-sm text-ink-soft">Tidak ada sesi hari ini.</p>
@@ -253,15 +269,20 @@ export function TeachingView() {
             <option value="completed">Selesai</option>
             <option value="cancelled">Dibatalkan</option>
           </select>
-          <select className="ui-select h-9 w-auto min-w-[160px]" value={senseiFilter} onChange={(event) => setSenseiFilter(event.target.value)}>
+          <select
+            className="ui-select h-9 w-auto min-w-[160px]"
+            value={senseiFilter}
+            onChange={(event) => setSenseiFilter(event.target.value)}
+          >
             <option value="all">Semua Sensei</option>
-            {(permissions.canViewAllSchedules ? allSensei : allSensei.filter((item) => item.id === linkedSenseiId)).map(
-              (item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              )
-            )}
+            {(permissions.canViewAllSchedules
+              ? allSensei
+              : allSensei.filter((item) => item.id === linkedSenseiId)
+            ).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
           <input
             className="ui-input h-9 w-44"
@@ -300,7 +321,8 @@ export function TeachingView() {
                     <Badge tone={WORKFLOW_TONE[state]}>{workflowLabel(state)}</Badge>
                   </div>
                   <p className="truncate text-xs text-ink-soft">
-                    {session.date} · {session.startTime}–{session.endTime} · {displayName(allSensei, session.senseiId)} ·{' '}
+                    {session.date} · {session.startTime}–{session.endTime} ·{' '}
+                    {displayName(allSensei, session.senseiId)} ·{' '}
                     {studentSummary(session.studentIds, allStudents)}
                   </p>
                   {ordinal && ordinal.required > 0 ? (
@@ -308,7 +330,9 @@ export function TeachingView() {
                   ) : null}
                 </div>
                 <div className="hidden shrink-0 text-right text-[11px] text-ink-soft sm:block">
-                  <div>{log?.clockInAt ? 'In ·' : 'In ○'} {log?.clockOutAt ? 'Out ·' : 'Out ○'}</div>
+                  <div>
+                    {log?.clockInAt ? 'In ·' : 'In ○'} {log?.clockOutAt ? 'Out ·' : 'Out ○'}
+                  </div>
                   {log?.lateJoin ? <div className="font-bold text-danger">Terlambat</div> : null}
                 </div>
               </button>
@@ -363,8 +387,9 @@ export function TeachingView() {
           onOverrideAttendance={overrideAttendance}
           onOverridePerformance={overridePerformance}
           canInput={
-            Boolean(permissions.canInputAttendance && linkedSenseiId && linkedSenseiId === selected.senseiId) ||
-            permissions.canOverrideAcademic
+            Boolean(
+              permissions.canInputAttendance && linkedSenseiId && linkedSenseiId === selected.senseiId
+            ) || permissions.canOverrideAcademic
           }
         />
       ) : null}
@@ -402,7 +427,12 @@ function SessionDrawer(props: {
       recordingStatus: RecordingStatus;
     }
   ) => void;
-  onOverrideAttendance: (reportId: string, studentId: string, attendance: AttendanceStatus, reason: string) => void;
+  onOverrideAttendance: (
+    reportId: string,
+    studentId: string,
+    attendance: AttendanceStatus,
+    reason: string
+  ) => void;
   onOverridePerformance: (reportId: string, studentId: string, score: number, reason: string) => void;
   canInput: boolean;
 }) {
@@ -423,11 +453,15 @@ function SessionDrawer(props: {
       }))
   );
   const [materialCovered, setMaterialCovered] = useState(props.report?.materialCovered ?? '');
-  const [materialUrl, setMaterialUrl] = useState(props.report?.materialUrl ?? teachingClass?.materialLink ?? '');
+  const [materialUrl, setMaterialUrl] = useState(
+    props.report?.materialUrl ?? teachingClass?.materialLink ?? ''
+  );
   const [levelProgress, setLevelProgress] = useState(props.report?.levelProgress ?? '');
   const [sessionNotes, setSessionNotes] = useState(props.report?.sessionNotes ?? '');
   const [recordingUrl, setRecordingUrl] = useState(props.report?.recordingUrl ?? '');
-  const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>(props.report?.recordingStatus ?? 'Missing');
+  const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>(
+    props.report?.recordingStatus ?? 'Missing'
+  );
   const [academicReason, setAcademicReason] = useState('');
 
   return (
@@ -462,15 +496,40 @@ function SessionDrawer(props: {
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
-        {props.canOperate && props.state === 'ready' ? <Button tone="primary" onClick={props.onClockIn}>Clock in</Button> : null}
-        {props.canOperate && props.state === 'in_progress' ? <Button tone="primary" onClick={props.onClockOut}>Clock out</Button> : null}
+        {props.canOperate && props.state === 'ready' ? (
+          <Button tone="primary" onClick={props.onClockIn}>
+            Clock in
+          </Button>
+        ) : null}
+        {props.canOperate && props.state === 'in_progress' ? (
+          <Button tone="primary" onClick={props.onClockOut}>
+            Clock out
+          </Button>
+        ) : null}
       </div>
       {props.canOverride ? (
         <div className="grid gap-2 rounded-xl border border-line p-3 md:grid-cols-3">
-          <input className="ui-input" type="datetime-local" value={props.clockInAt} onChange={(event) => props.setClockInAt(event.target.value)} />
-          <input className="ui-input" type="datetime-local" value={props.clockOutAt} onChange={(event) => props.setClockOutAt(event.target.value)} />
-          <input className="ui-input" placeholder="Alasan override" value={props.overrideReason} onChange={(event) => props.setOverrideReason(event.target.value)} />
-          <Button className="md:col-span-3" onClick={props.onOverrideClock} disabled={!props.overrideReason}>Override clock-in/out</Button>
+          <input
+            className="ui-input"
+            type="datetime-local"
+            value={props.clockInAt}
+            onChange={(event) => props.setClockInAt(event.target.value)}
+          />
+          <input
+            className="ui-input"
+            type="datetime-local"
+            value={props.clockOutAt}
+            onChange={(event) => props.setClockOutAt(event.target.value)}
+          />
+          <input
+            className="ui-input"
+            placeholder="Alasan override"
+            value={props.overrideReason}
+            onChange={(event) => props.setOverrideReason(event.target.value)}
+          />
+          <Button className="md:col-span-3" onClick={props.onOverrideClock} disabled={!props.overrideReason}>
+            Override clock-in/out
+          </Button>
         </div>
       ) : null}
 
@@ -484,11 +543,17 @@ function SessionDrawer(props: {
             disabled={!props.canInput}
             onChange={(event) => {
               const attendance = event.target.value as AttendanceStatus;
-              const next = records.map((item, itemIndex) => (itemIndex === index ? { ...item, attendance } : item));
+              const next = records.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, attendance } : item
+              );
               setRecords(next);
             }}
           >
-            {ATTENDANCE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            {ATTENDANCE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
           <input
             className="ui-input"
@@ -499,7 +564,9 @@ function SessionDrawer(props: {
             disabled={!props.canInput}
             onChange={(event) => {
               const performanceScore = Number(event.target.value);
-              setRecords(records.map((item, itemIndex) => (itemIndex === index ? { ...item, performanceScore } : item)));
+              setRecords(
+                records.map((item, itemIndex) => (itemIndex === index ? { ...item, performanceScore } : item))
+              );
             }}
           />
           <input
@@ -509,36 +576,70 @@ function SessionDrawer(props: {
             disabled={!props.canInput}
             onChange={(event) => {
               const performanceNote = event.target.value;
-              setRecords(records.map((item, itemIndex) => (itemIndex === index ? { ...item, performanceNote } : item)));
+              setRecords(
+                records.map((item, itemIndex) => (itemIndex === index ? { ...item, performanceNote } : item))
+              );
             }}
           />
-          {record.attendance ? <Badge tone={ATTENDANCE_TONE[record.attendance]}>{record.attendance}</Badge> : null}
+          {record.attendance ? (
+            <Badge tone={ATTENDANCE_TONE[record.attendance]}>{record.attendance}</Badge>
+          ) : null}
         </div>
       ))}
       <label>
         <span className="ui-label">Materi / topik</span>
-        <input className="ui-input" value={materialCovered} disabled={!props.canInput} onChange={(event) => setMaterialCovered(event.target.value)} />
+        <input
+          className="ui-input"
+          value={materialCovered}
+          disabled={!props.canInput}
+          onChange={(event) => setMaterialCovered(event.target.value)}
+        />
       </label>
       <label>
         <span className="ui-label">Link materi (opsional)</span>
-        <input className="ui-input" value={materialUrl} disabled={!props.canInput} onChange={(event) => setMaterialUrl(event.target.value)} />
+        <input
+          className="ui-input"
+          value={materialUrl}
+          disabled={!props.canInput}
+          onChange={(event) => setMaterialUrl(event.target.value)}
+        />
       </label>
       <label>
         <span className="ui-label">Progres level</span>
-        <input className="ui-input" value={levelProgress} disabled={!props.canInput} onChange={(event) => setLevelProgress(event.target.value)} />
+        <input
+          className="ui-input"
+          value={levelProgress}
+          disabled={!props.canInput}
+          onChange={(event) => setLevelProgress(event.target.value)}
+        />
       </label>
       <label>
         <span className="ui-label">Catatan sesi</span>
-        <textarea className="ui-textarea" value={sessionNotes} disabled={!props.canInput} onChange={(event) => setSessionNotes(event.target.value)} />
+        <textarea
+          className="ui-textarea"
+          value={sessionNotes}
+          disabled={!props.canInput}
+          onChange={(event) => setSessionNotes(event.target.value)}
+        />
       </label>
       <div className="grid gap-2 md:grid-cols-2">
         <label>
           <span className="ui-label">Link rekaman</span>
-          <input className="ui-input" value={recordingUrl} disabled={!props.canInput} onChange={(event) => setRecordingUrl(event.target.value)} />
+          <input
+            className="ui-input"
+            value={recordingUrl}
+            disabled={!props.canInput}
+            onChange={(event) => setRecordingUrl(event.target.value)}
+          />
         </label>
         <label>
           <span className="ui-label">Status rekaman</span>
-          <select className="ui-select" value={recordingStatus} disabled={!props.canInput} onChange={(event) => setRecordingStatus(event.target.value as RecordingStatus)}>
+          <select
+            className="ui-select"
+            value={recordingStatus}
+            disabled={!props.canInput}
+            onChange={(event) => setRecordingStatus(event.target.value as RecordingStatus)}
+          >
             <option>Available</option>
             <option>Missing</option>
             <option>Not Required</option>
@@ -548,7 +649,12 @@ function SessionDrawer(props: {
       {props.canInput ? (
         <Button
           tone="primary"
-          disabled={!materialCovered || props.state === 'ready' || props.state === 'in_progress' || props.state === 'cancelled'}
+          disabled={
+            !materialCovered ||
+            props.state === 'ready' ||
+            props.state === 'in_progress' ||
+            props.state === 'cancelled'
+          }
           onClick={() =>
             props.onSubmit(props.session.id, {
               students: records,
@@ -567,13 +673,25 @@ function SessionDrawer(props: {
       {props.canOverride && props.report ? (
         <div className="rounded-xl border border-line p-3">
           <p className="ui-label">Koreksi akademik (audit)</p>
-          <input className="ui-input" placeholder="Alasan koreksi" value={academicReason} onChange={(event) => setAcademicReason(event.target.value)} />
+          <input
+            className="ui-input"
+            placeholder="Alasan koreksi"
+            value={academicReason}
+            onChange={(event) => setAcademicReason(event.target.value)}
+          />
           <div className="mt-2 flex flex-wrap gap-2">
             {records.map((record) => (
               <Button
                 key={`att-${record.studentId}`}
                 disabled={!academicReason}
-                onClick={() => props.onOverrideAttendance(props.report!.id, record.studentId, record.attendance, academicReason)}
+                onClick={() =>
+                  props.onOverrideAttendance(
+                    props.report!.id,
+                    record.studentId,
+                    record.attendance,
+                    academicReason
+                  )
+                }
               >
                 Koreksi absensi {displayName(props.students, record.studentId)}
               </Button>
@@ -582,7 +700,14 @@ function SessionDrawer(props: {
               <Button
                 key={`score-${record.studentId}`}
                 disabled={!academicReason || record.performanceScore == null}
-                onClick={() => props.onOverridePerformance(props.report!.id, record.studentId, record.performanceScore ?? 0, academicReason)}
+                onClick={() =>
+                  props.onOverridePerformance(
+                    props.report!.id,
+                    record.studentId,
+                    record.performanceScore ?? 0,
+                    academicReason
+                  )
+                }
               >
                 Koreksi nilai {displayName(props.students, record.studentId)}
               </Button>

@@ -109,7 +109,9 @@ export function WeekCalendar({
               <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
                 {format(day, 'EEE', { locale: localeId })}
               </div>
-              <div className={`text-sm font-bold ${today ? 'text-accent' : 'text-ink'}`}>{format(day, 'd')}</div>
+              <div className={`text-sm font-bold ${today ? 'text-accent' : 'text-ink'}`}>
+                {format(day, 'd')}
+              </div>
             </div>
           );
         })}
@@ -195,16 +197,24 @@ export function WeekCalendar({
                   >
                     <span className={`absolute inset-y-0 left-0 w-1 ${senseiRail(session.senseiId)}`} />
                     <span className="block p-1.5 pl-2.5">
-                      <span className="block truncate text-[11px] font-bold leading-tight text-ink">{session.level}</span>
+                      <span className="block truncate text-[11px] font-bold leading-tight text-ink">
+                        {session.level}
+                      </span>
                       <span className="block truncate text-[10px] text-ink-soft">
                         {session.startTime}–{session.endTime}
                       </span>
                       <span className="block truncate text-[10px] text-ink-soft">
                         {displayName(sensei, session.senseiId)}
                       </span>
-                      {conflict ? <span className="text-[9px] font-bold uppercase text-danger">Konflik</span> : null}
-                      {makeup ? <span className="text-[9px] font-bold uppercase text-info">Makeup</span> : null}
-                      {session.isExtra ? <span className="text-[9px] font-bold uppercase text-warn">Extra</span> : null}
+                      {conflict ? (
+                        <span className="text-[9px] font-bold uppercase text-danger">Konflik</span>
+                      ) : null}
+                      {makeup ? (
+                        <span className="text-[9px] font-bold uppercase text-info">Makeup</span>
+                      ) : null}
+                      {session.isExtra ? (
+                        <span className="text-[9px] font-bold uppercase text-warn">Extra</span>
+                      ) : null}
                     </span>
                   </button>
                 );

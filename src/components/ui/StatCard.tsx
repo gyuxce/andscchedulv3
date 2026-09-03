@@ -20,9 +20,7 @@ export function StatCard({
         <p className="mt-2 text-2xl font-bold leading-none tracking-tight tabular-nums text-ink">{value}</p>
         {hint ? <p className="mt-1.5 text-xs text-ink-soft">{hint}</p> : null}
       </div>
-      {icon ? (
-        <div className="rounded-lg border border-line bg-surface p-2 text-accent">{icon}</div>
-      ) : null}
+      {icon ? <div className="rounded-lg border border-line bg-surface p-2 text-accent">{icon}</div> : null}
     </div>
   );
 

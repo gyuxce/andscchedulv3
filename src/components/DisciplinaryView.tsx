@@ -25,7 +25,11 @@ export function DisciplinaryView() {
       metrics: getDisciplinaryMetrics(item.id, month, schedules, logs)
     }));
     const weight = (m: (typeof mapped)[number]['metrics']) =>
-      sortKey === 'swaps' ? m.senseiInitiatedSwaps : sortKey === 'cancels' ? m.cancelledNoReplacement : m.lateJoins;
+      sortKey === 'swaps'
+        ? m.senseiInitiatedSwaps
+        : sortKey === 'cancels'
+          ? m.cancelledNoReplacement
+          : m.lateJoins;
     return mapped.sort(
       (a, b) =>
         weight(b.metrics) - weight(a.metrics) ||
@@ -66,8 +70,8 @@ export function DisciplinaryView() {
   return (
     <div className="space-y-6">
       <PageIntro kicker="Disiplin" title={`Disiplin · ${month}`}>
-        Metrik disiplin ditampilkan terpisah, belum digabung ke skor QA. Swap yang diminta siswa/admin tidak dihitung ke
-        Sensei. Pembatalan tanpa pengganti hanya dihitung jika initiator Sensei.
+        Metrik disiplin ditampilkan terpisah, belum digabung ke skor QA. Swap yang diminta siswa/admin tidak
+        dihitung ke Sensei. Pembatalan tanpa pengganti hanya dihitung jika initiator Sensei.
       </PageIntro>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -98,7 +102,9 @@ export function DisciplinaryView() {
                 rows.map(({ sensei: item, metrics }) => (
                   <tr key={item.id}>
                     <td className="font-medium text-ink">{item.name}</td>
-                    <td className={`num ${metrics.senseiInitiatedSwaps ? 'font-semibold text-ink' : 'text-ink-soft'}`}>
+                    <td
+                      className={`num ${metrics.senseiInitiatedSwaps ? 'font-semibold text-ink' : 'text-ink-soft'}`}
+                    >
                       {metrics.senseiInitiatedSwaps}
                     </td>
                     <td

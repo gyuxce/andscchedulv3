@@ -29,7 +29,9 @@ export function CapacityHeatmap({
           className="grid border-b border-line"
           style={{ gridTemplateColumns: '220px repeat(7, minmax(0, 1fr))' }}
         >
-          <div className="px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">Sensei</div>
+          <div className="px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+            Sensei
+          </div>
           {days.map((day) => {
             const dateKey = toDateKey(day);
             const today = isToday(dateKey);
@@ -41,7 +43,9 @@ export function CapacityHeatmap({
                 <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
                   {format(day, 'EEE', { locale: localeId })}
                 </div>
-                <div className={`text-sm font-bold ${today ? 'text-accent' : 'text-ink'}`}>{format(day, 'd')}</div>
+                <div className={`text-sm font-bold ${today ? 'text-accent' : 'text-ink'}`}>
+                  {format(day, 'd')}
+                </div>
               </div>
             );
           })}
@@ -114,7 +118,9 @@ export function CapacityHeatmap({
                       ) : (
                         <>
                           <div className="px-1 pt-1 text-[11px] font-semibold text-ink">
-                            {cap.slots.map((slot) => compactTimeRange(slot.startTime, slot.endTime)).join(' · ')}
+                            {cap.slots
+                              .map((slot) => compactTimeRange(slot.startTime, slot.endTime))
+                              .join(' · ')}
                           </div>
                           <div className="px-1 text-[10px] font-semibold text-ink-soft">
                             {formatHoursShort(cap.assignedHours)} / {formatHoursShort(cap.availableHours)}
@@ -129,7 +135,9 @@ export function CapacityHeatmap({
                               </div>
                             ))}
                             {cap.sessions.length > 2 ? (
-                              <div className="px-1 text-[10px] text-ink-soft">+{cap.sessions.length - 2} sesi</div>
+                              <div className="px-1 text-[10px] text-ink-soft">
+                                +{cap.sessions.length - 2} sesi
+                              </div>
                             ) : null}
                             {editable
                               ? cap.slots.map((slot) => (

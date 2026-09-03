@@ -3,13 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { weekRangeLabel, weekStart } from '../../lib/dates';
 import { Button } from './Button';
 
-export function WeekNav({
-  weekAnchor,
-  onChange
-}: {
-  weekAnchor: string;
-  onChange: (date: string) => void;
-}) {
+export function WeekNav({ weekAnchor, onChange }: { weekAnchor: string; onChange: (date: string) => void }) {
   const start = weekStart(weekAnchor);
   return (
     <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">

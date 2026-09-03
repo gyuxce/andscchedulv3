@@ -6,11 +6,7 @@ import { displayName, senseiRail, TYPE_TONE } from '../lib/display';
 import { findMakeupsOf, hasActiveOrCompletedMakeup, isMakeupSession, makeupLabel } from '../lib/makeup';
 import { addMinutesToTime } from '../lib/recurring';
 import { findConflicts } from '../lib/schedule';
-import {
-  buildRecurringPreview,
-  formatPreviewDate,
-  previewConflicts
-} from '../lib/schedulePreview';
+import { buildRecurringPreview, formatPreviewDate, previewConflicts } from '../lib/schedulePreview';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
 import type { CancellationInitiator, ClassSession, ClassType, SwapInitiator } from '../types';
 import { Badge } from './ui/Badge';
@@ -313,7 +309,8 @@ export function ScheduleView() {
           </>
         }
       >
-        Kelas resmi = 1 Class Master + N sesi berulang. Makeup tertaut ke sesi batal; Extra meeting terpisah dari rencana.
+        Kelas resmi = 1 Class Master + N sesi berulang. Makeup tertaut ke sesi batal; Extra meeting terpisah
+        dari rencana.
       </PageIntro>
       {view === 'board' && senseiFilter !== 'all' ? (
         <>
@@ -389,7 +386,9 @@ export function ScheduleView() {
       ) : (
         <div className="ui-card divide-y divide-line overflow-hidden">
           {listByDay.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-ink-soft">Tidak ada sesi pada minggu / filter ini.</p>
+            <p className="px-4 py-8 text-center text-sm text-ink-soft">
+              Tidak ada sesi pada minggu / filter ini.
+            </p>
           ) : (
             listByDay.map(([date, rows]) => (
               <div key={date}>
@@ -460,7 +459,9 @@ export function ScheduleView() {
                   className="ui-input"
                   value={recurringForm.displayName}
                   placeholder="Private Nathan Pra Guntai"
-                  onChange={(event) => setRecurringForm({ ...recurringForm, displayName: event.target.value })}
+                  onChange={(event) =>
+                    setRecurringForm({ ...recurringForm, displayName: event.target.value })
+                  }
                 />
               </label>
               <div className="grid gap-3 md:grid-cols-2">
@@ -526,7 +527,9 @@ export function ScheduleView() {
                     className="ui-input"
                     type="date"
                     value={recurringForm.startDate}
-                    onChange={(event) => setRecurringForm({ ...recurringForm, startDate: event.target.value })}
+                    onChange={(event) =>
+                      setRecurringForm({ ...recurringForm, startDate: event.target.value })
+                    }
                   />
                 </label>
                 <label>
@@ -535,7 +538,9 @@ export function ScheduleView() {
                     className="ui-input"
                     type="time"
                     value={recurringForm.startTime}
-                    onChange={(event) => setRecurringForm({ ...recurringForm, startTime: event.target.value })}
+                    onChange={(event) =>
+                      setRecurringForm({ ...recurringForm, startTime: event.target.value })
+                    }
                   />
                 </label>
                 <label>
@@ -609,7 +614,9 @@ export function ScheduleView() {
             <section className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">Preview schedule</p>
               {preview.length === 0 ? (
-                <p className="text-sm text-ink-soft">Isi start date, hari, dan jumlah pertemuan untuk melihat preview.</p>
+                <p className="text-sm text-ink-soft">
+                  Isi start date, hari, dan jumlah pertemuan untuk melihat preview.
+                </p>
               ) : (
                 <div className="max-h-56 overflow-auto rounded-xl border border-line">
                   <table className="ui-table">
@@ -718,12 +725,14 @@ export function ScheduleView() {
         >
           {sessionForm.makeupOfSessionId && creatingSession ? (
             <p className="rounded-xl border border-info/25 bg-info-soft px-3 py-2 text-sm text-ink">
-              Makeup tertaut ke sesi asli. Progress/absensi memakai sesi makeup, bukan sesi batal. Required meetings tidak naik.
+              Makeup tertaut ke sesi asli. Progress/absensi memakai sesi makeup, bukan sesi batal. Required
+              meetings tidak naik.
             </p>
           ) : null}
           {sessionForm.isExtra && creatingSession ? (
             <p className="rounded-xl border border-warn/25 bg-warn-soft px-3 py-2 text-sm text-ink">
-              Extra meeting di luar rencana. Tidak dihitung ke required X/X kecuali Admin mengubah total secara eksplisit.
+              Extra meeting di luar rencana. Tidak dihitung ke required X/X kecuali Admin mengubah total
+              secara eksplisit.
             </p>
           ) : null}
           {editing && isMakeupSession(editing) ? (
@@ -732,12 +741,14 @@ export function ScheduleView() {
             </p>
           ) : null}
           {editing?.isExtra ? (
-            <p className="rounded-xl border border-warn/25 bg-warn-soft px-3 py-2 text-sm text-ink">Sesi Extra — di luar required meetings.</p>
+            <p className="rounded-xl border border-warn/25 bg-warn-soft px-3 py-2 text-sm text-ink">
+              Sesi Extra — di luar required meetings.
+            </p>
           ) : null}
           {editingClass ? (
             <p className="text-xs text-ink-soft">
-              Class: {editingClass.displayName} · Original end {editingClass.plannedEndDate || '—'} · Projected{' '}
-              {editingClass.projectedEndDate || '—'}
+              Class: {editingClass.displayName} · Original end {editingClass.plannedEndDate || '—'} ·
+              Projected {editingClass.projectedEndDate || '—'}
             </p>
           ) : null}
           {editing && editing.status === 'cancelled' && linkedMakeups.length > 0 ? (
@@ -781,12 +792,12 @@ export function ScheduleView() {
                   </Button>
                 </div>
               ) : null}
-              {permissions.canEditOfficialSchedule &&
-              editing.status === 'cancelled' &&
-              !alreadyHasMakeup ? (
+              {permissions.canEditOfficialSchedule && editing.status === 'cancelled' && !alreadyHasMakeup ? (
                 <div className="rounded-xl border border-info/25 bg-info-soft p-3">
                   <p className="ui-label">Replacement / Makeup</p>
-                  <p className="mb-2 text-xs text-ink-soft">Buat sesi pengganti tertaut ke kelas batal ini.</p>
+                  <p className="mb-2 text-xs text-ink-soft">
+                    Buat sesi pengganti tertaut ke kelas batal ini.
+                  </p>
                   <Button tone="primary" onClick={() => openMakeup(editing)}>
                     Jadwalkan makeup
                   </Button>
@@ -817,7 +828,9 @@ export function ScheduleView() {
                   <select
                     className="ui-select"
                     value={sessionForm.type}
-                    onChange={(event) => setSessionForm({ ...sessionForm, type: event.target.value as ClassType })}
+                    onChange={(event) =>
+                      setSessionForm({ ...sessionForm, type: event.target.value as ClassType })
+                    }
                   >
                     {CLASS_TYPES.map((type) => (
                       <option key={type}>{type}</option>
@@ -886,14 +899,18 @@ export function ScheduleView() {
                 />
               </label>
               <p className="text-xs text-ink-soft">
-                Durasi {hoursBetween(sessionForm.startTime, sessionForm.endTime)} jam. Ketersediaan Sensei hanya
-                referensi kapasitas.
+                Durasi {hoursBetween(sessionForm.startTime, sessionForm.endTime)} jam. Ketersediaan Sensei
+                hanya referensi kapasitas.
               </p>
               {editing && permissions.canAssignSensei && editing.status !== 'cancelled' ? (
                 <div className="grid gap-3 rounded-xl border border-line p-3 md:grid-cols-2">
                   <div>
                     <p className="ui-label">Tukar Sensei</p>
-                    <select className="ui-select" value={swapTo} onChange={(event) => setSwapTo(event.target.value)}>
+                    <select
+                      className="ui-select"
+                      value={swapTo}
+                      onChange={(event) => setSwapTo(event.target.value)}
+                    >
                       <option value="">Pilih pengganti</option>
                       {allSensei
                         .filter((item) => item.id !== editing.senseiId && item.primaryStatus === 'ACTIVE')

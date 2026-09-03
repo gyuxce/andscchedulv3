@@ -108,15 +108,23 @@ function formatValue(
   if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak';
   if (Array.isArray(value)) {
     if (field === 'studentIds') {
-      return value.length
-        ? value.map((id) => displayName(lookups.students, String(id))).join(', ')
-        : '—';
+      return value.length ? value.map((id) => displayName(lookups.students, String(id))).join(', ') : '—';
     }
     return value.length ? value.map(String).join(', ') : '—';
   }
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    const preferred = ['level', 'type', 'date', 'startTime', 'endTime', 'status', 'senseiId', 'score', 'attendance'];
+    const preferred = [
+      'level',
+      'type',
+      'date',
+      'startTime',
+      'endTime',
+      'status',
+      'senseiId',
+      'score',
+      'attendance'
+    ];
     const parts = preferred
       .filter((key) => record[key] != null && record[key] !== '')
       .map((key) => `${FIELD_LABELS[key] || key}: ${formatValue(record[key], lookups, key)}`);
@@ -186,8 +194,8 @@ export function AuditView() {
   return (
     <div className="space-y-6">
       <PageIntro kicker="Audit Log" title="Audit log">
-        Koreksi sensitif wajib punya jejak: nilai lama, nilai baru, pelaku, waktu, dan alasan. Soft-delete/archive
-        dipakai, bukan hapus permanen.
+        Koreksi sensitif wajib punya jejak: nilai lama, nilai baru, pelaku, waktu, dan alasan.
+        Soft-delete/archive dipakai, bukan hapus permanen.
       </PageIntro>
       <div className="ui-card overflow-hidden">
         <div className="ui-table-wrap">

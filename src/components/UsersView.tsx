@@ -116,7 +116,13 @@ export function UsersView() {
                     <td className="text-ink-soft">{user.role}</td>
                     <td>
                       <Badge
-                        tone={user.status === 'Approved' ? 'success' : user.status === 'Pending' ? 'gold' : 'danger'}
+                        tone={
+                          user.status === 'Approved'
+                            ? 'success'
+                            : user.status === 'Pending'
+                              ? 'gold'
+                              : 'danger'
+                        }
                       >
                         {user.status}
                       </Badge>
@@ -125,7 +131,7 @@ export function UsersView() {
                       {user.role === 'Sensei' && !user.senseiId ? (
                         <span className="text-danger">belum tertaut</span>
                       ) : (
-                        sensei.find((item) => item.id === user.senseiId)?.name ?? '—'
+                        (sensei.find((item) => item.id === user.senseiId)?.name ?? '—')
                       )}
                     </td>
                   </tr>
@@ -145,10 +151,7 @@ export function UsersView() {
               <Button
                 tone="primary"
                 disabled={
-                  saving ||
-                  !form.email.trim() ||
-                  form.password.length < 6 ||
-                  form.password !== form.password2
+                  saving || !form.email.trim() || form.password.length < 6 || form.password !== form.password2
                 }
                 onClick={() => void save()}
               >

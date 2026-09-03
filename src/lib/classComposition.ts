@@ -7,10 +7,7 @@ import type { ClassType } from '../types';
  *
  * Returns a user-facing error string, or null when the composition is valid.
  */
-export function classCompositionError(
-  type: ClassType,
-  studentIds: string[]
-): string | null {
+export function classCompositionError(type: ClassType, studentIds: string[]): string | null {
   if (type === 'Semi-Private' && (studentIds.length < 2 || studentIds.length > 4)) {
     return 'Semi-Private sebaiknya 2–4 siswa';
   }

@@ -335,7 +335,9 @@ export function ClassesView() {
           );
         })}
         {classMasters.length === 0 ? (
-          <p className="text-sm text-ink-soft">Belum ada Class Master. Super Admin bisa menambah lalu generate jadwal.</p>
+          <p className="text-sm text-ink-soft">
+            Belum ada Class Master. Super Admin bisa menambah lalu generate jadwal.
+          </p>
         ) : null}
         {classMasters.length > 0 && visible.length === 0 ? (
           <p className="text-sm text-ink-soft">Tidak ada kelas pada filter ini.</p>
@@ -390,7 +392,8 @@ export function ClassesView() {
                 { label: 'Sensei', value: displayName(allSensei, form.senseiId) },
                 {
                   label: 'Status',
-                  value: CLASS_MASTER_STATUSES.find((item) => item.value === form.status)?.label || form.status
+                  value:
+                    CLASS_MASTER_STATUSES.find((item) => item.value === form.status)?.label || form.status
                 },
                 { label: 'Required meetings', value: String(form.requiredMeetings) },
                 { label: 'Durasi sesi', value: `${form.sessionDurationMinutes} menit` },
@@ -398,8 +401,7 @@ export function ClassesView() {
                 { label: 'Planned end', value: form.plannedEndDate || '—' },
                 {
                   label: 'Siswa',
-                  value:
-                    form.studentIds.map((id) => displayName(allStudents, id)).join(', ') || '—',
+                  value: form.studentIds.map((id) => displayName(allStudents, id)).join(', ') || '—',
                   full: true
                 },
                 { label: 'Google Meet', value: form.meetLink || '—', full: true },
@@ -414,15 +416,27 @@ export function ClassesView() {
               <div className="grid gap-3 md:grid-cols-2">
                 <label>
                   <span className="ui-label">Nama tampilan</span>
-                  <input className="ui-input" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    value={form.displayName}
+                    onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Kode kelas</span>
-                  <input className="ui-input" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Tipe</span>
-                  <select className="ui-select" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ClassType })}>
+                  <select
+                    className="ui-select"
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value as ClassType })}
+                  >
                     {CLASS_TYPES.map((type) => (
                       <option key={type}>{type}</option>
                     ))}
@@ -430,7 +444,11 @@ export function ClassesView() {
                 </label>
                 <label>
                   <span className="ui-label">Level</span>
-                  <select className="ui-select" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
+                  <select
+                    className="ui-select"
+                    value={form.level}
+                    onChange={(e) => setForm({ ...form, level: e.target.value })}
+                  >
                     {CLASS_LEVELS.map((level) => (
                       <option key={level}>{level}</option>
                     ))}
@@ -438,35 +456,72 @@ export function ClassesView() {
                 </label>
                 <label>
                   <span className="ui-label">Sensei</span>
-                  <select className="ui-select" value={form.senseiId} onChange={(e) => setForm({ ...form, senseiId: e.target.value })}>
-                    {allSensei.filter((item) => item.primaryStatus === 'ACTIVE').map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
-                    ))}
+                  <select
+                    className="ui-select"
+                    value={form.senseiId}
+                    onChange={(e) => setForm({ ...form, senseiId: e.target.value })}
+                  >
+                    {allSensei
+                      .filter((item) => item.primaryStatus === 'ACTIVE')
+                      .map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
                   </select>
                 </label>
                 <label>
                   <span className="ui-label">Status operasional</span>
-                  <select className="ui-select" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ClassMasterStatus })}>
+                  <select
+                    className="ui-select"
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value as ClassMasterStatus })}
+                  >
                     {CLASS_MASTER_STATUSES.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <label>
                   <span className="ui-label">Required meetings</span>
-                  <input className="ui-input" type="number" min={1} value={form.requiredMeetings} onChange={(e) => setForm({ ...form, requiredMeetings: Number(e.target.value) })} />
+                  <input
+                    className="ui-input"
+                    type="number"
+                    min={1}
+                    value={form.requiredMeetings}
+                    onChange={(e) => setForm({ ...form, requiredMeetings: Number(e.target.value) })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Durasi sesi (menit)</span>
-                  <input className="ui-input" type="number" min={30} step={15} value={form.sessionDurationMinutes} onChange={(e) => setForm({ ...form, sessionDurationMinutes: Number(e.target.value) })} />
+                  <input
+                    className="ui-input"
+                    type="number"
+                    min={30}
+                    step={15}
+                    value={form.sessionDurationMinutes}
+                    onChange={(e) => setForm({ ...form, sessionDurationMinutes: Number(e.target.value) })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Start date</span>
-                  <input className="ui-input" type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    type="date"
+                    value={form.startDate}
+                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Planned end date</span>
-                  <input className="ui-input" type="date" value={form.plannedEndDate} onChange={(e) => setForm({ ...form, plannedEndDate: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    type="date"
+                    value={form.plannedEndDate}
+                    onChange={(e) => setForm({ ...form, plannedEndDate: e.target.value })}
+                  />
                 </label>
               </div>
 
@@ -476,10 +531,14 @@ export function ClassesView() {
                   multiple
                   className="ui-select h-28"
                   value={form.studentIds}
-                  onChange={(e) => setForm({ ...form, studentIds: Array.from(e.target.selectedOptions).map((o) => o.value) })}
+                  onChange={(e) =>
+                    setForm({ ...form, studentIds: Array.from(e.target.selectedOptions).map((o) => o.value) })
+                  }
                 >
                   {allStudents.map((student) => (
-                    <option key={student.id} value={student.id}>{student.name}</option>
+                    <option key={student.id} value={student.id}>
+                      {student.name}
+                    </option>
                   ))}
                 </select>
                 {form.type === 'Semi-Private' ? (
@@ -490,31 +549,52 @@ export function ClassesView() {
               <div className="grid gap-3 md:grid-cols-2">
                 <label>
                   <span className="ui-label">Google Meet / room</span>
-                  <input className="ui-input" value={form.meetLink} onChange={(e) => setForm({ ...form, meetLink: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    value={form.meetLink}
+                    onChange={(e) => setForm({ ...form, meetLink: e.target.value })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Google Classroom</span>
-                  <input className="ui-input" value={form.classroomLink} onChange={(e) => setForm({ ...form, classroomLink: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    value={form.classroomLink}
+                    onChange={(e) => setForm({ ...form, classroomLink: e.target.value })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Chat link</span>
-                  <input className="ui-input" value={form.chatLink} onChange={(e) => setForm({ ...form, chatLink: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    value={form.chatLink}
+                    onChange={(e) => setForm({ ...form, chatLink: e.target.value })}
+                  />
                 </label>
                 <label>
                   <span className="ui-label">Material link</span>
-                  <input className="ui-input" value={form.materialLink} onChange={(e) => setForm({ ...form, materialLink: e.target.value })} />
+                  <input
+                    className="ui-input"
+                    value={form.materialLink}
+                    onChange={(e) => setForm({ ...form, materialLink: e.target.value })}
+                  />
                 </label>
               </div>
               <label>
                 <span className="ui-label">Catatan mengajar</span>
-                <textarea className="ui-input min-h-20" value={form.teachingNotes} onChange={(e) => setForm({ ...form, teachingNotes: e.target.value })} />
+                <textarea
+                  className="ui-input min-h-20"
+                  value={form.teachingNotes}
+                  onChange={(e) => setForm({ ...form, teachingNotes: e.target.value })}
+                />
               </label>
 
               {editing ? (
                 <div className="space-y-3 rounded-xl border border-info/25 bg-info-soft p-3">
                   <p className="font-semibold text-ink">Generate jadwal berulang</p>
                   <p className="text-xs text-ink-soft">
-                    Membuat {form.requiredMeetings} sesi kalender dari start date + hari dipilih. Cancel/makeup tidak mengubah target required meetings.
+                    Membuat {form.requiredMeetings} sesi kalender dari start date + hari dipilih.
+                    Cancel/makeup tidak mengubah target required meetings.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {DAYS_OF_WEEK.map((day) => {
@@ -526,7 +606,9 @@ export function ClassesView() {
                           className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${active ? 'border-accent bg-accent text-on-accent' : 'border-line bg-surface text-ink hover:bg-surface-2'}`}
                           onClick={() =>
                             setWeekdays((current) =>
-                              current.includes(day.value) ? current.filter((v) => v !== day.value) : [...current, day.value]
+                              current.includes(day.value)
+                                ? current.filter((v) => v !== day.value)
+                                : [...current, day.value]
                             )
                           }
                         >
@@ -537,7 +619,12 @@ export function ClassesView() {
                   </div>
                   <label className="block max-w-[160px]">
                     <span className="ui-label">Jam mulai</span>
-                    <input className="ui-input" type="time" value={genStartTime} onChange={(e) => setGenStartTime(e.target.value)} />
+                    <input
+                      className="ui-input"
+                      type="time"
+                      value={genStartTime}
+                      onChange={(e) => setGenStartTime(e.target.value)}
+                    />
                   </label>
                   {previewDates.length ? (
                     <p className="text-xs text-ink-soft">

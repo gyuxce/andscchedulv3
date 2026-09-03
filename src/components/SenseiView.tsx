@@ -50,7 +50,9 @@ export function SenseiView() {
   const setSenseiLeave = useDashboardStore((state) => state.setSenseiLeave);
   const createUserLogin = useDashboardStore((state) => state.createUserLogin);
   const currentUser = useDashboardStore((state) => state.currentUser);
-  const visible = permissions.canViewAllSensei ? sensei : sensei.filter((item) => item.id === currentUser?.senseiId);
+  const visible = permissions.canViewAllSensei
+    ? sensei
+    : sensei.filter((item) => item.id === currentUser?.senseiId);
   const canEditOps = permissions.canManageUsers;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -177,7 +179,9 @@ export function SenseiView() {
     const rows = visible.map((item) => {
       const labels = getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters);
       const workload = getWorkloadMetrics(item.id, availability, schedules, weekAnchor);
-      const linked = users.some((user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase());
+      const linked = users.some(
+        (user) => user.email.trim().toLowerCase() === item.email.trim().toLowerCase()
+      );
       return { item, labels, workload, linked };
     });
     const filtered = rows.filter(({ item, labels, workload }) => {
@@ -198,9 +202,7 @@ export function SenseiView() {
   const groups = useMemo(() => {
     if (filter !== 'all') return [{ key: 'flat', label: '', rows: roster }];
     const unassignedRows = roster.filter((row) => row.labels.includes('UNASSIGNED'));
-    const newRows = roster.filter(
-      (row) => !row.labels.includes('UNASSIGNED') && row.labels.includes('NEW')
-    );
+    const newRows = roster.filter((row) => !row.labels.includes('UNASSIGNED') && row.labels.includes('NEW'));
     const assignedRows = roster.filter(
       (row) => !row.labels.includes('UNASSIGNED') && !row.labels.includes('NEW')
     );
@@ -227,7 +229,8 @@ export function SenseiView() {
           </>
         }
       >
-        Master data Sensei. Label NEW / UNASSIGNED / CUTI dihitung otomatis. INACTIVE tetap tersimpan di history.
+        Master data Sensei. Label NEW / UNASSIGNED / CUTI dihitung otomatis. INACTIVE tetap tersimpan di
+        history.
       </PageIntro>
       <FilterChips
         value={filter}
@@ -238,7 +241,9 @@ export function SenseiView() {
             id: 'unassigned',
             label: 'UNASSIGNED',
             count: visible.filter((item) =>
-              getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters).includes('UNASSIGNED')
+              getOperationalLabels(item, schedules, leavePeriods, new Date(), classMasters).includes(
+                'UNASSIGNED'
+              )
             ).length
           },
           {
@@ -267,7 +272,9 @@ export function SenseiView() {
                 {group.rows.map(({ item, labels, workload, linked }) => {
                   const ratio = workload.targetHours > 0 ? workload.assignedHours / workload.targetHours : 0;
                   const extraLabels = labels.filter(
-                    (label) => !(group.key === 'unassigned' && label === 'UNASSIGNED') && !(group.key === 'new' && label === 'NEW')
+                    (label) =>
+                      !(group.key === 'unassigned' && label === 'UNASSIGNED') &&
+                      !(group.key === 'new' && label === 'NEW')
                   );
                   return (
                     <button
@@ -300,7 +307,8 @@ export function SenseiView() {
                             {formatHours(workload.assignedHours)} / {formatHours(workload.targetHours)}
                           </span>
                           <span className="hidden text-xs text-ink-soft sm:inline">
-                            sisa {formatHours(workload.remainingHours)} · {formatPercent(workload.utilization)}
+                            sisa {formatHours(workload.remainingHours)} ·{' '}
+                            {formatPercent(workload.utilization)}
                           </span>
                         </div>
                       </div>
@@ -392,7 +400,11 @@ export function SenseiView() {
             <div className="grid gap-3 md:grid-cols-2">
               <label>
                 <span className="ui-label">Nama lengkap</span>
-                <input className="ui-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input
+                  className="ui-input"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
               </label>
               <label>
                 <span className="ui-label">Display name</span>
@@ -413,7 +425,11 @@ export function SenseiView() {
               </label>
               <label>
                 <span className="ui-label">WhatsApp / kontak</span>
-                <input className="ui-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <input
+                  className="ui-input"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
               </label>
               <label>
                 <span className="ui-label">Join date</span>
@@ -488,14 +504,14 @@ export function SenseiView() {
               <p className="ui-label">Akun login dashboard</p>
               {hasLogin ? (
                 <p className="text-sm text-ink-soft">
-                  Email ini sudah punya profil login. Sensei bisa masuk dengan password yang sudah diset. Reset password
-                  lewat Supabase Authentication bila lupa.
+                  Email ini sudah punya profil login. Sensei bisa masuk dengan password yang sudah diset.
+                  Reset password lewat Supabase Authentication bila lupa.
                 </p>
               ) : (
                 <>
                   <p className="text-xs text-ink-soft">
-                    Isi password di bawah untuk membuat akun login langsung dari dashboard (role Sensei, status
-                    Approved). Email login = email Sensei di atas.
+                    Isi password di bawah untuk membuat akun login langsung dari dashboard (role Sensei,
+                    status Approved). Email login = email Sensei di atas.
                   </p>
                   <div className="grid gap-2 md:grid-cols-2">
                     <label>
@@ -527,7 +543,10 @@ export function SenseiView() {
                     <Button
                       tone="primary"
                       disabled={
-                        creatingLogin || loginPassword.length < 6 || loginPassword !== loginPassword2 || !form.email
+                        creatingLogin ||
+                        loginPassword.length < 6 ||
+                        loginPassword !== loginPassword2 ||
+                        !form.email
                       }
                       onClick={() => void createLoginOnly()}
                     >
@@ -553,8 +572,18 @@ export function SenseiView() {
                   </p>
                 ) : null}
                 <div className="grid gap-2 md:grid-cols-2">
-                  <input className="ui-input" type="date" value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} />
-                  <input className="ui-input" type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} />
+                  <input
+                    className="ui-input"
+                    type="date"
+                    value={leaveStart}
+                    onChange={(e) => setLeaveStart(e.target.value)}
+                  />
+                  <input
+                    className="ui-input"
+                    type="date"
+                    value={leaveEnd}
+                    onChange={(e) => setLeaveEnd(e.target.value)}
+                  />
                 </div>
                 <input
                   className="ui-input"
@@ -565,7 +594,9 @@ export function SenseiView() {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     disabled={!leaveStart || !leaveEnd || !reason}
-                    onClick={() => setSenseiLeave(selected.id, { startDate: leaveStart, endDate: leaveEnd }, reason)}
+                    onClick={() =>
+                      setSenseiLeave(selected.id, { startDate: leaveStart, endDate: leaveEnd }, reason)
+                    }
                   >
                     Simpan CUTI
                   </Button>
@@ -583,7 +614,12 @@ export function SenseiView() {
               </div>
               <div className="space-y-2 rounded-xl border border-line p-3">
                 <p className="ui-label">Override status utama (dengan alasan)</p>
-                <input className="ui-input" placeholder="Alasan" value={reason} onChange={(e) => setReason(e.target.value)} />
+                <input
+                  className="ui-input"
+                  placeholder="Alasan"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
                 <div className="flex flex-wrap gap-2">
                   <Button
                     disabled={!reason}

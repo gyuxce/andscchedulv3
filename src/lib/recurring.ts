@@ -1,11 +1,7 @@
 import { addDays, format, getDay, parseISO } from 'date-fns';
 
 /** Generate up to `count` dates starting from startDate that fall on selected weekdays (0=Sun..6=Sat). */
-export function generateRecurringDates(
-  startDate: string,
-  weekdays: number[],
-  count: number
-): string[] {
+export function generateRecurringDates(startDate: string, weekdays: number[], count: number): string[] {
   if (!startDate || weekdays.length === 0 || count <= 0) return [];
   const uniqueDays = [...new Set(weekdays)].sort((a, b) => a - b);
   const dates: string[] = [];
