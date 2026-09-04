@@ -7,7 +7,7 @@ UPDATE sensei SET timezone = 'Asia/Jakarta' WHERE timezone IS NULL OR timezone =
 ALTER TABLE sensei ALTER COLUMN timezone SET DEFAULT 'Asia/Jakarta';
 ALTER TABLE sensei DROP CONSTRAINT IF EXISTS sensei_timezone_check;
 ALTER TABLE sensei ADD CONSTRAINT sensei_timezone_check
-  CHECK (timezone IN ('Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'));
+  CHECK (timezone IN ('Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Tokyo'));
 
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
