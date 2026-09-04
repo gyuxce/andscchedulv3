@@ -44,6 +44,15 @@ const HEALTH_LABEL: Record<ClassHealthStatus, string> = {
   inactive: 'Nonaktif'
 };
 
+const HEALTH_DOT: Record<ClassHealthStatus, string> = {
+  on_track: 'bg-ok',
+  ending_soon: 'bg-warn',
+  delayed: 'bg-warn',
+  overdue: 'bg-danger',
+  completed: 'bg-ok',
+  inactive: 'bg-ink-soft/40'
+};
+
 const ATTENTION = new Set<ClassHealthStatus>(['overdue', 'delayed', 'ending_soon']);
 
 function dateLabel(value?: string | null) {
@@ -85,6 +94,7 @@ export function ClassesView() {
   const [weekdays, setWeekdays] = useState<number[]>([1, 5]);
   const [genStartTime, setGenStartTime] = useState('19:00');
   const [filter, setFilter] = useState<ClassFilter>('all');
+  const [view, setView] = useState<'compact' | 'cards'>('compact');
 
   const openCreate = () => {
     setForm({
@@ -216,18 +226,83 @@ export function ClassesView() {
         ))}
       </div>
 
-      <FilterChips
-        value={filter}
-        onChange={setFilter}
-        options={[
-          { id: 'all', label: 'Semua', count: rows.length },
-          { id: 'attention', label: 'Perhatian', count: fleet.attention },
-          { id: 'on_track', label: 'On track', count: fleet.onTrack },
-          { id: 'idle', label: 'Draft / nonaktif' },
-          { id: 'done', label: 'Selesai' }
-        ]}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FilterChips
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { id: 'all', label: 'Semua', count: rows.length },
+            { id: 'attention', label: 'Perhatian', count: fleet.attention },
+            { id: 'on_track', label: 'On track', count: fleet.onTrack },
+            { id: 'idle', label: 'Draft / nonaktif' },
+            { id: 'done', label: 'Selesai' }
+          ]}
+        />
+        <div className="flex overflow-hidden rounded-lg border border-line text-xs font-semibold">
+          {(['compact', 'cards'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setView(mode)}
+              className={`px-3 py-1.5 transition-colors ${
+                view === mode ? 'bg-accent text-on-accent' : 'bg-surface text-ink-soft hover:bg-surface-2'
+              }`}
+            >
+              {mode === 'compact' ? 'Ringkas' : 'Kartu'}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {view === 'compact' ? (
+        <div className="space-y-1.5">
+          {visible.map(({ item, progress, health }) => {
+            const senseiName = displayName(allSensei, item.senseiId);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => openDetail(item)}
+                className="ui-card flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:border-line-strong"
+              >
+                <span
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${HEALTH_DOT[health.status]}`}
+                  title={HEALTH_LABEL[health.status]}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-semibold text-ink">{item.displayName}</span>
+                    <Badge tone={TYPE_TONE[item.type]}>{item.type}</Badge>
+                  </div>
+                  <p className="truncate text-[11px] text-ink-soft">
+                    {item.level} · {senseiName} · {item.studentIds.length} siswa
+                    {progress.calendarCount === 0 ? ' · belum generate' : ''}
+                  </p>
+                </div>
+                <div className="hidden w-24 shrink-0 sm:block">
+                  <Meter
+                    value={progress.completed}
+                    max={Math.max(progress.required, 1)}
+                    tone={HEALTH_METER[health.status]}
+                  />
+                </div>
+                <span className="shrink-0 tabular-nums text-sm font-bold text-ink">
+                  {progress.completed}
+                  <span className="text-xs font-medium text-ink-soft">/{progress.required}</span>
+                </span>
+              </button>
+            );
+          })}
+          {classMasters.length === 0 ? (
+            <p className="text-sm text-ink-soft">
+              Belum ada Class Master. Super Admin bisa menambah lalu generate jadwal.
+            </p>
+          ) : null}
+          {classMasters.length > 0 && visible.length === 0 ? (
+            <p className="text-sm text-ink-soft">Tidak ada kelas pada filter ini.</p>
+          ) : null}
+        </div>
+      ) : (
       <div className="space-y-3">
         {visible.map(({ item, progress, health }) => {
           const senseiName = displayName(allSensei, item.senseiId);
@@ -343,6 +418,7 @@ export function ClassesView() {
           <p className="text-sm text-ink-soft">Tidak ada kelas pada filter ini.</p>
         ) : null}
       </div>
+      )}
 
       {(creating || editing) && (
         <Modal

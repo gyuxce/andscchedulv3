@@ -9,6 +9,13 @@ function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
+/** clockIn/clockOut are "yyyy-MM-dd HH:mm"; drop the date when it matches the session date. */
+function clockTime(value: string, sessionDate: string) {
+  if (!value) return '—';
+  const [day, time] = value.split(' ');
+  return day === sessionDate ? time : `${time} ${day.slice(5)}`;
+}
+
 export function ReportsView() {
   const permissions = usePermissions();
   const currentUser = useDashboardStore((state) => state.currentUser);
@@ -180,13 +187,21 @@ export function ReportsView() {
                       <td className="whitespace-nowrap tabular-nums text-ink-soft">
                         {row.startTime}–{row.endTime}
                       </td>
-                      <td className="text-xs text-ink-soft">
-                        <div>In {row.clockIn || '—'}</div>
-                        <div>Out {row.clockOut || '—'}</div>
+                      <td className="whitespace-nowrap text-xs tabular-nums text-ink-soft">
+                        {row.clockIn || row.clockOut ? (
+                          <>
+                            {clockTime(row.clockIn, row.date)}
+                            <span className="px-1 text-ink-soft/60">→</span>
+                            {clockTime(row.clockOut, row.date)}
+                          </>
+                        ) : (
+                          '—'
+                        )}
                       </td>
-                      <td className="text-xs text-ink-soft">
-                        <div>Plan {row.scheduledMinutes}m</div>
-                        <div>Actual {row.actualMinutes == null ? '—' : `${row.actualMinutes}m`}</div>
+                      <td className="whitespace-nowrap text-xs tabular-nums text-ink-soft">
+                        {row.scheduledMinutes}m
+                        <span className="px-1 text-ink-soft/60">→</span>
+                        {row.actualMinutes == null ? '—' : `${row.actualMinutes}m`}
                       </td>
                       <td className="text-ink-soft">{row.sessionLabel}</td>
                       <td className="text-ink-soft">{row.status}</td>

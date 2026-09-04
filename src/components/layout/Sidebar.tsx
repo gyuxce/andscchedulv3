@@ -51,6 +51,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose:
   const activeTab = useDashboardStore((state) => state.activeTab);
   const setTab = useDashboardStore((state) => state.setTab);
   const logout = useDashboardStore((state) => state.logout);
+  const [logoOk, setLogoOk] = useState(true);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(COLLAPSE_KEY) === '1';
@@ -95,16 +96,31 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose:
           compact ? 'justify-center px-2 py-3' : 'px-4 py-3.5'
         }`}
       >
-        <div className={compact ? 'text-center' : 'min-w-0 flex-1'}>
-          {compact ? (
-            <span className="text-sm font-bold tracking-tight">ANS</span>
-          ) : (
-            <>
-              <div className="text-[15px] font-bold leading-tight tracking-tight">ANS Dashboard</div>
-              <div className="text-[11px] text-ink-soft">Operasional &amp; akademik</div>
-            </>
-          )}
-        </div>
+        {logoOk ? (
+          <img
+            src="/logo.png"
+            alt="Aki No Sora"
+            width={compact ? 30 : 34}
+            height={compact ? 30 : 34}
+            className="shrink-0"
+            onError={(event) => {
+              const img = event.currentTarget;
+              if (!img.src.endsWith('/logo.svg')) {
+                img.src = '/logo.svg';
+              } else {
+                setLogoOk(false);
+              }
+            }}
+          />
+        ) : null}
+        {compact ? (
+          logoOk ? null : <span className="text-sm font-bold tracking-tight">ANS</span>
+        ) : (
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-bold leading-tight tracking-tight">ANS Dashboard</div>
+            <div className="text-[11px] text-ink-soft">Operasional &amp; akademik</div>
+          </div>
+        )}
         {!compact ? (
           <button
             type="button"
