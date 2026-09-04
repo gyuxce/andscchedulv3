@@ -31,6 +31,9 @@ import {
   upsertSessionReportRemote,
   upsertStudentRemote,
   updateProfileRemote,
+  deleteProfileRemote,
+  deleteSenseiRemote,
+  deleteStudentRemote,
   writeAudit
 } from '../services/supabaseData';
 import { ensureClassEnrollments, progressEnrollmentJourney } from '../lib/enrollment';
@@ -213,6 +216,9 @@ interface DashboardStore extends DashboardSnapshot {
     userId: string,
     patch: { role?: AppRole; status?: UserStatus; senseiId?: string | null }
   ) => Promise<boolean>;
+  deleteUser: (userId: string) => Promise<boolean>;
+  deleteSensei: (senseiId: string) => Promise<boolean>;
+  deleteStudent: (studentId: string) => Promise<boolean>;
 }
 
 function actor(state: DashboardStore) {
@@ -1595,6 +1601,126 @@ export const useDashboardStore = create<DashboardStore>()(
           };
         });
         toast.success('Akun diperbarui');
+        return true;
+      },
+      deleteUser: async (userId) => {
+        const state = get();
+        if (state.currentUser?.role !== 'Super Admin') {
+          toast.error('Hanya Super Admin yang bisa menghapus akun');
+          return false;
+        }
+        if (state.currentUser?.id === userId) {
+          toast.error('Tidak bisa menghapus akun sendiri');
+          return false;
+        }
+        const existing = state.users.find((item) => item.id === userId);
+        try {
+          await deleteProfileRemote(userId);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Gagal menghapus akun');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'delete_user',
+            entity: 'profiles',
+            recordId: userId,
+            oldValue: existing
+              ? { email: existing.email, role: existing.role, status: existing.status }
+              : undefined,
+            reason: 'Akun login dihapus dari dashboard'
+          });
+          return {
+            users: current.users.filter((item) => item.id !== userId),
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Akun login dihapus. Blokir juga di Supabase Authentication bila perlu.');
+        return true;
+      },
+      deleteSensei: async (senseiId) => {
+        const state = get();
+        if (state.currentUser?.role !== 'Super Admin') {
+          toast.error('Hanya Super Admin yang bisa menghapus Sensei');
+          return false;
+        }
+        const existing = state.sensei.find((item) => item.id === senseiId);
+        if (!existing) return false;
+        const blockers: string[] = [];
+        if (state.schedules.some((x) => x.senseiId === senseiId || x.originalSenseiId === senseiId))
+          blockers.push('jadwal');
+        if (state.availability.some((x) => x.senseiId === senseiId)) blockers.push('ketersediaan');
+        if (state.sessionLogs.some((x) => x.senseiId === senseiId)) blockers.push('log sesi');
+        if (state.classMasters.some((x) => x.senseiId === senseiId)) blockers.push('Class Master');
+        if (state.qaScores.some((x) => x.senseiId === senseiId)) blockers.push('skor QA');
+        if (blockers.length) {
+          toast.error(`Tidak bisa hapus — masih ada ${blockers.join(', ')}. Set INACTIVE saja.`);
+          return false;
+        }
+        try {
+          await deleteSenseiRemote(senseiId);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Gagal menghapus Sensei');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'delete_sensei',
+            entity: 'sensei',
+            recordId: senseiId,
+            oldValue: { name: existing.name, email: existing.email },
+            reason: 'Sensei dihapus dari dashboard (belum ada data terkait)'
+          });
+          return {
+            sensei: current.sensei.filter((item) => item.id !== senseiId),
+            leavePeriods: current.leavePeriods.filter((item) => item.senseiId !== senseiId),
+            users: current.users.map((item) =>
+              item.senseiId === senseiId ? { ...item, senseiId: undefined } : item
+            ),
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Sensei dihapus');
+        return true;
+      },
+      deleteStudent: async (studentId) => {
+        const state = get();
+        if (state.currentUser?.role !== 'Super Admin') {
+          toast.error('Hanya Super Admin yang bisa menghapus siswa');
+          return false;
+        }
+        const existing = state.students.find((item) => item.id === studentId);
+        if (!existing) return false;
+        const blockers: string[] = [];
+        if (state.enrollments.some((x) => x.studentId === studentId)) blockers.push('enrollment');
+        if (state.levelCompletions.some((x) => x.studentId === studentId)) blockers.push('level completion');
+        if (state.sessionReports.some((r) => r.students.some((st) => st.studentId === studentId)))
+          blockers.push('laporan sesi');
+        if (state.schedules.some((x) => x.studentIds.includes(studentId))) blockers.push('jadwal');
+        if (blockers.length) {
+          toast.error(`Tidak bisa hapus — masih ada ${blockers.join(', ')}. Set "Tidak aktif" saja.`);
+          return false;
+        }
+        try {
+          await deleteStudentRemote(studentId);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Gagal menghapus siswa');
+          return false;
+        }
+        set((current) => {
+          pushAudit(current, {
+            action: 'delete_student',
+            entity: 'students',
+            recordId: studentId,
+            oldValue: { name: existing.name },
+            reason: 'Siswa dihapus dari dashboard (belum ada data terkait)'
+          });
+          return {
+            students: current.students.filter((item) => item.id !== studentId),
+            auditLogs: current.auditLogs
+          };
+        });
+        toast.success('Siswa dihapus');
         return true;
       }
     }),

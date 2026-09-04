@@ -9,6 +9,7 @@ import type { Sensei, SenseiPrimaryStatus, SenseiTimezone } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
+import { ConfirmDelete } from './ui/ConfirmDelete';
 import { DetailFields } from './ui/DetailFields';
 import { FilterChips } from './ui/FilterChips';
 import { Meter } from './ui/Meter';
@@ -45,6 +46,7 @@ export function SenseiView() {
   const weekAnchor = useDashboardStore((state) => state.weekAnchor);
   const setWeekAnchor = useDashboardStore((state) => state.setWeekAnchor);
   const overrideSenseiStatus = useDashboardStore((state) => state.overrideSenseiStatus);
+  const deleteSensei = useDashboardStore((state) => state.deleteSensei);
   const updateSenseiTimezone = useDashboardStore((state) => state.updateSenseiTimezone);
   const upsertSensei = useDashboardStore((state) => state.upsertSensei);
   const setSenseiLeave = useDashboardStore((state) => state.setSenseiLeave);
@@ -232,6 +234,10 @@ export function SenseiView() {
         Master data Sensei. Label NEW / UNASSIGNED / CUTI dihitung otomatis. INACTIVE tetap tersimpan di
         history.
       </PageIntro>
+      <p className="text-xs text-ink-soft">
+        {visible.filter((item) => item.primaryStatus === 'ACTIVE').length} aktif ·{' '}
+        {visible.filter((item) => item.primaryStatus !== 'ACTIVE').length} nonaktif · {visible.length} total
+      </p>
       <FilterChips
         value={filter}
         onChange={setFilter}
@@ -648,6 +654,27 @@ export function SenseiView() {
                   </Button>
                 </div>
               </div>
+
+              {canEditOps ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-line p-3">
+                  <span className="text-xs text-ink-soft">
+                    Hapus permanen — hanya untuk Sensei yang salah input (belum ada jadwal / sesi / kelas).
+                    Kalau sudah punya data, pakai <b>Set INACTIVE</b>.
+                  </span>
+                  <ConfirmDelete
+                    label="Hapus Sensei"
+                    confirmLabel="Hapus Sensei"
+                    message={`Hapus ${selected.name}?`}
+                    onConfirm={async () => {
+                      const ok = await deleteSensei(selected.id);
+                      if (ok) {
+                        setSelectedId(null);
+                        setCreating(false);
+                      }
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </Modal>

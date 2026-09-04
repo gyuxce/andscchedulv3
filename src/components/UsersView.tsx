@@ -4,14 +4,17 @@ import { useDashboardStore } from '../store/useDashboardStore';
 import type { AppRole, UserAccount, UserStatus } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { ConfirmDelete } from './ui/ConfirmDelete';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
 
 export function UsersView() {
   const users = useDashboardStore((state) => state.users);
   const sensei = useDashboardStore((state) => state.sensei);
+  const currentUser = useDashboardStore((state) => state.currentUser);
   const createUserLogin = useDashboardStore((state) => state.createUserLogin);
   const updateUser = useDashboardStore((state) => state.updateUser);
+  const deleteUser = useDashboardStore((state) => state.deleteUser);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editUser, setEditUser] = useState<UserAccount | null>(null);
@@ -286,6 +289,23 @@ export function UsersView() {
                 <code>profiles.sensei_id</code> ke Sensei yang benar.
               </span>
             </label>
+          ) : null}
+
+          {editUser.id !== currentUser?.id ? (
+            <div className="mt-2 flex items-center justify-between gap-3 border-t border-line pt-3">
+              <span className="text-xs text-ink-soft">
+                Hapus profil login. Untuk memblokir total, hapus juga user di Supabase Authentication.
+              </span>
+              <ConfirmDelete
+                label="Hapus akun"
+                confirmLabel="Hapus akun"
+                message={`Hapus akun ${editUser.name}?`}
+                onConfirm={async () => {
+                  const ok = await deleteUser(editUser.id);
+                  if (ok) setEditUser(null);
+                }}
+              />
+            </div>
           ) : null}
         </Modal>
       ) : null}

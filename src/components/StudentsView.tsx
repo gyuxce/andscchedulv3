@@ -21,6 +21,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
 import { Meter } from './ui/Meter';
+import { ConfirmDelete } from './ui/ConfirmDelete';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
 import { ProgressRing } from './ui/ProgressRing';
@@ -62,6 +63,7 @@ export function StudentsView() {
   const enrollments = useDashboardStore((state) => state.enrollments);
   const completeLevel = useDashboardStore((state) => state.completeLevel);
   const upsertStudent = useDashboardStore((state) => state.upsertStudent);
+  const deleteStudent = useDashboardStore((state) => state.deleteStudent);
   const upsertEnrollment = useDashboardStore((state) => state.upsertEnrollment);
   const { students, sessionReports, schedules } = useScopedData();
   const canManage = permissions.canManageUsers;
@@ -658,6 +660,24 @@ export function StudentsView() {
               />
             </label>
           </div>
+
+          {editingStudentId && canManage ? (
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+              <span className="text-xs text-ink-soft">
+                Hapus permanen — hanya untuk siswa yang salah input (belum ada enrollment / jadwal / laporan).
+                Kalau sudah punya data, pakai status <b>Tidak aktif</b>.
+              </span>
+              <ConfirmDelete
+                label="Hapus siswa"
+                confirmLabel="Hapus siswa"
+                message={`Hapus ${selected?.name ?? 'siswa ini'}?`}
+                onConfirm={async () => {
+                  const ok = await deleteStudent(editingStudentId);
+                  if (ok) setStudentModal(false);
+                }}
+              />
+            </div>
+          ) : null}
         </Modal>
       ) : null}
 
