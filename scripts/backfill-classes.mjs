@@ -165,14 +165,24 @@ for (const { key, group_id, schedules: rows } of series.values()) {
   }
 }
 
+// A student may sit in two series at the same level (e.g. a Group + a Private
+// makeup track) → same enrollment id. Keep one per (student, level): the row
+// with the most sessions counted.
+const enrollById = new Map();
+for (const e of enrollments) {
+  const prev = enrollById.get(e.id);
+  if (!prev || e.sessions_completed > prev.sessions_completed) enrollById.set(e.id, e);
+}
+const dedupEnroll = [...enrollById.values()];
+
 console.log(`Seri kelas          : ${series.size}`);
 console.log(`Class Master dibuat  : ${classMasters.length}`);
 console.log(`  - Group/Semi (grup): ${classMasters.filter((c) => /· \d+ siswa/.test(c.display_name)).length}`);
 console.log(`  - Private (1:1)     : ${classMasters.filter((c) => !/· \d+ siswa/.test(c.display_name)).length}`);
 console.log(`schedules.class_id   : ${scheduleClassId.size} sesi akan ditautkan`);
-console.log(`Enrollment baru      : ${enrollments.length} (existing dipertahankan: ${existingEnroll.length})`);
+console.log(`Enrollment baru      : ${dedupEnroll.length} (existing dipertahankan: ${existingEnroll.length})`);
 console.log(`  contoh CM: ${JSON.stringify(classMasters[0])}`);
-console.log(`  contoh enroll: ${JSON.stringify(enrollments[0])}`);
+console.log(`  contoh enroll: ${JSON.stringify(dedupEnroll[0])}`);
 
 if (!APPLY) {
   console.log('\nDRY RUN — jalankan lagi + --apply untuk menulis.');
@@ -204,7 +214,7 @@ for (const [cmId, ids] of byCm) {
 }
 
 console.log('menulis enrollments...');
-await upsertAll('enrollments', enrollments);
+await upsertAll('enrollments', dedupEnroll);
 
 const [cmCount, enrCount, linked] = await Promise.all([
   db.from('class_masters').select('id', { count: 'exact', head: true }),
