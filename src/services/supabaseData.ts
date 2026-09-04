@@ -214,6 +214,28 @@ export async function updateProfileRemote(
   if (error) throw new Error(error.message);
 }
 
+export async function deleteProfileRemote(userId: string) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('profiles').delete().eq('id', userId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteSenseiRemote(senseiId: string) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  // sensei_status FK cascades; sensei_availability / session_logs are guarded in the store.
+  const { error } = await supabase.from('sensei').delete().eq('id', senseiId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteStudentRemote(studentId: string) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('students').delete().eq('id', studentId);
+  if (error) throw new Error(error.message);
+}
+
 export async function ensureProfile(userId: string, email: string) {
   const supabase = getSupabase();
   if (!supabase) return null;
