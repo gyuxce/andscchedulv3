@@ -200,6 +200,13 @@ describe('session workflow and late join', () => {
     expect(isLateJoin(session, '2026-08-14T02:06:00.000Z', 5, 'Asia/Jakarta')).toBe(true);
     expect(isLateJoin(session, '2026-08-14T02:05:00.000Z', 5, 'Asia/Jakarta')).toBe(false);
   });
+
+  it('supports a Sensei teaching from Japan (JST, UTC+9)', () => {
+    const session = classOf({ id: 'c1', date: '2026-08-14', startTime: '09:00', endTime: '10:00' });
+    // 09:00 Asia/Tokyo (JST, UTC+9) = 00:00 UTC
+    expect(isLateJoin(session, '2026-08-14T00:00:00.000Z', 0, 'Asia/Tokyo')).toBe(false);
+    expect(isLateJoin(session, '2026-08-14T00:01:00.000Z', 0, 'Asia/Tokyo')).toBe(true);
+  });
 });
 
 describe('disciplinary attribution', () => {

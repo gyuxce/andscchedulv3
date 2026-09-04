@@ -50,7 +50,7 @@ export interface UserAccount {
   senseiId?: string;
 }
 
-export type SenseiTimezone = 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura';
+export type SenseiTimezone = 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura' | 'Asia/Tokyo';
 
 export interface Sensei {
   id: string;
