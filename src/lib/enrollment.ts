@@ -89,6 +89,9 @@ export function progressEnrollmentJourney(input: {
   classType?: Enrollment['classType'];
   senseiId?: string | null;
   classId?: string | null;
+  /** Target meetings for the newly-opened next level — usually the next class's requiredMeetings. */
+  requiredMeetings?: number | null;
+  plannedEndDate?: string | null;
   notes?: string;
 }): { enrollments: Enrollment[]; changed: Enrollment[] } {
   const now = new Date().toISOString();
@@ -127,6 +130,9 @@ export function progressEnrollmentJourney(input: {
         status: 'active',
         startDate: endDate,
         endDate: null,
+        plannedEndDate: input.plannedEndDate ?? null,
+        requiredMeetings: input.requiredMeetings ?? null,
+        sessionsCompleted: 0,
         paymentStatus: 'BELUM_BAYAR',
         notes: input.notes,
         updatedAt: now,

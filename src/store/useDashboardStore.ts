@@ -1309,6 +1309,16 @@ export const useDashboardStore = create<DashboardStore>()(
             ? [student.academicNotes, `Completed ${level}: ${notes}`].filter(Boolean).join(' · ')
             : student.academicNotes
         };
+        // Inherit the target from the next level's class so progress / "mau habis"
+        // works right away instead of falling back to a hardcoded number.
+        const nextClass = nextLevel
+          ? state.classMasters.find(
+              (c) =>
+                c.level === nextLevel &&
+                c.studentIds.includes(studentId) &&
+                (c.status === 'active' || c.status === 'ready')
+            )
+          : undefined;
         const journey = progressEnrollmentJourney({
           enrollments: state.enrollments,
           studentId,
@@ -1316,8 +1326,11 @@ export const useDashboardStore = create<DashboardStore>()(
           nextLevel,
           createId,
           actorName: state.currentUser?.name,
-          classType: student.type,
-          senseiId: student.senseiId ?? null,
+          classType: nextClass?.type ?? student.type,
+          senseiId: nextClass?.senseiId ?? student.senseiId ?? null,
+          classId: nextClass?.id ?? null,
+          requiredMeetings: nextClass?.requiredMeetings ?? null,
+          plannedEndDate: nextClass?.plannedEndDate ?? null,
           notes
         });
         set((current) => {
