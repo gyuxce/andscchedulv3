@@ -13,6 +13,7 @@ import {
   getEnrollmentProgress,
   isCurrentEnrollmentStatus
 } from '../lib/enrollment';
+import { formatDay } from '../lib/dates';
 import { filterAcademicReportRows, isMakeupSession, makeupLabel } from '../lib/makeup';
 import { senseiDisplayName } from '../lib/labels';
 import { useDashboardStore, usePermissions, useScopedData } from '../store/useDashboardStore';
@@ -20,8 +21,9 @@ import type { ClassType, Enrollment, EnrollmentStatus, PaymentStatus, Student } 
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
-import { Meter } from './ui/Meter';
 import { ConfirmDelete } from './ui/ConfirmDelete';
+import { FilterChips } from './ui/FilterChips';
+import { Meter } from './ui/Meter';
 import { Modal } from './ui/Modal';
 import { PageIntro } from './ui/PageIntro';
 import { ProgressRing } from './ui/ProgressRing';
@@ -47,7 +49,7 @@ const emptyEnrollment = (studentId: string): Omit<Enrollment, 'id' | 'updatedAt'
   startDate: new Date().toISOString().slice(0, 10),
   endDate: null,
   plannedEndDate: null,
-  requiredMeetings: 10,
+  requiredMeetings: null,
   sessionsCompleted: 0,
   paymentStatus: 'BELUM_BAYAR',
   paymentRemark: '',
@@ -78,7 +80,27 @@ export function StudentsView() {
   const [enrollmentForm, setEnrollmentForm] = useState(emptyEnrollment(''));
   const [editingEnrollmentId, setEditingEnrollmentId] = useState<string | null>(null);
   const [studentQuery, setStudentQuery] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [listFilter, setListFilter] = useState<'active' | 'ending' | 'inactive' | 'all'>('active');
+
+  /** current enrollment + "mau habis" status per student */
+  const studentRows = useMemo(() => {
+    return students.map((student) => {
+      const current = enrollments.find(
+        (item) => item.studentId === student.id && isCurrentEnrollmentStatus(item.status)
+      );
+      const display = current ? deriveEnrollmentDisplayStatus(current, schedules, sessionReports) : null;
+      const ending = display === 'ending_soon' || current?.status === 'ending_soon';
+      const progress = current ? getEnrollmentProgress(current, schedules, sessionReports) : null;
+      return {
+        student,
+        ending: Boolean(ending && student.isActive),
+        remaining: progress?.remaining ?? null,
+        plannedEnd: current?.plannedEndDate ?? null
+      };
+    });
+  }, [students, enrollments, schedules, sessionReports]);
+
+  const endingCount = studentRows.filter((r) => r.ending).length;
 
   const history = useMemo(() => {
     if (!selected) return [];
@@ -161,7 +183,7 @@ export function StudentsView() {
       startDate: item.startDate || null,
       endDate: item.endDate || null,
       plannedEndDate: item.plannedEndDate || null,
-      requiredMeetings: item.requiredMeetings ?? 10,
+      requiredMeetings: item.requiredMeetings ?? null,
       sessionsCompleted: item.sessionsCompleted ?? 0,
       paymentStatus: item.paymentStatus || 'BELUM_BAYAR',
       paymentRemark: item.paymentRemark || '',
@@ -197,7 +219,7 @@ export function StudentsView() {
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
         <div className="ui-card overflow-hidden lg:sticky lg:top-4">
-          <div className="border-b border-line px-4 py-3">
+          <div className="space-y-2 border-b border-line px-4 py-3">
             <div className="flex items-baseline justify-between gap-2">
               <div className="font-semibold">Siswa operasional</div>
               <span className="text-[11px] text-ink-soft">
@@ -205,31 +227,44 @@ export function StudentsView() {
               </span>
             </div>
             <input
-              className="ui-input mt-2 h-9"
+              className="ui-input h-9"
               placeholder="Cari nama"
               value={studentQuery}
               onChange={(event) => setStudentQuery(event.target.value)}
             />
-            <label className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-soft">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(event) => setShowInactive(event.target.checked)}
-              />
-              Tampilkan siswa nonaktif
-            </label>
+            <FilterChips
+              value={listFilter}
+              onChange={setListFilter}
+              options={[
+                { id: 'active', label: 'Aktif', count: students.filter((s) => s.isActive).length },
+                { id: 'ending', label: 'Mau habis', count: endingCount },
+                {
+                  id: 'inactive',
+                  label: 'Nonaktif',
+                  count: students.filter((s) => !s.isActive).length
+                },
+                { id: 'all', label: 'Semua', count: students.length }
+              ]}
+            />
           </div>
-          <div className="max-h-[60vh] overflow-y-auto lg:max-h-[calc(100vh-13rem)]">
-            {students
-              .filter((student) => {
-                if (!showInactive && !student.isActive && student.id !== selectedId) return false;
+          <div className="max-h-[60vh] overflow-y-auto lg:max-h-[calc(100vh-16rem)]">
+            {studentRows
+              .filter(({ student, ending }) => {
+                if (student.id === selectedId) return true;
+                if (listFilter === 'active' && !student.isActive) return false;
+                if (listFilter === 'inactive' && student.isActive) return false;
+                if (listFilter === 'ending' && !ending) return false;
                 const q = studentQuery.trim().toLowerCase();
                 if (!q) return true;
                 return `${student.name} ${student.currentLevel} ${student.type}`.toLowerCase().includes(q);
               })
               .slice()
-              .sort((a, b) => Number(b.isActive) - Number(a.isActive))
-              .map((student) => (
+              .sort((a, b) => {
+                if (a.ending !== b.ending) return a.ending ? -1 : 1;
+                if (a.ending && b.ending) return (a.remaining ?? 99) - (b.remaining ?? 99);
+                return Number(b.student.isActive) - Number(a.student.isActive);
+              })
+              .map(({ student, ending, remaining, plannedEnd }) => (
                 <button
                   key={student.id}
                   onClick={() => {
@@ -240,21 +275,33 @@ export function StudentsView() {
                   className={`flex w-full items-center gap-3 border-b border-l-2 border-line px-3 py-2.5 text-left transition-colors last:border-b-0 ${
                     selectedId === student.id
                       ? 'border-l-accent bg-accent-soft'
-                      : 'border-l-transparent bg-surface hover:bg-surface-2'
+                      : ending
+                        ? 'border-l-warn bg-surface hover:bg-surface-2'
+                        : 'border-l-transparent bg-surface hover:bg-surface-2'
                   } ${!student.isActive ? 'opacity-55' : ''}`}
                 >
                   <Avatar name={student.name} size="sm" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate font-semibold">{student.name}</span>
-                      {!student.isActive ? (
+                      {ending ? (
+                        <span className="shrink-0 text-[10px] font-semibold uppercase text-warn">
+                          mau habis
+                        </span>
+                      ) : !student.isActive ? (
                         <span className="shrink-0 text-[10px] font-medium uppercase text-ink-faint">
                           nonaktif
                         </span>
                       ) : null}
                     </div>
                     <div className="truncate text-xs text-ink-soft">
-                      {student.currentLevel || 'Belum ada enrollment'} · {student.type}
+                      {ending
+                        ? remaining != null
+                          ? `sisa ${remaining} sesi`
+                          : plannedEnd
+                            ? `berakhir ${formatDay(plannedEnd, 'd MMM')}`
+                            : 'mendekati akhir'
+                        : `${student.currentLevel || 'Belum ada enrollment'} · ${student.type}`}
                     </div>
                   </div>
                 </button>
@@ -391,7 +438,12 @@ export function StudentsView() {
                         max={currentProgress.required}
                       />
                     </div>
-                  ) : null}
+                  ) : (
+                    <p className="text-xs text-warn">
+                      Target sesi belum diisi — buka <b>Edit enrollment</b>, pilih <b>Assigned class</b> atau
+                      isi <b>Required total meetings</b> agar progres &amp; "mau habis" terhitung.
+                    </p>
+                  )}
                   {currentEnrollment.enrollmentRemark || currentEnrollment.notes ? (
                     <p className="text-xs text-ink-soft">
                       {currentEnrollment.enrollmentRemark || currentEnrollment.notes}
@@ -806,7 +858,8 @@ export function StudentsView() {
                 className="ui-input"
                 type="number"
                 min={1}
-                value={enrollmentForm.requiredMeetings ?? 10}
+                placeholder="ikut Assigned class"
+                value={enrollmentForm.requiredMeetings ?? ''}
                 onChange={(e) =>
                   setEnrollmentForm({ ...enrollmentForm, requiredMeetings: Number(e.target.value) || null })
                 }
