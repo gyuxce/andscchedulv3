@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Aki No Sora">
+  <defs>
+    <linearGradient id="brush" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E23A2E"/>
+      <stop offset="1" stop-color="#C62A22"/>
+    </linearGradient>
+  </defs>
+  <!-- brush enso ring: two offset arcs with a small opening, tapered ends -->
+  <path
+    d="M256 54
+       C145 54 54 143 54 256
+       C54 369 145 458 256 458
+       C332 458 400 417 435 353"
+    fill="none" stroke="url(#brush)" stroke-width="42" stroke-linecap="round"
+    transform="rotate(-18 256 256)"/>
+  <path
+    d="M420 150
+       C392 106 349 74 300 60"
+    fill="none" stroke="url(#brush)" stroke-width="30" stroke-linecap="round"
+    transform="rotate(-18 256 256)"/>
+  <g fill="#D62F26" font-family="'Noto Serif JP','Yu Mincho',serif" font-weight="700" text-anchor="middle">
+    <text x="212" y="212" font-size="150">秋</text>
+    <text x="292" y="300" font-size="96">の</text>
+    <text x="300" y="404" font-size="150">空</text>
+  </g>
+</svg>

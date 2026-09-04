@@ -27,7 +27,7 @@ export function ConfirmDelete({
         type="button"
         disabled={disabled}
         onClick={() => setArmed(true)}
-        className="text-xs font-semibold text-danger hover:underline disabled:opacity-40"
+        className="inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-field)] border border-danger/40 bg-danger-soft px-3.5 text-sm font-semibold text-danger transition-colors duration-150 hover:bg-danger hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {label}
       </button>
